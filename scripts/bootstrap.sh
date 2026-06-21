@@ -196,30 +196,11 @@ STEP_NAME="Deploy LiteLLM"
 print_step "3" "Deploy LiteLLM"
 
 # ── Port conflict check ──
-check_port_free() {
-  local port="$1"
-  if command -v ss &>/dev/null; then
-    ss -tlnp 2>/dev/null | grep -q ":${port} " && return 1 || return 0
-  elif command -v lsof &>/dev/null; then
-    lsof -i :"$port" &>/dev/null && return 1 || return 0
-  else
-    # Cannot check — assume free
-    return 0
-  fi
-}
-
-PORTS_TO_CHECK=(4000 9090 3000)
-PORT_CONFLICT=false
-for port in "${PORTS_TO_CHECK[@]}"; do
-  if ! check_port_free "$port"; then
+for port in 4000 9090 3000; do
+  if command -v ss &>/dev/null && ss -tlnp 2>/dev/null | grep -q ":${port} "; then
     echo "  WARNING: Port $port is already in use. Docker Compose may fail."
-    PORT_CONFLICT=true
   fi
 done
-if [ "$PORT_CONFLICT" = true ] && [ "$DRY_RUN" = false ]; then
-  echo "  Consider stopping conflicting services or changing ports in docker-compose.yml."
-  echo "  Continuing anyway — Docker may reuse the existing service."
-fi
 
 # Do NOT clear LITELLM_MASTER_KEY — it may already be set from the environment.
 # The resolve_master_key function checks env first, then .master-key, then .env.
@@ -243,23 +224,9 @@ if curl -sf -m "$CURL_TIMEOUT" "$LITELLM_URL/health/liveliness" &>/dev/null; the
     try_resolve_master_key || prompt_master_key
   fi
 
-elif litellm_container_exists; then
-  # ── Scenario 2a: Container exists but stopped ──
-  echo "  LiteLLM container exists but is not running."
-  echo "  Starting existing deployment..."
-  if [ "$DRY_RUN" = true ]; then
-    echo "  Would run: docker compose up -d"
-    LITELLM_MASTER_KEY="<LITELLM_MASTER_KEY>"
-  else
-    docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d
-    wait_for_litellm
-    try_resolve_master_key || prompt_master_key
-  fi
-
-elif litellm_files_exist; then
-  # ── Scenario 2b: Files exist but containers removed (compose down) ──
-  echo "  LiteLLM deployment files found but no containers."
-  echo "  Recreating and starting..."
+elif litellm_container_exists || litellm_files_exist; then
+  # ── Deployed but not running ──
+  echo "  Starting existing LiteLLM deployment..."
   if [ "$DRY_RUN" = true ]; then
     echo "  Would run: docker compose up -d"
     LITELLM_MASTER_KEY="<LITELLM_MASTER_KEY>"
