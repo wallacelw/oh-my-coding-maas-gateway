@@ -146,6 +146,27 @@ echo ""
 # ── 4. Acquire virtual key (idempotent — reuse existing if valid) ──
 echo "4. Configuring LiteLLM virtual key..."
 
+# Try to reuse existing key by alias via /key/list (best-effort)
+if [ -z "$VIRTUAL_KEY" ] && [ -n "${LITELLM_MASTER_KEY:-}" ]; then
+  KEY_LIST=$(curl -sf -m 10 "http://127.0.0.1:4000/key/list" \
+    -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
+  if [ -n "$KEY_LIST" ]; then
+    ALIAS_KEY=$(echo "$KEY_LIST" | jq -r '.keys[] | select(.key_alias == "opencode") | .key' 2>/dev/null | head -1 || true)
+    if [ -n "$ALIAS_KEY" ] && [[ "$ALIAS_KEY" == sk-* ]]; then
+      if [ "$DRY_RUN" = true ]; then
+        echo "   Would test existing key by alias: ${ALIAS_KEY:0:8}...${ALIAS_KEY: -4}"
+        VIRTUAL_KEY="$ALIAS_KEY"
+      elif retry_curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/v1/chat/completions" \
+           -H "Authorization: Bearer $ALIAS_KEY" \
+           -H "Content-Type: application/json" \
+           -d '{"model":"glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
+        echo "   Existing virtual key (alias 'opencode') is valid. Reusing: ${ALIAS_KEY:0:8}...${ALIAS_KEY: -4}"
+        VIRTUAL_KEY="$ALIAS_KEY"
+      fi
+    fi
+  fi
+fi
+
 # Try to reuse existing key from current opencode config
 if [ -z "$VIRTUAL_KEY" ] && [ -f "$OPENCODE_CONFIG" ]; then
   EXISTING_KEY=$(jq -r '.provider.LiteLLM.options.apiKey // empty' "$OPENCODE_CONFIG" 2>/dev/null || true)

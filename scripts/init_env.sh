@@ -6,10 +6,14 @@
 #   --auto                  — non-interactive agent mode; reads HUAWEI_MAAS_API_KEY
 #                            from env var, auto-generates all other secrets,
 #                            never prompts. Errors if HUAWEI_MAAS_API_KEY not set.
+#                            Preserves existing secrets on re-run (idempotent).
+#   --auto --force          — like --auto but regenerates all secrets
+#                            (use after security incidents or to rotate keys)
 #
 # Usage:
 #   ./scripts/init_env.sh              # interactive — you choose every value
-#   ./scripts/init_env.sh --auto       # agent mode — all from env vars, no prompts
+#   ./scripts/init_env.sh --auto       # agent mode — idempotent, preserves secrets
+#   ./scripts/init_env.sh --auto --force # agent mode — regenerate all secrets
 
 set -euo pipefail
 
@@ -21,10 +25,14 @@ ENV_FILE="$PROJECT_ROOT/.env"
 
 # ── Parse mode ────────────────────────────────────────────────────
 MODE="interactive"
-if [[ "${1:-}" == "--auto" ]]; then MODE="auto"
-elif [[ -n "${1:-}" ]]; then
-  echo "Usage: $0 [--auto]" >&2; exit 1
-fi
+FORCE=false
+for arg in "$@"; do
+  if [[ "$arg" == "--auto" ]]; then MODE="auto"
+  elif [[ "$arg" == "--force" ]]; then FORCE=true
+  elif [[ -n "$arg" ]]; then
+    echo "Usage: $0 [--auto] [--force]" >&2; exit 1
+  fi
+done
 
 # ── Helpers ───────────────────────────────────────────────────────
 generate_secret() { python3 -c 'import secrets; print(secrets.token_urlsafe(32))'; }
@@ -109,7 +117,8 @@ DEFAULT_RETENTION="15d"
 #   SALT_KEY   → invalidates all virtual keys
 #   DB_PASSWORD → PostgreSQL auth
 #   GRAFANA_PASSWORD → Grafana login
-if [[ "$MODE" == "auto" ]]; then
+# With --force, all secrets are regenerated (for key rotation).
+if [[ "$MODE" == "auto" && "$FORCE" != true ]]; then
   if [[ -n "${EXISTING_MASTER_KEY:-}" ]]; then
     DEFAULT_MASTER_KEY="$EXISTING_MASTER_KEY"
     echo "  Reusing existing LITELLM_MASTER_KEY (idempotent)"
