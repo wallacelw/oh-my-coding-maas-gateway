@@ -58,7 +58,6 @@ if [ -f "$PROJECT_DIR/.env" ]; then
 fi
 
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
-MAAS_API_BASE="${HUAWEI_MAAS_API_BASE:-https://api-ap-southeast-1.modelarts-maas.com/openai/v1}"
 
 printf "${YELLOW}╔══════════════════════════════════════════════════════╗\n"
 printf "║  oh-my-litellm-opencode — Unified Validation          ║\n"

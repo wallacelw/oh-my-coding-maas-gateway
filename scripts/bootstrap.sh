@@ -58,7 +58,8 @@ resolve_master_key() {
 
   # 2. .master-key file
   if [ -f "$PROJECT_DIR/.master-key" ]; then
-    local found_key="$(cat "$PROJECT_DIR/.master-key")"
+    local found_key
+    found_key="$(cat "$PROJECT_DIR/.master-key")"
     if [ -n "$found_key" ]; then
       echo "  Found LITELLM_MASTER_KEY in $PROJECT_DIR/.master-key"
       echo "$found_key"
@@ -68,7 +69,8 @@ resolve_master_key() {
 
   # 3. .env file
   if [ -f "$PROJECT_DIR/.env" ]; then
-    local found_key="$(grep -oP '^LITELLM_MASTER_KEY="?\K[^"]+' "$PROJECT_DIR/.env" 2>/dev/null || true)"
+    local found_key
+    found_key="$(grep -oP '^LITELLM_MASTER_KEY="?\K[^"]+' "$PROJECT_DIR/.env" 2>/dev/null || true)"
     if [ -n "$found_key" ]; then
       echo "  Found LITELLM_MASTER_KEY in $PROJECT_DIR/.env"
       # Cache to .master-key for faster future resolution
