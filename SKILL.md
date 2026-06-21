@@ -127,7 +127,7 @@ Strategies: `simple-shuffle` (default), `least-busy`, `latency-based-routing`, `
 
 Handled by `bootstrap.sh` or `install.sh`:
 
-1. **Install opencode** — `bun install -g opencode@0.4.6` (pinned)
+1. **Install opencode** — `curl -fsSL https://opencode.ai/install | bash` (latest stable)
 2. **Install plugin** — `bunx oh-my-opencode-slim@2.0.4 install`
 3. **Mint virtual key** — reuse existing if valid, else mint unlimited key via LiteLLM
 4. **Write opencode.jsonc** — jq substitution on template:
@@ -270,7 +270,7 @@ histogram_quantile(0.95, rate(litellm_custom_ttft_seconds_bucket[5m]))
 | Property | Mechanism |
 |---|---|
 | `init_env.sh --auto` non-interactive | Reads HUAWEI_MAAS_API_KEY from env, auto-generates rest, never prompts |
-| opencode pinned | `opencode@0.4.6`, `oh-my-opencode-slim@2.0.4` |
+| opencode latest | `curl -fsSL https://opencode.ai/install \| bash` (no pinning — always latest) |
 | LiteLLM image pinned | `v1.83.14-stable.patch.3` (no `latest`) |
 | Timeouts consistent | `request_timeout: 600`, `stream_timeout: 60` |
 | Resource limits | All 4 services have memory + CPU limits |
