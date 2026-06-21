@@ -56,17 +56,21 @@ bun, jq, Docker + Compose V2, git, python3, `HUAWEI_MAAS_API_KEY` env var.
 
 ```
 Client → LiteLLM (:4000) → Huawei MaaS (ap-southeast-1)
-               │               │
-               │          ┌────┴────┐
-               │          │ N API   │  (N = HUAWEI_MAAS_API_KEY_COUNT)
-               │          │ keys    │  LiteLLM load-balances N deployments
-               │          └────────┘
-               ├── PostgreSQL (:5432)  — keys, usage, spend
-               ├── Prometheus (:9090)  — /metrics scrape every 15s
-               └── Grafana   (:3000)  — pre-built dashboard
+                │               │
+                │          ┌────┴────┐
+                │          │ N API   │  (N = HUAWEI_MAAS_API_KEY_COUNT)
+                │          │ keys    │  LiteLLM load-balances N deployments
+                │          └────────┘
+                ├── PostgreSQL (:5432)  — keys, usage, spend
+                ├── OTel Collector (:4317/:4318) — single telemetry pipeline
+                │     ├── receives OTLP (traces + OTel metrics)
+                │     ├── scrapes /metrics (built-in + custom Prometheus metrics)
+                │     └── exports → Prometheus (remote write)
+                ├── Prometheus (:9090)  — TSDB, receives from OTel Collector
+                └── Grafana   (:3000)  — dashboards
 ```
 
-Startup: PostgreSQL → LiteLLM → Prometheus → Grafana (all healthcheck-gated).
+Startup: PostgreSQL → LiteLLM → OTel Collector → Prometheus → Grafana (all healthcheck-gated).
 
 ## Deployment Workflow
 
@@ -196,16 +200,21 @@ Council: single `councillor` per preset (deepseek-v4-pro/high).
 
 | Service | Image | Port | Resources |
 |---|---|---|---|
-| litellm | `ghcr.io/berriai/litellm:v1.83.14-stable.patch.3` | 4000 | 2g RAM, 2 CPU |
+| litellm | `ghcr.io/berriai/litellm:v1.89.3` | 4000 | 2g RAM, 2 CPU |
 | db | `postgres:16-alpine` | (5432) | 512m RAM, 1 CPU |
+| otel-collector | `otel/opentelemetry-collector-contrib:0.128.0` | 4317, 4318 | 256m RAM, 0.5 CPU |
 | prometheus | `prom/prometheus:v3.3.1` | 9090 | 512m RAM, 1 CPU |
 | grafana | `grafana/grafana:11.5.2` | 3000 | 256m RAM, 0.5 CPU |
 
 ## Metrics
 
-**Built-in** (on `/metrics`): `litellm_proxy_total_requests_metric`, `litellm_request_total_latency_metric`, `litellm_spend_metric`, `litellm_input_tokens_metric`, `litellm_output_tokens_metric`, `litellm_deployment_state`.
+**Telemetry pipeline:** LiteLLM → OTel Collector → Prometheus → Grafana
 
-**Custom** (`custom_callbacks.py`): `litellm_custom_ttft_seconds` (streaming), `litellm_custom_tpot_seconds` (always), `litellm_custom_itl_seconds` (streaming). Labeled: `model`, `model_group`, `api_provider`.
+**OTel (via `"otel"` callback):** `gen_ai.client.operation.duration`, `gen_ai.client.token.usage`, `gen_ai.client.token.cost`, `time_to_first_token`, `time_per_output_token`. Plus distributed traces (logged to OTel Collector stdout).
+
+**Built-in Prometheus** (scraped by OTel Collector from `/metrics`): `litellm_proxy_total_requests_metric`, `litellm_request_total_latency_metric`, `litellm_spend_metric`, `litellm_input_tokens_metric`, `litellm_output_tokens_metric`, `litellm_deployment_state`.
+
+**Custom** (`custom_callbacks.py`, on `/metrics`): `litellm_custom_ttft_seconds` (streaming), `litellm_custom_tpot_seconds` (always), `litellm_custom_itl_seconds` (streaming). Labeled: `model`, `model_group`, `api_provider`.
 
 **PromQL examples:**
 ```promql
@@ -252,7 +261,7 @@ histogram_quantile(0.95, rate(litellm_custom_ttft_seconds_bucket[5m]))
 | Virtual key 403 | Check key with `/key/info` |
 | Plugin not loaded | Re-run `bunx oh-my-opencode-slim@2.0.4 install` |
 | Fallback not triggering | Set `fallback.enabled: true`, use model arrays |
-| Port conflict | Check `ss -tlnp | grep -E ':4000|:9090|:3000'` |
+| Port conflict | Check `ss -tlnp | grep -E ':4000|:4317|:4318|:9090|:3000'` |
 
 ### Bootstrap Rollback
 
@@ -274,10 +283,11 @@ histogram_quantile(0.95, rate(litellm_custom_ttft_seconds_bucket[5m]))
 | docker compose up -d | Idempotent — always run, no-op if services already up |
 | mint-virtual-key.sh | Reuses existing key by alias; mints only if missing or invalid |
 | install.sh configs | Diff-before-write — skip if unchanged |
-| LiteLLM image pinned | `v1.83.14-stable.patch.3` (no `latest`) |
+| LiteLLM image pinned | `v1.89.3` (no `latest`) |
+| OTel Collector pinned | `0.128.0` |
 | Timeouts consistent | `request_timeout: 600`, `stream_timeout: 60` |
 | Resource limits | All 4 services have memory + CPU limits |
-| Port conflicts detected | `bootstrap.sh` checks 4000/9090/3000 |
+| Port conflicts detected | `bootstrap.sh` checks 4000/4317/4318/9090/3000 |
 | `mint-virtual-key.sh` resilient | 3 retries with backoff; `--max-time 30` |
 | Config substitution safe | `jq --arg` only, never `sed` |
 
@@ -291,7 +301,7 @@ histogram_quantile(0.95, rate(litellm_custom_ttft_seconds_bucket[5m]))
 
 - [ ] `.env` exists with all required variables (no placeholders), `0600` permissions
 - [ ] `litellm_config.yaml` generated with `5 × N` deployments
-- [ ] All 4 Docker services healthy
+- [ ] All 5 Docker services healthy
 - [ ] LiteLLM liveness 200, `unhealthy_count: 0`
 - [ ] Chat completion + streaming succeed
 - [ ] Prometheus target `up`, Grafana 200

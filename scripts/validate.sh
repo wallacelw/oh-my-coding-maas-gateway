@@ -108,10 +108,10 @@ if [ "$OPENCODE_ONLY" = false ]; then
     skip "Docker service health"
   else
     RUNNING=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | wc -l)
-    if [ "$RUNNING" -ge 4 ]; then
+    if [ "$RUNNING" -ge 5 ]; then
       pass "$RUNNING services running"
     else
-      fail "Only $RUNNING services running (expected 4)"
+      fail "Only $RUNNING services running (expected 5)"
     fi
   fi
 
@@ -143,12 +143,13 @@ if [ "$OPENCODE_ONLY" = false ]; then
     fi
   fi
 
-  # A4. Prometheus & Grafana
+  # A4. Prometheus, Grafana, OTel Collector
   echo ""
   echo "A4. Observability"
   if [ "$DRY_RUN" = true ]; then
     skip "Prometheus target"
     skip "Grafana reachable"
+    skip "OTel Collector reachable"
   else
     PROM_HEALTH=$(curl -s --connect-timeout 5 "$PROMETHEUS_URL/api/v1/targets" 2>/dev/null | \
       python3 -c "import sys,json; d=json.load(sys.stdin); ts=d['data']['activeTargets']; print(ts[0]['health'] if ts else 'none')" 2>/dev/null || echo "error")
@@ -163,6 +164,13 @@ if [ "$OPENCODE_ONLY" = false ]; then
       pass "Grafana reachable (HTTP $GRAFANA_CODE)"
     else
       fail "Grafana returned HTTP $GRAFANA_CODE"
+    fi
+
+    OTEL_CODE=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 "http://127.0.0.1:13133/" 2>/dev/null)
+    if [ "$OTEL_CODE" = "200" ]; then
+      pass "OTel Collector health endpoint reachable"
+    else
+      warn "OTel Collector health endpoint returned HTTP $OTEL_CODE (may still be starting)"
     fi
   fi
 
