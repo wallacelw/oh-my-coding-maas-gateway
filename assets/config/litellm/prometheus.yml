@@ -1,7 +1,10 @@
+# Prometheus configuration
+#
+# Metrics are received via remote write from OTel Collector.
+# No direct scraping — OTel Collector is the single telemetry pipeline.
+# See: assets/config/otel-collector/config.yaml
+
 global:
   scrape_interval: 15s
 
-scrape_configs:
-  - job_name: "litellm"
-    static_configs:
-      - targets: ["litellm:4000"]
+scrape_configs: []

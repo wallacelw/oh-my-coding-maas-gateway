@@ -10,7 +10,7 @@ services:
   litellm:
     <<: *default
     container_name: litellm_proxy
-    image: ghcr.io/berriai/litellm:v1.83.14-stable.patch.3
+    image: ghcr.io/berriai/litellm:v1.89.3
     ports:
       - "4000:4000"
     volumes:
@@ -19,6 +19,9 @@ services:
     environment:
       DATABASE_URL: "postgresql://llmproxy:${DB_PASSWORD}@db:5432/litellm"
       STORE_MODEL_IN_DB: "True"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      LITELLM_OTEL_INTEGRATION_ENABLE_METRICS: "true"
+      LITELLM_OTEL_INTEGRATION_ENABLE_EVENTS: "true"
     # env_file passes all .env vars to the container, including some that
     # only other services need (GRAFANA_PASSWORD, PROMETHEUS_RETENTION).
     # This is acceptable — vars are container-local and not exposed.
@@ -81,8 +84,9 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+      - "--web.enable-remote-write-receiver"
     depends_on:
-      litellm:
+      otel-collector:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:9090/-/healthy || exit 1"]
@@ -119,6 +123,33 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 64m
+
+  otel-collector:
+    <<: *default
+    image: otel/opentelemetry-collector-contrib:0.128.0
+    container_name: litellm_otel_collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./assets/config/otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:13133/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     deploy:
       resources:
         limits:
