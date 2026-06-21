@@ -170,6 +170,7 @@ if [ "$OPENCODE_ONLY" = false ]; then
   echo ""
   echo "A5. Config validation"
   CONFIG_FILE="$PROJECT_DIR/assets/config/litellm/litellm_config.yaml"
+  TEMPLATE_FILE="$PROJECT_DIR/assets/config/litellm/litellm_config.yaml.template"
   if [ -f "$CONFIG_FILE" ]; then
     pass "litellm_config.yaml exists (generated)"
     DEPLOYMENT_COUNT=$(grep -c '^\s*- model_name:' "$CONFIG_FILE" 2>/dev/null || echo "0")
@@ -178,6 +179,18 @@ if [ "$OPENCODE_ONLY" = false ]; then
       pass "Deployment count: $DEPLOYMENT_COUNT (5 models × $KEY_COUNT keys)"
     else
       warn "Deployment count: $DEPLOYMENT_COUNT (expected $EXPECTED_DEPLOYMENTS)"
+    fi
+    # Check for model catalog drift between template and generated config
+    if [ -f "$TEMPLATE_FILE" ]; then
+      TEMPLATE_MODELS=$(grep -c '^\s*- model_name:' "$TEMPLATE_FILE" 2>/dev/null || echo "0")
+      GENERATED_MODELS=$(grep -c '^\s*- model_name:' "$CONFIG_FILE" 2>/dev/null || echo "0")
+      # Template has 1 deployment per model; generated has KEY_COUNT per model
+      EXPECTED_FROM_TEMPLATE=$((TEMPLATE_MODELS * KEY_COUNT))
+      if [ "$GENERATED_MODELS" = "$EXPECTED_FROM_TEMPLATE" ]; then
+        pass "Model catalog: template and generated config are in sync"
+      else
+        warn "Model catalog drift: template has $TEMPLATE_MODELS entries, generated has $GENERATED_MODELS (expected $EXPECTED_FROM_TEMPLATE)"
+      fi
     fi
   else
     warn "litellm_config.yaml not found — run scripts/generate_config.sh"
