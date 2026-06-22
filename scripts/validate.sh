@@ -400,38 +400,15 @@ if [ "$LITELLM_ONLY" = false ]; then
         MODEL_LIST=$(printf '%s' "$MODELS_JSON" | jq -r '.data[].id' 2>/dev/null)
         echo "  ℹ Discovered $MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
 
-        # Parallel inference smoke test (staggered to avoid rate limits)
-        SMOKE_PIDS=()
-        SMOKE_MODELS=()
-        for model in $MODEL_LIST; do
-          BODY=$(jq -nc --arg m "$model" '{model: $m, messages: [{role: "user", content: "ok"}]}')
-          curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
+        # Smoke test: one model responding proves the proxy works
+        SMOKE_MODEL="deepseek-v3.2"  # cheapest (700 RPM)
+        if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
             -H "Authorization: Bearer $VIRTUAL_KEY" \
             -H "Content-Type: application/json" \
-            -d "$BODY" >/dev/null 2>&1 &
-          SMOKE_PIDS+=($!)
-          SMOKE_MODELS+=("$model")
-          sleep 0.5  # stagger to avoid burst rate limits
-        done
-
-        SMOKE_PASS=0; SMOKE_FAIL=0; SMOKE_FAIL_LIST=""
-        for i in "${!SMOKE_PIDS[@]}"; do
-          if wait "${SMOKE_PIDS[$i]}" 2>/dev/null; then
-            SMOKE_PASS=$((SMOKE_PASS + 1))
-          else
-            SMOKE_FAIL=$((SMOKE_FAIL + 1))
-            SMOKE_FAIL_LIST="$SMOKE_FAIL_LIST ${SMOKE_MODELS[$i]}"
-          fi
-        done
-        SMOKE_TOTAL=$((SMOKE_PASS + SMOKE_FAIL))
-
-        if [ "$SMOKE_PASS" -gt 0 ]; then
-          pass "Inference smoke test: $SMOKE_PASS/$SMOKE_TOTAL model(s) responded"
-          if [ "$SMOKE_FAIL" -gt 0 ]; then
-            warn "No response from:$(echo "$SMOKE_FAIL_LIST" | sed 's/^ //')"
-          fi
+            -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1; then
+          pass "Inference smoke test: $SMOKE_MODEL responded"
         else
-          fail "No models responded to inference (0/$SMOKE_TOTAL)"
+          fail "Inference smoke test: $SMOKE_MODEL did not respond"
         fi
       fi
     fi
