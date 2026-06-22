@@ -147,7 +147,7 @@ MAAS_API_KEY=$(prompt_value "HUAWEI_MAAS_API_KEY" "HUAWEI_MAAS_API_KEY (main key
 MAAS_API_BASE=$(prompt_value "HUAWEI_MAAS_API_BASE" "HUAWEI_MAAS_API_BASE (MaaS endpoint URL)" "$DEFAULT_MAAS_BASE" "no")
 OPENLIT_DB_PASSWORD=$(prompt_value "OPENLIT_DB_PASSWORD" "OPENLIT_DB_PASSWORD (ClickHouse database)" "$DEFAULT_OPENLIT_DB_PASSWORD" "yes")
 
-# ── Collect additional MaaS API keys (interactive only) ───────────
+# ── Collect additional MaaS API keys ───────────
 EXTRA_KEYS=()
 if [[ "$MODE" == "interactive" ]]; then
   echo "  Enter additional MaaS API keys (comma-separated, or press Enter for none):"
@@ -158,6 +158,19 @@ if [[ "$MODE" == "interactive" ]]; then
   fi
   if [[ -n "${extra_input:-}" ]]; then
     IFS=',' read -ra EXTRA_KEYS <<< "$extra_input"
+  fi
+elif [[ "$MODE" == "auto" ]]; then
+  # In auto mode, read extra keys from env vars exported by bootstrap.sh
+  AUTO_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
+  for i in $(seq 1 $((AUTO_COUNT - 1))); do
+    VAR="HUAWEI_MAAS_API_KEY_$i"
+    VAL="${!VAR:-}"
+    if [[ -n "$VAL" ]]; then
+      EXTRA_KEYS+=("$VAL")
+    fi
+  done
+  if [[ ${#EXTRA_KEYS[@]} -gt 0 ]]; then
+    echo "  Found ${#EXTRA_KEYS[@]} additional MaaS API key(s) from environment"
   fi
 fi
 

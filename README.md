@@ -54,7 +54,7 @@ export HUAWEI_MAAS_API_KEY="your-key-from-modelarts-console"
 opencode
 ```
 
-That's it. `bootstrap.sh --maas-key=KEY` is fully non-interactive — it auto-generates all secrets, starts Docker, mints a virtual key, writes configs, and validates.
+`bootstrap.sh` will prompt for the MaaS key (mandatory) and ask if you want to add extra keys for load balancing. Secrets are auto-generated. With `--maas-key=KEY`, the main key is pre-filled — you'll only be prompted for extra keys.
 
 ### For humans (interactive)
 
@@ -125,9 +125,9 @@ docker compose up -d            # start all 4 services
 
 | Mode | Secrets | MaaS keys | Use case |
 |------|---------|-----------|----------|
-| interactive (default) | Prompt each with generated defaults | Prompt each | Human, first-time |
-| `--auto` | Auto-generate, **preserve on re-run** | From env var | AI agent, non-interactive |
-| `--auto --force` | Regenerate all | From env var | Key rotation after security incident |
+| interactive (default) | Prompt each with generated defaults | Prompt each (comma-separated) | Human, first-time |
+| `--auto` | Auto-generate, **preserve on re-run** | Main from env var + extras from env vars | AI agent (bootstrap.sh provides env vars) |
+| `--auto --force` | Regenerate all | Main from env var + extras from env vars | Key rotation after security incident |
 
 **`bootstrap.sh` arguments:**
 
