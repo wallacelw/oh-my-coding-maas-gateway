@@ -92,7 +92,7 @@ Store the response as `MAAS_KEY`. Do not proceed without it.
 Before investing time in the full install, verify the key works:
 
 ```bash
-curl -sf -m 10 "https://maas-api.cn-south-1.myhuaweicloud.com/v1/infers" \
+curl -sf -m 10 "https://maas-api.ap-southeast-1.myhuaweicloud.com/v1/infers" \
   -H "Authorization: Bearer $MAAS_KEY" >/dev/null 2>&1 && echo "OK" || echo "INVALID"
 ```
 
