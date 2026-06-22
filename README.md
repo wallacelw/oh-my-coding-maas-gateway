@@ -120,7 +120,17 @@ command -v git >/dev/null 2>&1 || echo "MISSING: git"
 command -v python3 >/dev/null 2>&1 || echo "MISSING: python3"
 ```
 
-Install any missing prerequisites before proceeding. If Docker is missing, tell the user to install it manually (cannot be automated safely).
+Install missing prerequisites using these commands:
+
+| Tool | Install command | Notes |
+|------|----------------|-------|
+| bun | `curl -fsSL https://bun.sh/install \| bash` | Restart shell after install |
+| jq | `sudo apt-get install -y jq` (Debian/Ubuntu) or `brew install jq` (macOS) | |
+| git | `sudo apt-get install -y git` (Debian/Ubuntu) or `brew install git` (macOS) | Usually pre-installed |
+| python3 | `sudo apt-get install -y python3` (Debian/Ubuntu) or `brew install python3` (macOS) | Usually pre-installed |
+| docker | **Cannot be automated** — ask user to install manually: https://docs.docker.com/get-docker/ | Must also start the daemon |
+
+Do not proceed until all prerequisites are installed.
 
 **Step 5 — Check Docker is running**
 
