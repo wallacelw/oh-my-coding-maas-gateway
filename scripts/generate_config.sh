@@ -118,8 +118,6 @@ fi
   echo "  stream_timeout: 60 # TTFT only: 60s"
   echo "  drop_params: True"
   echo "  set_verbose: False"
-  echo "  callbacks:"
-  echo "    - \"otel\""
   echo "  ui_theme_config:"
   echo "    logo_url: \"https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png\""
   echo "    favicon_url: \"https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png\""
@@ -133,7 +131,6 @@ fi
   echo "general_settings:"
   echo "  database_connection_pool_limit: 10"
   echo "  database_connection_timeout: 60"
-  echo "  otel: true"
   echo "  allow_client_side_credentials: true"
 
 } > "$CONFIG_FILE"

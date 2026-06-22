@@ -15,12 +15,14 @@ services:
       - "4000:4000"
     volumes:
       - ./assets/config/litellm/litellm_config.yaml:/app/config.yaml:ro
+      - ./assets/config/litellm/entrypoint.sh:/app/entrypoint.sh:ro
+    entrypoint: ["/bin/bash", "/app/entrypoint.sh"]
     environment:
       DATABASE_URL: "postgresql://llmproxy:${DB_PASSWORD:?DB_PASSWORD must be set in .env}@db:5432/litellm"
       STORE_MODEL_IN_DB: "True"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://openlit:4318"
-      LITELLM_OTEL_INTEGRATION_ENABLE_METRICS: "true"
-      LITELLM_OTEL_INTEGRATION_ENABLE_EVENTS: "true"
+      OTEL_SERVICE_NAME: "litellm-proxy"
+      OTEL_DEPLOYMENT_ENVIRONMENT: "production"
     # env_file passes all .env vars to the container.
     # Acceptable — vars are container-local and not exposed.
     env_file:
