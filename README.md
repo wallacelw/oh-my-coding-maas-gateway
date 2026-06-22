@@ -86,7 +86,18 @@ Ask the user: "What is your Huawei ModelArts MaaS API key? (get it from https://
 
 Store the response as `MAAS_KEY`. Do not proceed without it.
 
-**Step 2 — Ask for additional keys**
+**Step 2 — Validate the key**
+
+Before investing time in the full install, verify the key works:
+
+```bash
+curl -sf -m 10 "https://maas-api.cn-south-1.myhuaweicloud.com/v1/infers" \
+  -H "Authorization: Bearer $MAAS_KEY" >/dev/null 2>&1 && echo "OK" || echo "INVALID"
+```
+
+If invalid, tell the user and go back to step 1. Common causes: typo, expired key, wrong region.
+
+**Step 3 — Ask for additional keys**
 
 Ask the user: "How many additional MaaS API keys do you want for load balancing? (0 for none, each key multiplies effective RPM/TPM)"
 
@@ -97,7 +108,7 @@ If the answer is > 0, prompt for each key one by one:
 
 If 0, skip.
 
-**Step 3 — Check prerequisites and install missing ones**
+**Step 4 — Check prerequisites and install missing ones**
 
 ```bash
 # Check what's missing
@@ -110,13 +121,39 @@ command -v python3 >/dev/null 2>&1 || echo "MISSING: python3"
 
 Install any missing prerequisites before proceeding. If Docker is missing, tell the user to install it manually (cannot be automated safely).
 
-**Step 4 — Install LiteLLM and related services**
+**Step 5 — Check Docker is running**
+
+```bash
+docker info >/dev/null 2>&1 && echo "OK" || echo "Docker daemon not running"
+```
+
+If not running, ask the user to start Docker and retry. Do not proceed until the daemon is up.
+
+**Step 6 — Check for existing installation**
+
+```bash
+[ -d /home/oh-my-litellm-opencode ] && echo "EXISTS" || echo "FRESH"
+```
+
+If the directory exists, ask the user: "An existing installation was found. Do you want to (a) update it in-place or (b) remove and reinstall fresh?" If (b): `rm -rf /home/oh-my-litellm-opencode`.
+
+**Step 7 — Check port availability**
+
+```bash
+for port in 4000 4317 4318 8123 9000 3000; do
+  ss -tlnp 2>/dev/null | grep -q ":${port} " && echo "PORT $port IN USE" || true
+done
+```
+
+If any port is in use, tell the user which ports are occupied and ask them to stop the conflicting services before proceeding.
+
+**Step 8 — Install LiteLLM and related services**
 
 ```bash
 git clone https://github.com/wallacelw/oh-my-litellm-opencode /home/oh-my-litellm-opencode
 cd /home/oh-my-litellm-opencode
 
-# Set up environment with the keys collected in steps 1-2
+# Set up environment with the keys collected in steps 1-3
 export HUAWEI_MAAS_API_KEY="$MAAS_KEY"
 # If additional keys were provided:
 export HUAWEI_MAAS_API_KEY_COUNT="<1 + number of additional keys>"
@@ -128,9 +165,22 @@ export HUAWEI_MAAS_API_KEY_2="$MAAS_KEY_2"  # if provided
 docker compose up -d
 ```
 
-Wait for services to be healthy (up to 90s). Check: `docker compose ps` — all 4 services should show `healthy`.
+**Step 9 — Wait for services to be healthy**
 
-**Step 5 — Install opencode and oh-my-opencode-slim**
+```bash
+# Wait up to 90s for all 4 services to report healthy
+for i in $(seq 1 18); do
+  HEALTHY=$(docker compose ps --format json 2>/dev/null | jq -r '.Health' 2>/dev/null | sort -u)
+  [ "$HEALTHY" = "healthy" ] && echo "All healthy" && break
+  echo "Waiting... ($((i*5))s)"
+  sleep 5
+done
+docker compose ps  # final status
+```
+
+All 4 services (litellm, db, clickhouse, openlit) must show `healthy`. If any are unhealthy after 90s, check `docker compose logs <service> --tail 20` and consult the [Repair Playbook in SKILL.md](https://github.com/wallacelw/oh-my-litellm-opencode/blob/main/SKILL.md).
+
+**Step 10 — Install opencode and oh-my-opencode-slim**
 
 ```bash
 ./scripts/install.sh
@@ -138,7 +188,7 @@ Wait for services to be healthy (up to 90s). Check: `docker compose ps` — all 
 
 This installs opencode, the oh-my-opencode-slim plugin, mints a virtual key, and writes all config files. It is idempotent — safe to re-run.
 
-**Step 6 — Validate**
+**Step 11 — Validate**
 
 ```bash
 ./scripts/validate.sh
@@ -146,7 +196,7 @@ This installs opencode, the oh-my-opencode-slim plugin, mints a virtual key, and
 
 All checks must pass. If any fail, consult the [Repair Playbook in SKILL.md](https://github.com/wallacelw/oh-my-litellm-opencode/blob/main/SKILL.md).
 
-**Step 7 — Send summary report to user**
+**Step 12 — Send summary report to user**
 
 Report the following to the user:
 
