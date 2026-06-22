@@ -42,18 +42,6 @@ Startup: PostgreSQL + ClickHouse (parallel) → LiteLLM + OpenLit (parallel, hea
 
 ## Quick Start
 
-### AI agents
-
-```bash
-git clone https://github.com/wallacelw/oh-my-litellm-opencode /home/oh-my-litellm-opencode
-cd /home/oh-my-litellm-opencode
-export HUAWEI_MAAS_API_KEY="your-key-from-modelarts-console"
-./scripts/bootstrap.sh --maas-key="$HUAWEI_MAAS_API_KEY"
-opencode
-```
-
-With `--maas-key=KEY`, the main key is pre-filled. You'll be prompted for extra keys for load balancing (press Enter to skip). All secrets are auto-generated.
-
 ### Humans
 
 ```bash
@@ -63,7 +51,11 @@ cd /home/oh-my-litellm-opencode
 opencode
 ```
 
-### Step-by-step
+### AI agents
+
+See **[For AI Agents](#for-ai-agents)** below for the exact step-by-step flow.
+
+### Step-by-step (manual)
 
 ```bash
 ./scripts/init_env.sh --auto    # generate .env with all secrets
@@ -84,41 +76,100 @@ docker compose up -d            # start all 4 services
 
 ## For AI Agents
 
-### Install (copy-paste ready)
+### Installation flow
+
+Follow these steps in order. This is the exact flow an AI agent should execute when installing this stack for a user.
+
+**Step 1 — Ask for the main MaaS API key**
+
+Ask the user: "What is your Huawei ModelArts MaaS API key? (get it from https://console.huaweicloud.com/modelarts/, region ap-southeast-1)"
+
+Store the response as `MAAS_KEY`. Do not proceed without it.
+
+**Step 2 — Ask for additional keys**
+
+Ask the user: "How many additional MaaS API keys do you want for load balancing? (0 for none, each key multiplies effective RPM/TPM)"
+
+If the answer is > 0, prompt for each key one by one:
+- "Additional MaaS key 1:" → store as `MAAS_KEY_1`
+- "Additional MaaS key 2:" → store as `MAAS_KEY_2`
+- ...and so on
+
+If 0, skip.
+
+**Step 3 — Check prerequisites and install missing ones**
+
+```bash
+# Check what's missing
+command -v bun >/dev/null 2>&1 || echo "MISSING: bun"
+command -v jq >/dev/null 2>&1 || echo "MISSING: jq"
+command -v docker >/dev/null 2>&1 || echo "MISSING: docker"
+command -v git >/dev/null 2>&1 || echo "MISSING: git"
+command -v python3 >/dev/null 2>&1 || echo "MISSING: python3"
+```
+
+Install any missing prerequisites before proceeding. If Docker is missing, tell the user to install it manually (cannot be automated safely).
+
+**Step 4 — Install LiteLLM and related services**
 
 ```bash
 git clone https://github.com/wallacelw/oh-my-litellm-opencode /home/oh-my-litellm-opencode
 cd /home/oh-my-litellm-opencode
-export HUAWEI_MAAS_API_KEY="<your-maas-key>"
-./scripts/bootstrap.sh --maas-key="$HUAWEI_MAAS_API_KEY"
-opencode
+
+# Set up environment with the keys collected in steps 1-2
+export HUAWEI_MAAS_API_KEY="$MAAS_KEY"
+# If additional keys were provided:
+export HUAWEI_MAAS_API_KEY_COUNT="<1 + number of additional keys>"
+export HUAWEI_MAAS_API_KEY_1="$MAAS_KEY_1"  # if provided
+export HUAWEI_MAAS_API_KEY_2="$MAAS_KEY_2"  # if provided
+
+./scripts/init_env.sh --auto
+./scripts/generate_config.sh
+docker compose up -d
 ```
 
-That's it. `bootstrap.sh` is idempotent — safe to re-run.
+Wait for services to be healthy (up to 90s). Check: `docker compose ps` — all 4 services should show `healthy`.
 
-### What you need before running
+**Step 5 — Install opencode and oh-my-opencode-slim**
 
-- **Huawei MaaS API key** — get it from [ModelArts console](https://console.huaweicloud.com/modelarts/) (region: `ap-southeast-1`)
-- **Prerequisites on the host**: bun, jq, Docker + Compose V2, git, python3
+```bash
+./scripts/install.sh
+```
 
-### What bootstrap.sh does
+This installs opencode, the oh-my-opencode-slim plugin, mints a virtual key, and writes all config files. It is idempotent — safe to re-run.
 
-1. Generates `.env` with all secrets (master key, salt, DB passwords) — preserves on re-run
-2. Starts 4 Docker services: LiteLLM proxy, PostgreSQL, ClickHouse, OpenLit
-3. Installs opencode + oh-my-opencode-slim plugin
-4. Mints a virtual key scoped for opencode (reuses existing by alias)
-5. Writes opencode.jsonc + oh-my-opencode-slim.json (4 presets, fallback enabled)
-6. Validates everything (55+ checks)
-7. Prints summary with URLs and next steps
+**Step 6 — Validate**
 
-### After install
+```bash
+./scripts/validate.sh
+```
 
-- **opencode** is ready — just run `opencode`, it uses the proxy at `http://127.0.0.1:4000`
-- **Presets**: switch at runtime with `/preset LiteLLM-Huawei-MaaS-Lite`
-- **Observability**: OpenLit dashboard at `http://127.0.0.1:3000` (login: `user@openlit.io` / `openlituser`)
-- **Add MaaS keys for load balancing**: add `HUAWEI_MAAS_API_KEY_N=<key>` to `.env`, increment `HUAWEI_MAAS_API_KEY_COUNT`, then `./scripts/generate_config.sh && docker compose restart litellm`
-- **Validate**: `./scripts/validate.sh`
-- **Full reset**: `docker compose down -v; rm -f .env .master-key`
+All checks must pass. If any fail, consult the [Repair Playbook in SKILL.md](https://github.com/wallacelw/oh-my-litellm-opencode/blob/main/SKILL.md).
+
+**Step 7 — Send summary report to user**
+
+Report the following to the user:
+
+```
+✅ Installation complete!
+
+Services:
+  LiteLLM Proxy:    http://127.0.0.1:4000
+  LiteLLM Admin UI: http://127.0.0.1:4000/ui
+  OpenLit Dashboard: http://127.0.0.1:3000  (user@openlit.io / openlituser)
+  ClickHouse:       http://127.0.0.1:8123
+
+Next steps:
+  1. Run `opencode` to start coding
+  2. Switch presets at runtime: /preset LiteLLM-Huawei-MaaS-Lite
+
+⚠️  Security: If any API keys were visible in your terminal during
+    installation, you should rotate them. To replace a key:
+    1. Get a new key from the MaaS console
+    2. Edit .env: replace HUAWEI_MAAS_API_KEY (or HUAWEI_MAAS_API_KEY_N)
+    3. Run: ./scripts/generate_config.sh && docker compose restart litellm
+    4. Run: ./scripts/validate.sh
+```
 
 ### Core rules (must always hold)
 
