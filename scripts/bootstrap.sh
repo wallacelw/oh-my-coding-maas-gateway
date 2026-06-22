@@ -173,6 +173,31 @@ fi
 [ "$PREREQ_OK" = false ] && { echo ""; echo "ERROR: Prerequisites missing. Install them and re-run."; exit 1; }
 
 export HUAWEI_MAAS_API_KEY="$MAAS_KEY"
+export HUAWEI_MAAS_API_KEY_0="$MAAS_KEY"
+
+# ── Collect extra MaaS API keys for load balancing ──
+EXTRA_KEY_COUNT=0
+if [ "$DRY_RUN" = true ]; then
+  echo "  (Would prompt for additional MaaS API keys)"
+else
+  echo ""
+  echo "  Add additional MaaS API keys for load balancing?"
+  read -r -p "  Each extra key multiplies effective RPM/TPM. [y/N]: " add_extra < /dev/tty
+  if [[ "${add_extra,,}" == "y" ]]; then
+    while true; do
+      EXTRA_NUM=$((EXTRA_KEY_COUNT + 1))
+      read -r -p "  Enter MaaS API key #$EXTRA_NUM (or press Enter to finish): " extra_key < /dev/tty
+      [ -z "$extra_key" ] && break
+      EXTRA_KEY_COUNT=$EXTRA_NUM
+      export "HUAWEI_MAAS_API_KEY_$EXTRA_NUM=$extra_key"
+      echo "  ✓ Extra key #$EXTRA_NUM added"
+    done
+  fi
+fi
+export HUAWEI_MAAS_API_KEY_COUNT=$((1 + EXTRA_KEY_COUNT))
+if [ "$EXTRA_KEY_COUNT" -gt 0 ]; then
+  echo "  ✓ $((1 + EXTRA_KEY_COUNT)) MaaS API keys total (main + $EXTRA_KEY_COUNT extra)"
+fi
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Step 3: Deploy LiteLLM

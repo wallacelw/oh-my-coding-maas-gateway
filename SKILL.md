@@ -104,7 +104,7 @@ export HUAWEI_MAAS_API_KEY="<your-key>"
 ./scripts/bootstrap.sh --maas-key="$HUAWEI_MAAS_API_KEY"
 ```
 
-`bootstrap.sh --maas-key=KEY` is fully non-interactive — it uses `init_env.sh --auto` internally, auto-generates all secrets, starts Docker, mints a virtual key, writes configs, and validates.
+`bootstrap.sh` prompts for the MaaS key (mandatory) and asks if you want to add extra keys for load balancing. With `--maas-key=KEY`, the main key is pre-filled — you'll only be prompted for extra keys. All other secrets are auto-generated via `init_env.sh --auto`.
 
 ### For humans (interactive)
 
@@ -140,9 +140,9 @@ docker compose up -d            # start all 4 services
 
 | Mode | Secrets | MaaS keys | Use case |
 |------|---------|-----------|----------|
-| interactive (default) | Prompt each with generated defaults | Prompt each | Human, first-time |
-| `--auto` | Auto-generate, **preserve on re-run** | From env var | AI agent, non-interactive |
-| `--auto --force` | Regenerate all | From env var | Key rotation after security incident |
+| interactive (default) | Prompt each with generated defaults | Prompt each (comma-separated) | Human, first-time |
+| `--auto` | Auto-generate, **preserve on re-run** | Main from env var + extras from env vars | AI agent (bootstrap.sh provides env vars) |
+| `--auto --force` | Regenerate all | Main from env var + extras from env vars | Key rotation after security incident |
 
 **Important:** `--auto --force` regenerates `LITELLM_MASTER_KEY` and `LITELLM_SALT_KEY`. You must run `docker compose up -d` afterward to pick up the new values. All existing virtual keys are invalidated — re-run `install.sh` to mint new ones.
 
