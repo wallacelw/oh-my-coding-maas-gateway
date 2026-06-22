@@ -69,7 +69,7 @@ bun, jq, Docker + Compose V2, git, python3, `HUAWEI_MAAS_API_KEY` env var.
 1. opencode sends request to LiteLLM with virtual key
 2. LiteLLM validates key, selects healthy deployment, forwards to MaaS
 3. MaaS responds → LiteLLM records usage/spend in PostgreSQL
-4. LiteLLM emits OTLP trace to OpenLit (via `"otel"` callback)
+4. LiteLLM emits OTLP trace to OpenLit (via OpenLit SDK auto-instrumentation)
 5. OpenLit stores trace in ClickHouse, displays in dashboard
 
 ## Core Rules
