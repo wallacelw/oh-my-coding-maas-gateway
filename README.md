@@ -65,6 +65,8 @@ brew install git python3              # macOS
 
 **2. Deploy and run:**
 
+Get your MaaS API key from [ModelArts console](https://console.huaweicloud.com/modelarts/) (region: ap-southeast-1), then:
+
 ```bash
 git clone https://github.com/wallacelw/oh-my-litellm-opencode /home/oh-my-litellm-opencode
 cd /home/oh-my-litellm-opencode
@@ -72,6 +74,8 @@ cd /home/oh-my-litellm-opencode
 ./scripts/validate.sh           # verify everything works
 opencode
 ```
+
+If re-running on an existing install, `bootstrap.sh` is idempotent — safe to re-run.
 
 ### AI agents
 
