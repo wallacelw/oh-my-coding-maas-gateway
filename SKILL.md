@@ -85,6 +85,7 @@ These invariants must always hold. Violating them breaks the system.
 - **Non-zero pricing required** on every model for budget enforcement.
 - **Master key is admin-only.** Mint virtual keys per team/service — never use master key in opencode.
 - **Proxy is sole egress** for MaaS traffic (centralized budgets/rate limits/audit).
+- **OpenLit SDK auto-instruments LiteLLM** — do NOT use `callbacks: ["otel"]` or `otel: true` in litellm_config.yaml (causes duplicate traces).
 - **LiteLLM provider uses `@ai-sdk/openai-compatible`** (not `openai`).
 - **Model keys: `openai/<model>`** in LiteLLM provider. **Preset references: `LiteLLM/openai/<model>`** (3-part).
 - **LiteLLM baseURL: `http://127.0.0.1:4000`** (no `/v1` — SDK adds it).
@@ -246,14 +247,24 @@ All passwords use `:?` fail-fast syntax — Docker Compose refuses to start if a
 
 ## Observability
 
-**Telemetry pipeline:** LiteLLM → OTLP (:4317/:4318) → OpenLit → ClickHouse
+**Telemetry pipeline:** LiteLLM (OpenLit SDK auto-instrumentation) → OTLP (:4317/:4318) → OpenLit → ClickHouse
 
-**OTel GenAI metrics** (via `"otel"` callback):
+The LiteLLM container uses the **OpenLit Python SDK** (`openlit-instrument`) for zero-code auto-instrumentation. This produces rich OTel traces with GenAI semantic conventions that the OpenLit dashboard needs — including ITL, TTFT, TPOT, and per-token cost.
+
+**How it works:**
+1. `entrypoint.sh` installs `openlit` Python SDK at container startup
+2. LiteLLM is started via `openlit-instrument python -m litellm --config=/app/config.yaml`
+3. OpenLit SDK auto-instruments all LiteLLM internal calls (completion, embedding, etc.)
+4. Traces are sent via OTLP to the OpenLit client's embedded OTel Collector
+5. OpenLit stores traces in ClickHouse and renders dashboards
+
+**GenAI metrics** (via OpenLit SDK auto-instrumentation):
+- **ITL** — inter-token latency (time between consecutive output tokens)
+- **TTFT** — time to first token (streaming latency)
+- **TPOT** — time per output token (generation throughput)
 - `gen_ai.client.operation.duration` — end-to-end request latency
 - `gen_ai.client.token.usage` — input/output token counts
 - `gen_ai.client.token.cost` — per-request cost with provider pricing
-- `gen_ai.server.time_to_first_token` — TTFT (streaming)
-- `gen_ai.client.operation.time_per_output_chunk` — TPOT
 
 **Distributed traces:** Every request traced end-to-end (opencode → LiteLLM → MaaS). Click any trace in OpenLit UI to inspect timing, model selection, retries, and errors.
 
