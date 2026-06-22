@@ -209,7 +209,7 @@ HUAWEI_MAAS_API_KEY_1="your-second-key"
 |---------|-----|------|---------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key (`sk-...`) | API proxy — all model calls go here |
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key | Key management, spend tracking |
-| OpenLit UI | `http://127.0.0.1:3000` | None (local) | Dashboards: cost, latency, traces |
+| OpenLit UI | `http://127.0.0.1:3000` | `user@openlit.io` / `openlituser` (change after first login) | Dashboards: cost, latency, traces |
 | ClickHouse HTTP | `http://127.0.0.1:8123` | `default / OPENLIT_DB_PASSWORD` | SQL analytics over traces |
 
 ## Environment Variables

@@ -275,7 +275,7 @@ SELECT model, sum(cost) FROM otel_traces WHERE timestamp > now() - INTERVAL 1 DA
 |---|---|---|
 | LiteLLM API | `http://127.0.0.1:4000` | `Bearer <key>` |
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key |
-| OpenLit UI | `http://127.0.0.1:3000` | None (local) |
+| OpenLit UI | `http://127.0.0.1:3000` | `user@openlit.io` / `openlituser` (change after first login) |
 | ClickHouse | `http://127.0.0.1:8123` | `default / OPENLIT_DB_PASSWORD` |
 
 **Backup:** `docker compose exec db pg_dump -U llmproxy litellm > backup.sql`
