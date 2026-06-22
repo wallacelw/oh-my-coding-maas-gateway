@@ -238,6 +238,10 @@ HUAWEI_MAAS_API_BASE="${MAAS_API_BASE}"
 
 # ── OpenLit ──────────────────────────────────────
 OPENLIT_DB_PASSWORD="${OPENLIT_DB_PASSWORD}"
+# OpenLit UI default credentials (seeded at container startup, cannot be removed):
+#   Email:    user@openlit.io
+#   Password: openlituser
+# Change password after first login: http://127.0.0.1:3000 → Settings
 EOF
 
 chmod 600 "$ENV_FILE"
