@@ -6,9 +6,11 @@
 # LiteLLM load-balances across deployments with the same model_name.
 #
 # Usage:
-#   ./scripts/generate_config.sh                                    # default: simple-shuffle
-#   ./scripts/generate_config.sh --routing-strategy=least-busy      # alternative strategy
-#   ./scripts/generate_config.sh --routing-strategy=latency-based-routing
+#   ./scripts/2_generate_config.sh                                    # default: simple-shuffle
+
+#   ./scripts/2_generate_config.sh --routing-strategy=least-busy      # alternative strategy
+
+#   ./scripts/2_generate_config.sh --routing-strategy=latency-based-routing
 
 set -euo pipefail
 
@@ -33,7 +35,7 @@ done
 
 # ── Load .env ─────────────────────────────────────────────────────
 if [ ! -f "$ENV_FILE" ]; then
-  echo "ERROR: .env not found. Run scripts/init_env.sh first." >&2
+  echo "ERROR: .env not found. Run scripts/1_init_env.sh first." >&2
   exit 1
 fi
 # shellcheck source=/dev/null

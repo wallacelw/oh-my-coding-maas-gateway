@@ -11,9 +11,11 @@
 #                            (use after security incidents or to rotate keys)
 #
 # Usage:
-#   ./scripts/init_env.sh              # interactive — you choose every value
-#   ./scripts/init_env.sh --auto       # agent mode — idempotent, preserves secrets
-#   ./scripts/init_env.sh --auto --force # agent mode — regenerate all secrets
+#   ./scripts/1_init_env.sh              # interactive — you choose every value
+
+#   ./scripts/1_init_env.sh --auto       # agent mode — idempotent, preserves secrets
+
+#   ./scripts/1_init_env.sh --auto --force # agent mode — regenerate all secrets
 
 set -euo pipefail
 
@@ -242,7 +244,7 @@ fi
 # ── Generate litellm_config.yaml ─────────────────────────────────
 echo ""
 echo "Generating litellm_config.yaml..."
-"$SCRIPT_DIR/generate_config.sh"
+"$SCRIPT_DIR/2_generate_config.sh"
 echo "Config generation successful."
 
 # ── Summary ───────────────────────────────────────────────────────
@@ -266,5 +268,5 @@ echo "    HUAWEI_MAAS_API_BASE= $MAAS_API_BASE"
 echo ""
 echo "  Next steps:"
 echo "    docker compose up -d"
-echo "    ./scripts/validate.sh --litellm-only"
+echo "    ./scripts/5_validate.sh --litellm-only"
 echo "══════════════════════════════════════════════════════"

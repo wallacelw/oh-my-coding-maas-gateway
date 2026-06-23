@@ -1,85 +1,41 @@
 # oh-my-litellm-opencode
 
-One command to deploy a production-ready AI coding stack: **LiteLLM proxy** routing through **Huawei ModelArts MaaS**, with **opencode** bootstrap, virtual keys, 4 presets, and multi-key load balancing.
-
-## What You Get
-
-- **5 production models** via a single local proxy (`http://127.0.0.1:4000`)
-- **Virtual key auth** — opencode uses a scoped key, not your master key
-- **Multi-key load balancing** — add N MaaS keys, effective RPM/TPM = per-key × N
-- **Automatic fallback** — if a model fails, the next in the array takes over
-- **4 presets** — full/Lite × proxy/direct, switchable at runtime with `/preset`
-- **Desktop companion** — floating status window showing live agent activity
-
-## Architecture
-
-```
- opencode                    LiteLLM Proxy (:4000)              Huawei MaaS
- ─────────                   ─────────────────────              ─────────────
- orchestrator ─┐                                    ┌───────→ glm-5.1
- oracle ───────┤                                    ├───────→ glm-5
- council ──────┤    virtual key (sk-...)            ├───────→ deepseek-v4-pro
- librarian ────┤──────────────────────→  LiteLLM  ──┤───────→ deepseek-v4-flash
- explorer ─────┤    (scoped, unlimited)   │         └───────→ deepseek-v3.2
- designer ─────┤                        │
- fixer ────────┘                        │    N API keys (load-balanced)
-                                        │    LiteLLM fans out each model
-                                        │    across N deployments
-                                        │
-                                  PostgreSQL (:5432)
-                                  keys · spend · usage
-```
-
-Startup: PostgreSQL → LiteLLM (healthcheck-gated on db).
+LiteLLM proxy → Huawei MaaS → opencode. Virtual keys, 4 presets, multi-key load balancing.
 
 ## Quick Start
-
-### Humans
 
 **1. Install prerequisites** (skip any you already have):
 
 ```bash
-# bun (JavaScript runtime)
-curl -fsSL https://bun.sh/install | bash
-
-# jq (JSON processor)
-sudo apt-get install -y jq        # Debian/Ubuntu
-brew install jq                   # macOS
-
-# Docker + Compose V2 — follow https://docs.docker.com/get-docker/
-# Then start the daemon: open Docker Desktop, or: sudo systemctl start docker
-
-# git, python3 — usually pre-installed; if not:
-sudo apt-get install -y git python3   # Debian/Ubuntu
-brew install git python3              # macOS
+curl -fsSL https://bun.sh/install | bash          # bun
+sudo apt-get install -y jq                         # jq (or: brew install jq)
+# Docker: https://docs.docker.com/get-docker/     # then start the daemon
 ```
 
-**2. Deploy and run:**
-
-Get your MaaS API key from [ModelArts console](https://console.huaweicloud.com/modelarts/) (region: ap-southeast-1), then:
+**2. Deploy:**
 
 ```bash
 git clone https://github.com/wallacelw/oh-my-litellm-opencode /home/oh-my-litellm-opencode
 cd /home/oh-my-litellm-opencode
-./scripts/bootstrap.sh          # prompts for MaaS key + extra keys, starts Docker
-./scripts/validate.sh           # verify everything works
+./scripts/0_bootstrap.sh      # prompts for MaaS key, starts Docker, installs opencode
+./scripts/5_validate.sh       # verify
 opencode
 ```
 
-If re-running on an existing install, `bootstrap.sh` is idempotent — safe to re-run.
+## Architecture
 
-### AI agents
-
-See **[For AI Agents](#for-ai-agents)** below for the exact step-by-step flow.
-
-### Step-by-step (manual)
-
-```bash
-./scripts/init_env.sh --auto    # generate .env with all secrets
-./scripts/generate_config.sh    # build litellm_config.yaml from .env
-docker compose up -d            # start both services
-./scripts/install.sh            # install opencode + plugin + mint key + write config
-./scripts/validate.sh           # verify everything works
+```
+ opencode                LiteLLM (:4000)              Huawei MaaS
+ ────────                ──────────────              ────────────
+ orchestrator ─┐                              ┌───→ glm-5.1
+ oracle ───────┤                              ├───→ glm-5
+ council ──────┤  virtual key (sk-...)       ├───→ deepseek-v4-pro
+ librarian ────┤──────────────→ LiteLLM ─────├───→ deepseek-v4-flash
+ explorer ─────┤  (scoped, unlimited) │       └───→ deepseek-v3.2
+ designer ─────┤                    │
+ fixer ────────┘                    │    N API keys (load-balanced)
+                                    │
+                              PostgreSQL (:5432)
 ```
 
 ## Endpoints
@@ -91,19 +47,4 @@ docker compose up -d            # start both services
 
 ## For AI Agents
 
-Read **[SKILL.md](https://github.com/wallacelw/oh-my-litellm-opencode/blob/main/SKILL.md)** — it contains the exact 12-step installation flow you should follow, including:
-
-1. Ask user for main MaaS key
-2. Validate the key before proceeding
-3. Ask for additional keys for load balancing
-4. Check prerequisites and install missing ones
-5. Check Docker daemon is running
-6. Check for existing installation
-7. Check port availability
-8. Install LiteLLM and related services
-9. Wait for services to be healthy
-10. Install opencode + oh-my-opencode-slim + companion
-11. Validate
-12. Send summary report with key rotation instructions
-
-SKILL.md also contains core rules, presets, models, upgrade paths, repair playbook, and determinism guarantees.
+Read **[SKILL.md](https://github.com/wallacelw/oh-my-litellm-opencode/blob/main/SKILL.md)** for the 12-step installation flow.
