@@ -212,7 +212,7 @@ if [ "$OPENCODE_ONLY" = false ]; then
       fi
     fi
   else
-    warn "litellm_config.yaml not found — run scripts/generate_config.sh"
+    warn "litellm_config.yaml not found — run scripts/2_generate_config.sh"
   fi
 
   echo ""

@@ -218,10 +218,10 @@ done
 # ── 3a. Ensure .env exists ──
 if [ ! -f "$PROJECT_DIR/.env" ]; then
   if [ "$DRY_RUN" = true ]; then
-    echo "  Would run: scripts/init_env.sh --auto"
+    echo "  Would run: scripts/1_init_env.sh --auto"
   else
     echo "  .env not found. Running init_env.sh --auto ..."
-    (cd "$PROJECT_DIR" && ./scripts/init_env.sh --auto)
+    (cd "$PROJECT_DIR" && ./scripts/1_init_env.sh --auto)
   fi
 else
   # If --maas-key was provided and differs from .env, update .env
@@ -233,7 +233,7 @@ else
       sed -i "s|^HUAWEI_MAAS_API_KEY=.*|HUAWEI_MAAS_API_KEY=\"$MAAS_KEY\"|" "$PROJECT_DIR/.env"
       sed -i "s|^HUAWEI_MAAS_API_KEY_0=.*|HUAWEI_MAAS_API_KEY_0=\"$MAAS_KEY\"|" "$PROJECT_DIR/.env" 2>/dev/null || true
       echo "  Regenerating litellm_config.yaml..."
-      (cd "$PROJECT_DIR" && ./scripts/generate_config.sh)
+      (cd "$PROJECT_DIR" && ./scripts/2_generate_config.sh)
     fi
   fi
   echo "  .env exists — skipping init_env.sh"
@@ -268,7 +268,7 @@ export LITELLM_MASTER_KEY="${LITELLM_MASTER_KEY:-}"
 # ──────────────────────────────────────────────────────────────────────────────
 print_step "4" "Install opencode, plugin, and configure"
 
-INSTALL_CMD=("$SCRIPT_DIR/install.sh")
+INSTALL_CMD=("$SCRIPT_DIR/3_install.sh")
 [ -n "$VIRTUAL_KEY" ] && INSTALL_CMD+=("--virtual-key=$VIRTUAL_KEY")
 [ "$DRY_RUN" = true ] && INSTALL_CMD+=("--dry-run")
 
@@ -284,7 +284,7 @@ fi
 # ──────────────────────────────────────────────────────────────────────────────
 print_step "5" "Validate"
 
-VALIDATE_CMD=("$SCRIPT_DIR/validate.sh")
+VALIDATE_CMD=("$SCRIPT_DIR/5_validate.sh")
 [ "$DRY_RUN" = true ] && VALIDATE_CMD+=("--dry-run")
 
 if [ "$DRY_RUN" = true ]; then
