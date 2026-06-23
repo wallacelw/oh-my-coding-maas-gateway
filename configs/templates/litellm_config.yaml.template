@@ -79,7 +79,7 @@ model_list:
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 30000
-      rpm: 3  
+      rpm: 3
     model_info:
       max_tokens: 1000000
       max_input_tokens: 1000000

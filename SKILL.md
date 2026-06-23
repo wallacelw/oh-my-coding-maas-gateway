@@ -87,7 +87,7 @@ Switch at runtime: `/preset LiteLLM-Huawei-MaaS-Core`
 
 ## Council
 
-3 councillors run in parallel, each with a different model and focus:
+3 councillors run in parallel, all using glm-5.2, each with a different focus:
 
 | Councillor | Model | Focus |
 |------------|-------|-------|
