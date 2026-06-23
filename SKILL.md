@@ -34,9 +34,9 @@ For generic AI agents (Claude Code, Cursor, etc.) installing this stack for a us
 
 ### What the agent does interactively
 
-**1. Check prerequisites** — for each missing tool, ask user "OK to install bun/jq/git/python3?" then install. Docker must be installed manually by user.
+**1. Check prerequisites** — for each missing tool (bun, jq, git, python3, docker), ask user "OK to install?" then install.
 
-**2. Check Docker running** — `docker info >/dev/null 2>&1` — if not, ask user to start it
+**2. Check Docker running** — `docker info >/dev/null 2>&1` — if not, start it (`sudo systemctl start docker` or ask user to open Docker Desktop)
 
 **3. Ask for MaaS key** — "What is your Huawei ModelArts MaaS API key? (region: ap-southeast-1, get from https://console.huaweicloud.com/modelarts/)"
 
