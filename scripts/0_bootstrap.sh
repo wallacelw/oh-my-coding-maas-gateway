@@ -421,7 +421,7 @@ if [ "$AGENT_MODE" = true ]; then
   echo "  3. Run: ./scripts/2_generate_config.sh && docker compose restart litellm"
   echo "  4. Run: ./scripts/5_validate.sh"
 else
-  echo "Preset: LiteLLM-Huawei-MaaS-Full (default) — all 5 models via LiteLLM"
+  echo "Preset: LiteLLM-Huawei-MaaS-Full (default) — all 6 models via LiteLLM"
   echo "Core:    LiteLLM-Huawei-MaaS-Core — 3 models (no v4-pro/v4-flash)"
   echo "Direct: Huawei-MaaS-Full / Huawei-MaaS-Core — bypass LiteLLM proxy"
   echo ""

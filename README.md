@@ -1,6 +1,6 @@
 # oh-my-litellm-opencode
 
-LiteLLM proxy → Huawei MaaS → opencode. Virtual keys, 4 presets, multi-key load balancing.
+LiteLLM proxy → Huawei MaaS → opencode. Virtual keys, 4 presets, 6 models, multi-key load balancing.
 
 ## Quick Start
 
@@ -25,17 +25,18 @@ opencode
 ## Architecture
 
 ```
- opencode                LiteLLM (:4000)              Huawei MaaS
- ────────                ──────────────              ────────────
- orchestrator ─┐                              ┌───→ glm-5.1
- oracle ───────┤                              ├───→ glm-5
- council ──────┤  virtual key (sk-...)       ├───→ deepseek-v4-pro
- librarian ────┤──────────────→ LiteLLM ─────├───→ deepseek-v4-flash
- explorer ─────┤  (scoped, unlimited) │       └───→ deepseek-v3.2
- designer ─────┤                    │
- fixer ────────┘                    │    N API keys (load-balanced)
-                                    │
-                              PostgreSQL (:5432)
+  opencode                LiteLLM (:4000)              Huawei MaaS
+  ────────                ──────────────              ────────────
+  orchestrator ─┐                              ┌───→ glm-5.2
+  oracle ───────┤                              ├───→ glm-5.1
+  council ──────┤  virtual key (sk-...)       ├───→ glm-5
+  librarian ────┤──────────────→ LiteLLM ─────├───→ deepseek-v4-pro
+  explorer ─────┤  (scoped, unlimited) │       ├───→ deepseek-v4-flash
+  designer ─────┤                    │       └───→ deepseek-v3.2
+  fixer ────────┘                    │
+                                     │    N API keys (load-balanced)
+                                     │
+                               PostgreSQL (:5432)
 ```
 
 ## Endpoints

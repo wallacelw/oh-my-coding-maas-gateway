@@ -78,10 +78,10 @@ export HUAWEI_MAAS_API_KEY_2="$MAAS_KEY_2"        # if provided
 
 | Preset | Models | Route |
 |--------|--------|-------|
-| **LiteLLM-Huawei-MaaS-Full** (default) | All 5 | Proxy → MaaS |
-| **LiteLLM-Huawei-MaaS-Core** | 3 (no v4-pro/v4-flash) | Proxy → MaaS |
-| **Huawei-MaaS-Full** | All 5 | Direct → MaaS |
-| **Huawei-MaaS-Core** | 3 (no v4-pro/v4-flash) | Direct → MaaS |
+| **LiteLLM-Huawei-MaaS-Full** (default) | All 6 | Proxy → MaaS |
+| **LiteLLM-Huawei-MaaS-Core** | 4 (no v4-pro/v4-flash) | Proxy → MaaS |
+| **Huawei-MaaS-Full** | All 6 | Direct → MaaS |
+| **Huawei-MaaS-Core** | 4 (no v4-pro/v4-flash) | Direct → MaaS |
 
 Switch at runtime: `/preset LiteLLM-Huawei-MaaS-Core`
 
@@ -92,13 +92,14 @@ Switch at runtime: `/preset LiteLLM-Huawei-MaaS-Core`
 | Councillor | Model | Focus |
 |------------|-------|-------|
 | **alpha** | deepseek-v4-pro | Deep reasoning, logical correctness, subtle bugs/edge cases |
-| **beta** | glm-5.1 | Architecture, maintainability, trade-offs, long-term implications |
+| **beta** | glm-5.2 | Architecture, maintainability, trade-offs, long-term implications |
 | **gamma** | deepseek-v3.2 | Practical implementation, cost-efficiency, verification steps |
 
 ## Models
 
 | Name | Context | RPM | Cost (in/out per token) |
 |------|---------|-----|------------------------|
+| `glm-5.2` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ |
 | `glm-5.1` | 192K/128K | 30 | $1.078 / $3.774 × 10⁻⁶ |
 | `glm-5` | 192K/64K | 30 | $0.809 / $2.965 × 10⁻⁶ |
 | `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ |

@@ -197,7 +197,7 @@ if [ "$OPENCODE_ONLY" = false ]; then
     DEPLOYMENT_COUNT=$(grep -c '^\s*- model_name:' "$CONFIG_FILE" 2>/dev/null || echo "0")
     EXPECTED_DEPLOYMENTS=$((KEY_COUNT * 5))
     if [ "$DEPLOYMENT_COUNT" = "$EXPECTED_DEPLOYMENTS" ]; then
-      pass "Deployment count: $DEPLOYMENT_COUNT (5 models × $KEY_COUNT keys)"
+      pass "Deployment count: $DEPLOYMENT_COUNT (6 models × $KEY_COUNT keys)"
     else
       warn "Deployment count: $DEPLOYMENT_COUNT (expected $EXPECTED_DEPLOYMENTS)"
     fi
@@ -277,8 +277,8 @@ if [ "$LITELLM_ONLY" = false ]; then
       "LiteLLM apiKey set" '.provider.LiteLLM.options.apiKey' \
       "LiteLLM apiKey starts with sk-" '(.provider.LiteLLM.options.apiKey | startswith("sk-"))' \
       "Huawei-MaaS provider defined" '.provider["Huawei-MaaS"]' \
-      "Huawei-MaaS has 5+ models" '.provider["Huawei-MaaS"].models | keys | length >= 5' \
-      "LiteLLM has 5+ models" '.provider.LiteLLM.models | keys | length >= 5' \
+      "Huawei-MaaS has 6+ models" '.provider["Huawei-MaaS"].models | keys | length >= 6' \
+      "LiteLLM has 6+ models" '.provider.LiteLLM.models | keys | length >= 6' \
       "oh-my-opencode-slim plugin" '.plugin | index("oh-my-opencode-slim")' \
       "explore agent disabled" '.agent.explore.disable == true' \
       "general agent disabled" '.agent.general.disable == true' \
