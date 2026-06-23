@@ -335,7 +335,7 @@ echo ""
 # ── 6. Write oh-my-opencode-slim.json ──
 echo "6. Writing oh-my-opencode-slim config..."
 SLIM_CONFIG="$OPENCODE_DIR/oh-my-opencode-slim.json"
-SLIM_TEMPLATE="$PROJECT_DIR/configs/templates/oh-my-opencode-slim.json.template"
+SLIM_TEMPLATE="$PROJECT_DIR/configs/templates/oh-my-opencode-slim.jsonc.template"
 
 NEW_SLIM=$(cat "$SLIM_TEMPLATE")
 
