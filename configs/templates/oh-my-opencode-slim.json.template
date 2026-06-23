@@ -6,7 +6,7 @@
     "LiteLLM-Huawei-MaaS-Full": {
       "orchestrator": { "model": "LiteLLM/openai/glm-5.2", "variant": "high", "skills": ["*"], "mcps": ["*", "!context7"] },
       "oracle":       { "model": ["LiteLLM/openai/deepseek-v4-pro", "LiteLLM/openai/glm-5.2"], "variant": "max", "skills": ["simplify"], "mcps": [] },
-      "council":      { "model": ["LiteLLM/openai/deepseek-v4-pro", "LiteLLM/openai/glm-5.2"], "variant": "high", "skills": [], "mcps": [] },
+      "council":      { "model": ["LiteLLM/openai/glm-5.2", "LiteLLM/openai/deepseek-v4-pro"], "variant": "high", "skills": [], "mcps": [] },
       "librarian":    { "model": "LiteLLM/openai/deepseek-v3.2", "variant": "low", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       "explorer":     { "model": ["LiteLLM/openai/deepseek-v4-flash", "LiteLLM/openai/deepseek-v3.2"], "variant": "low", "skills": [], "mcps": [] },
       "designer":     { "model": "LiteLLM/openai/glm-5", "variant": "medium", "skills": [], "mcps": [] },
@@ -24,7 +24,7 @@
     "Huawei-MaaS-Full": {
       "orchestrator": { "model": "Huawei-MaaS/glm-5.2", "variant": "high", "skills": ["*"], "mcps": ["*", "!context7"] },
       "oracle":       { "model": ["Huawei-MaaS/deepseek-v4-pro", "Huawei-MaaS/glm-5.2"], "variant": "max", "skills": ["simplify"], "mcps": [] },
-      "council":      { "model": ["Huawei-MaaS/deepseek-v4-pro", "Huawei-MaaS/glm-5.2"], "variant": "high", "skills": [], "mcps": [] },
+      "council":      { "model": ["Huawei-MaaS/glm-5.2", "Huawei-MaaS/deepseek-v4-pro"], "variant": "high", "skills": [], "mcps": [] },
       "librarian":    { "model": "Huawei-MaaS/deepseek-v3.2", "variant": "low", "skills": [], "mcps": ["websearch", "context7", "grep_app"] },
       "explorer":     { "model": ["Huawei-MaaS/deepseek-v4-flash", "Huawei-MaaS/deepseek-v3.2"], "variant": "low", "skills": [], "mcps": [] },
       "designer":     { "model": "Huawei-MaaS/glm-5", "variant": "medium", "skills": [], "mcps": [] },
@@ -49,8 +49,8 @@
   "council": {
     "presets": {
       "default": {
-        "alpha": { "model": "LiteLLM/openai/deepseek-v4-pro", "variant": "high", "prompt": "Focus on deep reasoning, logical correctness, and identifying subtle bugs or edge cases." },
-        "beta":  { "model": "LiteLLM/openai/glm-5.2", "variant": "high", "prompt": "Focus on architecture, maintainability, trade-offs, and long-term implications." },
+        "alpha": { "model": "LiteLLM/openai/glm-5.2", "variant": "high", "prompt": "Focus on deep reasoning, logical correctness, and identifying subtle bugs or edge cases." },
+        "beta":  { "model": "LiteLLM/openai/deepseek-v4-pro", "variant": "high", "prompt": "Focus on architecture, maintainability, trade-offs, and long-term implications." },
         "gamma": { "model": "LiteLLM/openai/deepseek-v3.2", "variant": "high", "prompt": "Focus on practical implementation, cost-efficiency, and concrete verification steps." }
       }
     },
