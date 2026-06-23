@@ -17,6 +17,20 @@ model_list:
 
   # ───────── Huawei MaaS Models ───────────
 
+  - model_name: glm-5.2
+    litellm_params:
+      model: openai/glm-5.2
+      api_base: os.environ/HUAWEI_MAAS_API_BASE
+      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
+      tpm: 1000000
+      rpm: 100
+    model_info:
+      max_tokens: 1000000
+      max_input_tokens: 1000000
+      max_output_tokens: 128000
+      input_cost_per_token: 0.0000014
+      output_cost_per_token: 0.0000044
+
   - model_name: glm-5.1
     litellm_params:
       model: openai/glm-5.1

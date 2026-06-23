@@ -268,7 +268,7 @@ echo "    LITELLM_MASTER_KEY  = ${MASTER_KEY:0:8}...${MASTER_KEY: -4}"
 echo "    LITELLM_SALT_KEY    = ${SALT_KEY:0:6}...${SALT_KEY: -4}"
 echo "    DB_PASSWORD         = ${DB_PASSWORD:0:6}...${DB_PASSWORD: -4}"
 echo "    HUAWEI_MAAS_API_KEY = ${MAAS_API_KEY:0:6}...${MAAS_API_KEY: -4}"
-echo "    MaaS API key count  = ${KEY_COUNT} (${KEY_COUNT} deployment(s) per model, $((KEY_COUNT * 5)) total)"
+echo "    MaaS API key count  = ${KEY_COUNT} (${KEY_COUNT} deployment(s) per model, $((KEY_COUNT * 6)) total)"
 if [[ "$KEY_COUNT" -gt 1 ]]; then
   for i in "${!EXTRA_KEYS[@]}"; do
     echo "    Additional key $((i + 1))   = ${EXTRA_KEYS[$i]:0:6}...${EXTRA_KEYS[$i]: -4}"
