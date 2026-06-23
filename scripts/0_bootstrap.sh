@@ -255,7 +255,8 @@ if [ ! -f "$PROJECT_DIR/.env" ]; then
   fi
 else
   # If --maas-key was provided and differs from .env, update .env
-  if [ -n "$MAAS_KEY" ] && [ "$MAAS_KEY" != "${HUAWEI_MAAS_API_KEY:-}" ]; then
+  ENV_MAAS_KEY=$(grep -oP '^HUAWEI_MAAS_API_KEY="?\K[^"]+' "$PROJECT_DIR/.env" 2>/dev/null || true)
+  if [ -n "$MAAS_KEY" ] && [ "$MAAS_KEY" != "$ENV_MAAS_KEY" ]; then
     if [ "$DRY_RUN" = true ]; then
       echo "  Would update HUAWEI_MAAS_API_KEY in .env and regenerate config"
     else

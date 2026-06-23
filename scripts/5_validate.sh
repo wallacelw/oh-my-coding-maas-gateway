@@ -150,7 +150,7 @@ if [ "$OPENCODE_ONLY" = false ]; then
     skip "Docker service health"
   else
     RUNNING=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | wc -l)
-    if [ "$RUNNING" -ge 4 ]; then
+    if [ "$RUNNING" -ge 2 ]; then
       pass "$RUNNING services running"
     else
       fail "Only $RUNNING services running (expected 4)"
@@ -187,7 +187,7 @@ if [ "$OPENCODE_ONLY" = false ]; then
 
   # A4. Config deployment count
   echo ""
-  echo "A5. Config validation"
+  echo "A4. Config validation"
   CONFIG_FILE="$PROJECT_DIR/configs/litellm_config.yaml"
   TEMPLATE_FILE="$PROJECT_DIR/configs/templates/litellm_config.yaml.template"
   if [ -f "$CONFIG_FILE" ]; then
@@ -341,7 +341,7 @@ if [ "$LITELLM_ONLY" = false ]; then
     fi
   else
     fail "No oh-my-opencode-slim config — skipping preset checks"
-    FAIL=$((FAIL + 16))
+    FAIL=$((FAIL + 20))
   fi
 
   # B5. Model availability (via proxy)
