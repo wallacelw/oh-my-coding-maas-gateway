@@ -60,6 +60,7 @@ Rules:
 - Do not skip steps. Do not improvise. Do not launch opencode.
 - If anything is unclear, ask me before proceeding.
 - If an existing installation is found, ask me: update in-place or fresh install.
+- After install: I will rotate my MaaS keys (they were shared with you).
 ```
 
 ## Documentation

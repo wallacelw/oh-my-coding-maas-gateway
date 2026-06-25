@@ -489,6 +489,32 @@ Next steps:
      ./scripts/4_mint-virtual-key.sh
 ```
 
+**Security warning (agent mode only):**
+
+If the install was run via `--agent` (keys passed via command line / environment
+variables), append this warning to the summary:
+
+```
+⚠️  Security: API keys were shared with the agent via command line
+   and environment variables. Rotate them to prevent unauthorized use.
+
+  1. Get new MaaS key(s) from https://console.huaweicloud.com/modelarts/
+  2. Edit .env: replace HUAWEI_MAAS_API_KEY and HUAWEI_MAAS_API_KEY_1..N
+  3. Regenerate config: ./scripts/2_generate_config.sh
+  4. Restart LiteLLM:  docker compose restart litellm
+  5. Re-validate:      ./scripts/5_validate.sh [--litellm-only if applicable]
+```
+
+For `INSTALL_MODE=full`, also add:
+
+```
+  Note: Virtual key is still valid — it's tied to LITELLM_MASTER_KEY,
+  not MaaS keys. No need to re-mint unless you also rotate the master key.
+```
+
+Do NOT show this warning for interactive (non-agent) installs — the human
+typed the keys directly, they were not shared with an agent.
+
 **Postcondition:** Summary printed. Installation is complete.
 
 **On failure:** N/A — this is the terminal step.
