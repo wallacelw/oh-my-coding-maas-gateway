@@ -129,6 +129,9 @@ LiteLLM config settings for observability:
 | `prometheus_initialize_budget_metrics: true` | — | Emit budget metrics for all keys even without requests |
 | `require_auth_for_metrics_endpoint: false` | — | Allow unauthenticated `/metrics` access (Prometheus is on internal Docker network) |
 
+Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
+(default: `30d`). Must be ≥ `7d` because recording rules use 7-day rolling windows.
+
 | Service | Port | Purpose |
 |---------|------|---------|
 | Prometheus | 9090 | Metrics storage + querying + alerting |
