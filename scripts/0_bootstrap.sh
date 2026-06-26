@@ -407,6 +407,10 @@ echo "LiteLLM proxy:     $LITELLM_URL"
 echo "LiteLLM Admin UI:  ${LITELLM_URL}/ui"
 echo "Grafana:           http://127.0.0.1:3000"
 echo "Prometheus:        http://127.0.0.1:9090"
+echo ""
+echo "Grafana login:"
+echo "  Username:        admin"
+echo "  Password:        grep GRAFANA_ADMIN_PASSWORD .env"
 if [ "$LITELLM_ONLY" = true ]; then
   echo ""
   echo "Mode:              LiteLLM-only (no opencode)"
@@ -459,7 +463,9 @@ print(d.get('provider',{}).get('LiteLLM',{}).get('options',{}).get('apiKey',''))
   echo ""
   if [ "$AGENT_MODE" = true ]; then
     echo "Next steps:"
-    echo "  1. Run: opencode"
+    echo "  1. Restart opencode to apply the new configuration:"
+    echo "       - Exit any running opencode session (Ctrl+C or /exit)"
+    echo "       - Start fresh: opencode"
     echo "  2. Switch preset: /preset LiteLLM-Huawei-MaaS-Core"
     echo ""
     echo "⚠️  Security: API keys were shared with the agent via command line"
@@ -479,9 +485,10 @@ print(d.get('provider',{}).get('LiteLLM',{}).get('options',{}).get('apiKey',''))
     echo "Direct: Huawei-MaaS-Full / Huawei-MaaS-Core — bypass LiteLLM proxy"
     echo ""
     echo "Next steps:"
-    echo "  1. Run: opencode"
-    echo "  2. Verify preset: status bar should show LiteLLM-Huawei-MaaS-Full"
-    echo "  3. Switch preset: /preset LiteLLM-Huawei-MaaS-Core"
+    echo "  1. Restart opencode if it's already running (exit and start fresh)"
+    echo "  2. Run: opencode"
+    echo "  3. Verify preset: status bar should show LiteLLM-Huawei-MaaS-Full"
+    echo "  4. Switch preset: /preset LiteLLM-Huawei-MaaS-Core"
   fi
 fi
 
