@@ -166,7 +166,7 @@ if [ "$OPENCODE_ONLY" = false ]; then
     skip "LiteLLM liveness probe"
     skip "LiteLLM per-model health"
   else
-    LIVENESS=$(curl -s --connect-timeout 5 --max-time 10 -w '%{http_code}' "$LITELLM_URL/health/liveliness" 2>/dev/null)
+    LIVENESS=$(curl -s --connect-timeout 5 --max-time 10 -w '%{http_code}' "$LITELLM_URL/health/liveliness" 2>/dev/null || true)
     LIVENESS_CODE="${LIVENESS: -3}"
     if [ "$LIVENESS_CODE" = "200" ]; then
       pass "LiteLLM liveness probe returned 200"
@@ -175,7 +175,7 @@ if [ "$OPENCODE_ONLY" = false ]; then
     fi
 
     if [ -n "${LITELLM_MASTER_KEY:-}" ]; then
-      HEALTH_RESP=$(curl -s --connect-timeout 10 --max-time 15 "$LITELLM_URL/health" -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null)
+      HEALTH_RESP=$(curl -s --connect-timeout 10 --max-time 15 "$LITELLM_URL/health" -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
       HEALTH_FAIL=$(echo "$HEALTH_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('unhealthy_count',0))" 2>/dev/null || echo "?")
       if [ "$HEALTH_FAIL" = "0" ]; then
         pass "All deployments healthy (unhealthy_count=0)"
@@ -387,7 +387,7 @@ if [ "$LITELLM_ONLY" = false ]; then
       fail "No API key for model checks"
     else
       MODELS_JSON=$(curl -sf -m 10 "$LITELLM_URL/v1/models" \
-        -H "Authorization: Bearer $VIRTUAL_KEY" 2>/dev/null)
+        -H "Authorization: Bearer $VIRTUAL_KEY" 2>/dev/null || true)
 
       if [ -z "$MODELS_JSON" ] || ! printf '%s' "$MODELS_JSON" | jq -e '.data | length > 0' >/dev/null 2>&1; then
         fail "Model catalog not reachable or empty"
