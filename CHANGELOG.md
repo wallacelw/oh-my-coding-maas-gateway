@@ -43,6 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SKILL.md` Step 9: recovery table expanded with Prometheus/Grafana entries.
 - `REFERENCE.md`: added Observability section, updated architecture diagram,
   endpoints table, and repair guide.
+- Agent preset model assignments updated based on benchmark research:
+  - **oracle**: `glm-5.2` primary (was `deepseek-v4-pro`) — best deep
+    reasoning with tools (HLE +6.5, MCP +3.4, SWE-bench Pro +6.7).
+  - **designer**: `glm-5.1` primary (was `glm-5`) with `deepseek-v3.2`
+    fallback — +28% coding over glm-5, sustained long-horizon productivity.
+  - **fixer**: `glm-5` primary (was `deepseek-v4-flash`) with
+    `deepseek-v3.2` fallback — 30 RPM vs 3 RPM, 10× more throughput.
+  - **explorer**: `deepseek-v3.2` primary (was `deepseek-v4-flash`) —
+    700 RPM, eliminates fallback latency.
 
 ### Fixed
 
