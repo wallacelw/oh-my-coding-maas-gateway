@@ -180,9 +180,9 @@ if [ -f "$OPENCODE_DIR/oh-my-opencode-slim.json" ] || [ -f "$OPENCODE_DIR/oh-my-
   echo "   Plugin already installed — skipping"
 else
   if [ "$DRY_RUN" = true ]; then
-    echo "   Would run: bunx oh-my-opencode-slim@${SLIM_VERSION} install --companion=yes"
+    echo "   Would run: bunx oh-my-opencode-slim@${SLIM_VERSION} install --companion=no"
   else
-    bunx "oh-my-opencode-slim@${SLIM_VERSION}" install --companion=yes
+    bunx "oh-my-opencode-slim@${SLIM_VERSION}" install --companion=no
     echo "   Plugin installed."
   fi
 fi
