@@ -1,6 +1,6 @@
 # oh-my-litellm-opencode
 
-LiteLLM proxy → Huawei MaaS → opencode. Virtual keys, 4 presets, 6 models, multi-key load balancing.
+LiteLLM proxy → Huawei MaaS → opencode. Virtual keys, 4 presets, 6 models, multi-key load balancing, Prometheus + Grafana observability.
 
 ## Quick Start
 

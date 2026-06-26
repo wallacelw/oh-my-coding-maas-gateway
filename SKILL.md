@@ -1,6 +1,6 @@
 ---
 name: oh-my-litellm-opencode
-description: Deploy LiteLLM proxy (litellm + postgres) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + oh-my-opencode-slim with virtual key and 4 presets.
+description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + oh-my-opencode-slim with virtual key and 4 presets.
 ---
 
 # oh-my-litellm-opencode — Deterministic Install Procedure
@@ -35,6 +35,8 @@ For reference documentation (architecture, presets, models, repair), see
 | `LITELLM_MASTER_KEY` | `1_init_env.sh` (auto-generated) | `0_bootstrap.sh`, `3_install.sh` | Must start with `sk-` | **Yes** — changing invalidates all virtual keys |
 | `LITELLM_SALT_KEY` | `1_init_env.sh` (auto-generated) | LiteLLM container | Random string | **Yes** — changing invalidates all virtual keys |
 | `DB_PASSWORD` | `1_init_env.sh` (auto-generated) | docker-compose, postgres | Random string | **Yes** — changing breaks DB auth |
+| `GRAFANA_ADMIN_PASSWORD` | `1_init_env.sh` (auto-generated) | docker-compose, `5_validate.sh` | Random string | No — rotating changes dashboard login only |
+| `PROMETHEUS_RETENTION` | `1_init_env.sh` (default `30d`) | docker-compose | Prometheus duration (`Nd`/`Nh`/`Nw`), ≥ `7d` | No |
 
 **Rules:**
 
@@ -286,32 +288,31 @@ the region is wrong."`
 
 ---
 
-### Step 6: Check Port 4000 Free
+### Step 6: Check Ports Free
 
 **Precondition:** Step 5 passed.
 
 **Action:**
 
+Check ports for all 4 services:
+
 ```bash
-sudo ss -tlnp | grep ':4000 '
+sudo ss -tlnp | grep -E ':(4000|5432|9090|3000) '
 ```
 
-If the port is in use: report to user `"Port 4000 is in use by PID X (process
+- **4000** — LiteLLM proxy
+- **5432** — PostgreSQL
+- **9090** — Prometheus
+- **3000** — Grafana
+
+If any port is in use: report to user `"Port X is in use by PID Y (process
 name). Stop it or choose a different approach."` Wait for user to resolve. Do
 NOT auto-kill.
 
-Also check port 5432 (PostgreSQL):
+**Postcondition:** `sudo ss -tlnp | grep -E ':(4000|5432|9090|3000) '` returns no output.
 
-```bash
-sudo ss -tlnp | grep ':5432 '
-```
-
-If in use, warn the user (Docker Compose may fail).
-
-**Postcondition:** `sudo ss -tlnp | grep ':4000 '` returns no output.
-
-**On failure:** If user cannot free the port: escalate `"Port 4000 must be free
-for LiteLLM proxy."`
+**On failure:** If user cannot free the ports: escalate `"Ports 4000, 5432,
+9090, 3000 must be free for the stack."`
 
 ---
 
@@ -348,7 +349,7 @@ This is idempotent — safe to re-run. In **full** mode it will:
 
 1. Generate `.env` (preserving existing immutable secrets)
 2. Generate `litellm_config.yaml`
-3. Start Docker Compose (LiteLLM + PostgreSQL)
+3. Start Docker Compose (LiteLLM + PostgreSQL + Prometheus + Grafana)
 4. Install opencode + oh-my-opencode-slim plugin
 5. Mint a virtual key
 6. Write opencode config
@@ -358,14 +359,14 @@ In **LiteLLM-only** mode it will:
 
 1. Generate `.env` (preserving existing immutable secrets)
 2. Generate `litellm_config.yaml`
-3. Start Docker Compose (LiteLLM + PostgreSQL)
+3. Start Docker Compose (LiteLLM + PostgreSQL + Prometheus + Grafana)
 4. Run validation (`--litellm-only`)
 
 > **Notes:**
-> - **Docker image pull:** Step 3 pulls the LiteLLM image (~500 MB) and
->   PostgreSQL image (~50 MB). On a slow connection this can take several
->   minutes. Do not timeout or report failure during the pull — wait for
->   `docker compose up -d` to complete.
+> - **Docker image pull:** Step 3 pulls 4 images: LiteLLM (~500 MB),
+> >   PostgreSQL (~50 MB), Prometheus (~200 MB), Grafana (~300 MB). On a slow
+> >   connection this can take several minutes. Do not timeout or report failure
+> >   during the pull — wait for `docker compose up -d` to complete.
 > - **npm registry** (full mode only): Step 4 runs `bunx oh-my-opencode-slim
 >   install` which downloads from the npm registry. If the registry is
 >   unreachable, this fails with a network error.
@@ -437,6 +438,10 @@ fi
 | `opencode not found` | `curl -fsSL https://opencode.ai/install \| bash`, retry Step 9 |
 | `Model catalog not reachable` | Check virtual key in `~/.config/opencode/opencode.jsonc`, re-run from Step 7 |
 | `smoke test` and `did not respond` | Re-validate MaaS key via Step 5's API call. If key is valid, escalate. |
+| `Prometheus not reachable` | `docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d prometheus`, wait 10s, retry Step 9 |
+| `rules not loaded` | Check `configs/prometheus_rules.yml` and `configs/prometheus_alerts.yml` syntax: `docker compose logs prometheus --tail 20` |
+| `Grafana not reachable` | `docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d grafana`, wait 20s, retry Step 9 |
+| `dashboard not found` | Check provisioning: `docker compose logs grafana --tail 20` |
 
 > **Note:** `unhealthy_count > 0` is a **warning** in `5_validate.sh`, not a
 > failure — it does not cause a non-zero exit. If you see this warning, monitor

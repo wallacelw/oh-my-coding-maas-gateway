@@ -109,7 +109,11 @@ the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 | MaaS 403 | Verify key; region must be `ap-southeast-1` |
 | `unhealthy_count > 0` | Check MaaS key/model/region — may be transient |
 | Virtual key 403 | Check with `/key/info` — may be expired |
-| Port conflict | `ss -tlnp \| grep ':4000'` |
+| Port conflict | `ss -tlnp \| grep -E ':(4000\|5432\|9090\|3000) '` |
+| Prometheus not scraping | Check `docker compose logs prometheus --tail 20`; verify `litellm:4000` reachable from Prometheus container |
+| Prometheus rules error | `docker compose logs prometheus --tail 20` — look for "loading groups failed"; check PromQL syntax in `configs/prometheus_rules.yml` |
+| Grafana dashboard blank | Check datasource UID: `curl -u admin:$GRAFANA_ADMIN_PASSWORD http://127.0.0.1:3000/api/datasources/name/Prometheus \| jq .uid` — must be `prometheus` |
+| Grafana login failed | Check `GRAFANA_ADMIN_PASSWORD` in `.env`; `docker compose restart grafana` after changing |
 
 **Full reset:** `docker compose down -v; rm -f .env .master-key`
 
