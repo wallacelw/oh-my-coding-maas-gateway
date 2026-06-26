@@ -71,7 +71,7 @@
     "readContextMaxFiles": 8
   },
   "companion": {
-    "enabled": true,
+    "enabled": false,
     "position": "bottom-right",
     "size": "medium",
     "gifPack": "default",
