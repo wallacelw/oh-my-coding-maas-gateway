@@ -264,7 +264,7 @@ if [ -z "$VIRTUAL_KEY" ]; then
     RESPONSE=$(retry_curl -o -sf -X POST "http://127.0.0.1:4000/key/generate" \
       -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
       -H "Content-Type: application/json" \
-      -d '{"key_alias": "opencode", "duration": null}')
+      -d '{"key_alias": "opencode", "duration": null}' || true)
     if [ -z "$RESPONSE" ]; then
       echo "ERROR: Failed to mint virtual key after 3 attempts. Check LiteLLM health and master key."
       exit 1
