@@ -260,7 +260,7 @@ fi
 print_step "3" "Deploy LiteLLM"
 
 # ── Port conflict check ──
-for port in 4000 5432; do
+for port in 4000 5432 9090 3000; do
   if command -v ss &>/dev/null && ss -tlnp 2>/dev/null | grep -q ":${port} "; then
     echo "  WARNING: Port $port is already in use. Docker Compose may fail."
   elif command -v netstat &>/dev/null && netstat -tlnp 2>/dev/null | grep -q ":${port} "; then
