@@ -3,13 +3,43 @@
 ## Workflow
 
 1. Make changes.
-2. Verify: run `./scripts/5_validate.sh` if scripts or configs changed.
+2. Validate end-to-end from multiple perspectives (see below).
 3. Commit with a clear message (see below).
 4. Push: `git push origin main`.
 5. Repeat.
 
 **Always commit and push after completing a unit of work.** Do not accumulate
 multiple unrelated changes in one commit. Do not leave uncommitted changes.
+
+## End-to-End Validation
+
+Before committing, validate the change from **all** relevant perspectives:
+
+1. **Script validation:** Run `./scripts/5_validate.sh` (or
+   `--litellm-only` / `--opencode-only` as appropriate). Must pass (or
+   fail only on expected checks like placeholder MaaS key).
+
+2. **Cross-file consistency:** If you changed one file, check every file
+   that references it:
+   - Changed a script? Check SKILL.md steps, REFERENCE.md script table.
+   - Changed a config template? Check the generated config, validation
+     checks, and CHANGELOG.
+   - Changed presets? Check REFERENCE.md agent→model table, CHANGELOG.
+   - Changed ports/services? Check docker-compose.yml, SKILL.md Steps 6-7,
+     REFERENCE.md endpoints, .githooks/pre-commit.
+   - Changed env vars? Check .env.template, 1_init_env.sh, 0_bootstrap.sh,
+     docker-compose.yml, SKILL.md Key Contract table.
+
+3. **Documentation accuracy:** Read the affected documentation sections
+   and verify they match the actual code output. Summaries, tables, and
+   examples should reflect current behavior — not stale descriptions.
+
+4. **Edge cases:** Consider:
+   - `--agent` mode vs interactive mode
+   - `--litellm-only` vs full mode
+   - `--dry-run` mode
+   - Idempotent re-run (existing .env, running containers)
+   - Upgrade path (existing installation, missing vars)
 
 ## Commit Messages
 
@@ -51,8 +81,8 @@ Fix bugs found in end-to-end review
 
 - Check `git status` — only stage intended files.
 - Check `git diff --cached` — review what you're about to commit.
-- If scripts or configs changed: run `./scripts/5_validate.sh`.
-- If docs changed: no validation needed, just commit and push.
+- Run the full End-to-End Validation section above — not just one perspective.
+- All changes must be validated before pushing. No exceptions.
 
 ## Code Style
 
