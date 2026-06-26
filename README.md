@@ -24,7 +24,11 @@ cd oh-my-litellm-opencode
 opencode
 ```
 
-After install, open the Grafana dashboard at `http://127.0.0.1:3000`.
+After install, open the Grafana dashboard at `http://127.0.0.1:3000`
+(username: `admin`, password: `grep GRAFANA_ADMIN_PASSWORD .env`).
+
+If opencode was already running, exit it (`/exit` or Ctrl+C) and start fresh
+to pick up the new configuration.
 
 **LiteLLM-only?** Skip opencode and just deploy the proxy:
 

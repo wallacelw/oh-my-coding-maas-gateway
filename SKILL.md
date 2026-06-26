@@ -565,3 +565,10 @@ follow Section C but with these modifications:
   `git -C "$PROJECT_DIR" reset --hard origin/main`.
 
 **Upgrade is complete when `5_validate.sh` exits 0.**
+
+**Post-upgrade: restart opencode.** If opencode is running, exit it
+(`/exit` or Ctrl+C) and start fresh (`opencode`) to pick up the new
+configuration. The slim plugin and preset changes are not hot-reloaded.
+
+**Grafana access:** `http://127.0.0.1:3000` — username `admin`,
+password `grep GRAFANA_ADMIN_PASSWORD .env`.
