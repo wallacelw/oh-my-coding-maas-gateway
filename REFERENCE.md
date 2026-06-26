@@ -28,7 +28,7 @@ This is reference documentation. For the install procedure, read
 |---------|-----|------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key (`sk-...`) |
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key |
-| Prometheus | `http://127.0.0.1:9090` | None |
+| Prometheus | `http://127.0.0.1:9090` | None (bound to localhost) |
 | Grafana | `http://127.0.0.1:3000` | Admin password (from `.env`) |
 
 ## Scripts

@@ -12,7 +12,7 @@ services:
     container_name: litellm_proxy
     image: ghcr.io/berriai/litellm:v1.89.3
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     volumes:
       - ./configs/litellm_config.yaml:/app/config.yaml:ro
     environment:
@@ -73,7 +73,7 @@ services:
     image: prom/prometheus:v3.2.1
     container_name: litellm_prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./configs/prometheus_rules.yml:/etc/prometheus/rules.yml:ro
@@ -96,7 +96,7 @@ services:
     image: grafana/grafana:11.5.2
     container_name: litellm_grafana
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
@@ -107,6 +107,12 @@ services:
     depends_on:
       prometheus:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     deploy:
       resources:
         limits:

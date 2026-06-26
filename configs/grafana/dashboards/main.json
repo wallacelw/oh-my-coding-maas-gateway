@@ -150,7 +150,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(litellm_proxy_total_requests_metric_total[1m])) * 60",
+          "expr": "sum(rate(litellm_proxy_total_requests_metric_total{requested_model=~\"$model\",api_key_alias=~\"$api_key\"}[1m])) * 60",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -219,7 +219,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(litellm_total_tokens_metric_total[1m])) * 60",
+          "expr": "sum(rate(litellm_total_tokens_metric_total{model=~\"$model\",api_key_alias=~\"$api_key\"}[1m])) * 60",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -288,7 +288,7 @@
       },
       "targets": [
         {
-          "expr": "count(count by (model_id) (litellm_deployment_total_requests_total))",
+          "expr": "count(count by (model_id) (litellm_deployment_total_requests_total{litellm_model_name=~\"$model\",api_key_alias=~\"$api_key\"}))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -358,7 +358,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (le, model) (rate(litellm_llm_api_time_to_first_token_metric_bucket[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le, model) (rate(litellm_llm_api_time_to_first_token_metric_bucket{model=~\"$model\",api_key_alias=~\"$api_key\"}[5m])))",
           "refId": "A",
           "legendFormat": "P50",
           "hide": false,
@@ -370,7 +370,7 @@
           "range": true
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_llm_api_time_to_first_token_metric_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_llm_api_time_to_first_token_metric_bucket{model=~\"$model\",api_key_alias=~\"$api_key\"}[5m])))",
           "refId": "B",
           "legendFormat": "P95",
           "hide": false,
@@ -433,7 +433,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (le, litellm_model_name) (rate(litellm_deployment_latency_per_output_token_bucket[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le, litellm_model_name) (rate(litellm_deployment_latency_per_output_token_bucket{litellm_model_name=~\"$model\",api_key_alias=~\"$api_key\"}[5m])))",
           "refId": "A",
           "legendFormat": "P50",
           "hide": false,
@@ -445,7 +445,7 @@
           "range": true
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (le, litellm_model_name) (rate(litellm_deployment_latency_per_output_token_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, litellm_model_name) (rate(litellm_deployment_latency_per_output_token_bucket{litellm_model_name=~\"$model\",api_key_alias=~\"$api_key\"}[5m])))",
           "refId": "B",
           "legendFormat": "P95",
           "hide": false,
@@ -521,7 +521,7 @@
       },
       "targets": [
         {
-          "expr": "sum(litellm_spend_metric_total)",
+          "expr": "sum(litellm_spend_metric_total{model=~\"$model\",api_key_alias=~\"$api_key\"})",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -578,7 +578,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (model) (litellm_spend_metric_total)",
+          "expr": "sum by (model) (litellm_spend_metric_total{model=~\"$model\",api_key_alias=~\"$api_key\"})",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -625,7 +625,7 @@
       },
       "targets": [
         {
-          "expr": "litellm_remaining_api_key_budget_metric",
+          "expr": "litellm_remaining_api_key_budget_metric{api_key_alias=~\"$api_key\"}",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -645,7 +645,7 @@
             "mode": "thresholds"
           },
           "thresholds": {
-            "mode": "percentage",
+            "mode": "absolute",
             "steps": [
               {
                 "color": "red",
@@ -701,7 +701,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (model) (rate(litellm_proxy_total_requests_metric_total[5m])) * 60",
+          "expr": "sum by (requested_model) (rate(litellm_proxy_total_requests_metric_total{requested_model=~\"$model\",api_key_alias=~\"$api_key\"}[5m])) * 60",
           "refId": "A",
           "legendFormat": "Current",
           "hide": false,
@@ -713,7 +713,7 @@
           "range": true
         },
         {
-          "expr": "avg_over_time(sum by (model) (rate(litellm_proxy_total_requests_metric_total[5m])) * 60)[7d:5m]",
+          "expr": "avg_over_time((sum by (requested_model) (rate(litellm_proxy_total_requests_metric_total{requested_model=~\"$model\",api_key_alias=~\"$api_key\"}[5m])) * 60)[7d:5m])",
           "refId": "B",
           "legendFormat": "7d avg",
           "hide": false,
@@ -764,7 +764,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (model) (rate(litellm_total_tokens_metric_total[5m])) * 60",
+          "expr": "sum by (model) (rate(litellm_total_tokens_metric_total{model=~\"$model\",api_key_alias=~\"$api_key\"}[5m])) * 60",
           "refId": "A",
           "legendFormat": "Current",
           "hide": false,
@@ -776,7 +776,7 @@
           "range": true
         },
         {
-          "expr": "avg_over_time(sum by (model) (rate(litellm_total_tokens_metric_total[5m])) * 60)[7d:5m]",
+          "expr": "avg_over_time((sum by (model) (rate(litellm_total_tokens_metric_total{model=~\"$model\",api_key_alias=~\"$api_key\"}[5m])) * 60)[7d:5m])",
           "refId": "B",
           "legendFormat": "7d avg",
           "hide": false,
@@ -840,7 +840,7 @@
       },
       "targets": [
         {
-          "expr": "rate(litellm_deployment_total_requests_total[5m]) * 60",
+          "expr": "rate(litellm_deployment_total_requests_total{litellm_model_name=~\"$model\",api_key_alias=~\"$api_key\"}[5m]) * 60",
           "refId": "A",
           "legendFormat": "{{litellm_model_name}} ({{model_id}}) / {{api_key_alias}}",
           "hide": false,
@@ -852,7 +852,7 @@
           "range": true
         },
         {
-          "expr": "sum by (litellm_model_name, model_id, api_key_alias) (litellm_spend_metric_total)",
+          "expr": "sum by (litellm_model_name, model_id, api_key_alias) (litellm_spend_metric_total{model=~\"$model\",api_key_alias=~\"$api_key\"})",
           "refId": "B",
           "legendFormat": "",
           "hide": true,
@@ -864,7 +864,7 @@
           "range": true
         },
         {
-          "expr": "litellm_deployment_state",
+          "expr": "litellm_deployment_state{litellm_model_name=~\"$model\",api_key_alias=~\"$api_key\"}",
           "refId": "C",
           "legendFormat": "",
           "hide": true,
