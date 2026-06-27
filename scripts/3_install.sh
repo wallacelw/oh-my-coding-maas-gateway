@@ -284,7 +284,7 @@ echo "5. Writing opencode config..."
 
 if [ "$DRY_RUN" = true ]; then
   echo "   Would write: $OPENCODE_CONFIG (chmod 600)"
-  echo "   Template: $PROJECT_DIR/configs/templates/opencode.json.template"
+  echo "   Template: $PROJECT_DIR/configs/opencode/opencode.json.template"
   echo "   Substitutions: <LITELLM_VIRTUAL_KEY> → ${VIRTUAL_KEY:0:8}..., <HUAWEI_MAAS_API_KEY> → from env"
   echo ""
   echo "6. Writing oh-my-opencode-slim config..."
@@ -304,7 +304,7 @@ if [ -z "$HUAWEI_MAAS_API_KEY" ]; then
 fi
 
 # Build opencode.jsonc from template using jq for JSON-safe substitution
-TEMPLATE="$PROJECT_DIR/configs/templates/opencode.json.template"
+TEMPLATE="$PROJECT_DIR/configs/opencode/opencode.json.template"
 TARGET="$OPENCODE_CONFIG"
 
 NEW_CONFIG=$(jq --arg vk "$VIRTUAL_KEY" --arg mk "${HUAWEI_MAAS_API_KEY:-<HUAWEI_MAAS_API_KEY>}" \
@@ -343,7 +343,7 @@ echo ""
 # ── 6. Write oh-my-opencode-slim.json ──
 echo "6. Writing oh-my-opencode-slim config..."
 SLIM_CONFIG="$OPENCODE_DIR/oh-my-opencode-slim.json"
-SLIM_TEMPLATE="$PROJECT_DIR/configs/templates/oh-my-opencode-slim.json.template"
+SLIM_TEMPLATE="$PROJECT_DIR/configs/opencode/oh-my-opencode-slim.json.template"
 
 NEW_SLIM=$(cat "$SLIM_TEMPLATE")
 

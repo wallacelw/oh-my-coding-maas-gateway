@@ -1,6 +1,6 @@
 # ── LiteLLM generated config ──
 .env
-configs/litellm_config.yaml
+configs/litellm/config.yaml
 
 # ── Backups created by scripts ──
 *.bak

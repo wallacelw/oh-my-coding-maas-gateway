@@ -4,7 +4,7 @@ set -euo pipefail
 
 BLOCKED_FILES=(
   .env
-  configs/litellm_config.yaml
+  configs/litellm/config.yaml
 )
 
 STAGED=$(git diff --cached --name-only 2>/dev/null || true)

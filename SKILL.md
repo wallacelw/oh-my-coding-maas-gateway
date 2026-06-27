@@ -348,7 +348,7 @@ fi
 This is idempotent — safe to re-run. In **full** mode it will:
 
 1. Generate `.env` (preserving existing immutable secrets)
-2. Generate `litellm_config.yaml`
+2. Generate `configs/litellm/config.yaml`
 3. Start Docker Compose (LiteLLM + PostgreSQL + Prometheus + Grafana)
 4. Install opencode + oh-my-opencode-slim plugin
 5. Mint a virtual key
@@ -358,7 +358,7 @@ This is idempotent — safe to re-run. In **full** mode it will:
 In **LiteLLM-only** mode it will:
 
 1. Generate `.env` (preserving existing immutable secrets)
-2. Generate `litellm_config.yaml`
+2. Generate `configs/litellm/config.yaml`
 3. Start Docker Compose (LiteLLM + PostgreSQL + Prometheus + Grafana)
 4. Run validation (`--litellm-only`)
 
@@ -439,7 +439,7 @@ fi
 | `Model catalog not reachable` | Check virtual key in `~/.config/opencode/opencode.jsonc`, re-run from Step 7 |
 | `smoke test` and `did not respond` | Re-validate MaaS key via Step 5's API call. If key is valid, escalate. |
 | `Prometheus not reachable` | `docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d prometheus`, wait 10s, retry Step 9 |
-| `rules not loaded` | Check `configs/prometheus_rules.yml` and `configs/prometheus_alerts.yml` syntax: `docker compose logs prometheus --tail 20` |
+| `rules not loaded` | Check `configs/prometheus/rules.yml` and `configs/prometheus/alerts.yml` syntax: `docker compose logs prometheus --tail 20` |
 | `Grafana not reachable` | `docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d grafana`, wait 20s, retry Step 9 |
 | `dashboard not found` | Check provisioning: `docker compose logs grafana --tail 20` |
 

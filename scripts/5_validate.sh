@@ -214,8 +214,8 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
   # A4. Config deployment count
   echo ""
   echo "A4. Config validation"
-  CONFIG_FILE="$PROJECT_DIR/configs/litellm_config.yaml"
-  TEMPLATE_FILE="$PROJECT_DIR/configs/templates/litellm_config.yaml.template"
+  CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
+  TEMPLATE_FILE="$PROJECT_DIR/configs/litellm/config.yaml.template"
   if [ -f "$CONFIG_FILE" ]; then
     pass "litellm_config.yaml exists (generated)"
     DEPLOYMENT_COUNT=$(grep -c '^\s*- model_name:' "$CONFIG_FILE" 2>/dev/null || echo "0")
