@@ -73,7 +73,7 @@ Fix bugs found in end-to-end review
 ## Never Commit
 
 - `.env` — contains secrets (blocked by .gitignore + pre-commit hook)
-- `configs/litellm_config.yaml` — auto-generated from `.env`
+- `configs/litellm/config.yaml` — auto-generated from `.env`
 - API keys, passwords, tokens, or any secret material
 - Backup files (`*.bak.*`)
 
@@ -95,8 +95,11 @@ Fix bugs found in end-to-end review
 
 ```
 scripts/          — install + validate scripts (numbered 0-5)
-configs/          — Prometheus, Grafana, LiteLLM configs
-configs/templates/ — .env, litellm_config, opencode, slim plugin templates
+configs/          — component configs grouped by service
+configs/litellm/   — LiteLLM config, entrypoint, template
+configs/prometheus/ — Prometheus config, rules, alerts
+configs/grafana/   — Grafana dashboards and provisioning
+configs/opencode/  — opencode + slim plugin templates
 docs              — SKILL.md (procedure), REFERENCE.md (reference), README.md (human)
 ```
 

@@ -18,7 +18,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$PROJECT_ROOT/.env"
-CONFIG_FILE="$PROJECT_ROOT/configs/litellm_config.yaml"
+CONFIG_FILE="$PROJECT_ROOT/configs/litellm/config.yaml"
 
 # ── Parse args ────────────────────────────────────────────────────
 ROUTING_STRATEGY="simple-shuffle"
@@ -138,6 +138,8 @@ fi
   echo "  database_connection_pool_limit: 10"
   echo "  database_connection_timeout: 60"
   echo "  allow_client_side_credentials: true"
+  echo "  background_health_checks: true # periodically health-check all deployments"
+  echo "  health_check_interval: 300 # seconds between background health checks"
 
 } > "$CONFIG_FILE"
 

@@ -20,7 +20,7 @@ set -euo pipefail
 # ── Resolve project root ──────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ENV_EXAMPLE="$PROJECT_ROOT/configs/templates/.env.template"
+ENV_EXAMPLE="$PROJECT_ROOT/configs/.env.template"
 ENV_FILE="$PROJECT_ROOT/.env"
 
 # ── Parse mode ────────────────────────────────────────────────────
