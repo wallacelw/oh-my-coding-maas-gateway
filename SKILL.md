@@ -1,11 +1,11 @@
 ---
 name: oh-my-litellm-opencode
-description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + oh-my-opencode-slim with virtual key and 4 presets.
+description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + Codex CLI + Claude Code CLI with virtual keys and 4 presets.
 ---
 
 # oh-my-litellm-opencode — Deterministic Install Procedure
 
-Deploy LiteLLM proxy → bootstrap opencode → mint virtual key → configure. **Idempotent.**
+Deploy LiteLLM proxy → bootstrap opencode + Codex CLI + Claude Code CLI → mint virtual keys → configure. **Idempotent.**
 
 For reference documentation (architecture, presets, models, repair), see
 **[REFERENCE.md](./REFERENCE.md)**.
@@ -32,7 +32,7 @@ For reference documentation (architecture, presets, models, repair), see
 | `HUAWEI_MAAS_API_KEY_COUNT` | Agent (Step 7) → recalculated by `0_bootstrap.sh` | `1_init_env.sh`, `2_generate_config.sh` | Integer ≥ 1 | No |
 | `HUAWEI_MAAS_API_KEY_0` | `0_bootstrap.sh` (auto, = main key) | `1_init_env.sh`, `2_generate_config.sh` | Non-empty | No |
 | `HUAWEI_MAAS_API_KEY_1..N` | User (prompted, Step 5) → agent exports (Step 7) | `0_bootstrap.sh` → `1_init_env.sh` | Non-empty | No |
-| `LITELLM_MASTER_KEY` | `1_init_env.sh` (auto-generated) | `0_bootstrap.sh`, `3a_install_opencode.sh`, `3b_install_codex.sh` | Must start with `sk-` | **Yes** — changing invalidates all virtual keys |
+| `LITELLM_MASTER_KEY` | `1_init_env.sh` (auto-generated) | `0_bootstrap.sh`, `3a_install_opencode.sh`, `3b_install_codex.sh`, `3c_install_claude_code.sh` | Must start with `sk-` | **Yes** — changing invalidates all virtual keys |
 | `LITELLM_SALT_KEY` | `1_init_env.sh` (auto-generated) | LiteLLM container | Random string | **Yes** — changing invalidates all virtual keys |
 | `DB_PASSWORD` | `1_init_env.sh` (auto-generated) | docker-compose, postgres | Random string | **Yes** — changing breaks DB auth |
 | `GRAFANA_ADMIN_PASSWORD` | `1_init_env.sh` (auto-generated) | docker-compose, `5_validate.sh` | Random string | No — rotating changes dashboard login only |
@@ -79,14 +79,16 @@ If creating `$PROJECT_DIR` fails with permission denied:
 sudo mkdir -p "$PROJECT_DIR" && sudo chown "$USER" "$PROJECT_DIR"
 ```
 
-Prompt user: `"Full install (LiteLLM + opencode) or LiteLLM-only? (default: full)"`
+Prompt user: `"Install mode: full, litellm-only, opencode-only, codex-only, or claude-code-only? (default: full)"`
 
 If user presses Enter or chooses full: `INSTALL_MODE="full"`.
-If user chooses LiteLLM-only: `INSTALL_MODE="litellm-only"`.
+Otherwise set `INSTALL_MODE` to the user's choice (one of: `litellm-only`,
+`opencode-only`, `codex-only`, `claude-code-only`).
 
 **Postcondition:** `uname -s` prints `Linux` AND `$PROJECT_DIR` is set and
 writable (`touch "$PROJECT_DIR/.test" && rm "$PROJECT_DIR/.test"` succeeds)
-AND `$INSTALL_MODE` is set to `full` or `litellm-only`.
+AND `$INSTALL_MODE` is set to one of: `full`, `litellm-only`,
+`opencode-only`, `codex-only`, `claude-code-only`.
 
 **On failure:** If OS is not Linux: stop and report "This procedure supports
 Linux only." If dir creation fails even with sudo: escalate.
@@ -110,12 +112,14 @@ command -v curl    && curl --version
 command -v docker  && docker --version
 docker compose version              # V2 plugin
 command -v sudo                     # sudo available
+command -v npm     && npm --version          # only if INSTALL_MODE != litellm-only
 ```
 
-> **Note:** `bun` and `jq` are NOT required when `INSTALL_MODE=litellm-only`.
-> They are only used by `3a_install_opencode.sh` (opencode plugin install) and
-> `5_validate.sh` Section B (opencode config checks), both skipped in
-> LiteLLM-only mode.
+> **Note:** `bun`, `jq`, and `npm` are NOT required when
+> `INSTALL_MODE=litellm-only`. `bun` and `jq` are used by opencode install and
+> validation; `npm` is used by Codex CLI (`npm install -g @openai/codex`) and
+> Claude Code CLI (`npm install -g @anthropic-ai/claude-code`). All are skipped
+> in LiteLLM-only mode.
 
 Collect all missing tools. If any are missing:
 
@@ -381,8 +385,10 @@ In **LiteLLM-only** mode it will:
 >   connection this can take several minutes. Do not timeout or report failure
 >   during the pull — wait for `docker compose up -d` to complete.
 > - **npm registry** (full mode only): Step 4 runs `bunx oh-my-opencode-slim
->   install` which downloads from the npm registry. If the registry is
->   unreachable, this fails with a network error.
+>   install` (opencode plugin), `npm install -g @openai/codex` (Codex CLI), and
+>   `npm install -g @anthropic-ai/claude-code` (Claude Code CLI). All download
+>   from the npm registry. If the registry is unreachable, these fail with a
+>   network error.
 > - **Git hooks:** Bootstrap configures `.githooks/pre-commit` to block
 >   committing `.env` and secrets. This is a side effect — no action needed.
 > - **Internal validation:** Bootstrap runs `5_validate.sh` internally as its
@@ -433,6 +439,12 @@ Escalate with log output.
 cd "$PROJECT_DIR"
 if [ "$INSTALL_MODE" = "litellm-only" ]; then
   ./scripts/5_validate.sh --litellm-only
+elif [ "$INSTALL_MODE" = "opencode-only" ]; then
+  ./scripts/5_validate.sh --opencode-only
+elif [ "$INSTALL_MODE" = "codex-only" ]; then
+  ./scripts/5_validate.sh --codex-only
+elif [ "$INSTALL_MODE" = "claude-code-only" ]; then
+  ./scripts/5_validate.sh --claude-code-only
 else
   ./scripts/5_validate.sh
 fi
@@ -449,6 +461,7 @@ fi
 | `services running` and count `< 4` | `docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d`, wait 30s, retry Step 9 |
 | `liveness probe` and not `200` | Re-run from Step 8 |
 | `opencode not found` | `curl -fsSL https://opencode.ai/install \| bash`, retry Step 9 |
+| `codex not found` | `npm install -g @openai/codex`, retry Step 9 |
 | `Model catalog not reachable` | Check virtual key in `~/.config/opencode/opencode.jsonc`, re-run from Step 7 |
 | `smoke test` and `did not respond` | Re-validate MaaS key via Step 5's API call. If key is valid, escalate. |
 | `Prometheus not reachable` | `docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d prometheus`, wait 10s, retry Step 9 |
@@ -456,7 +469,7 @@ fi
 | `Grafana not reachable` | `docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d grafana`, wait 20s, retry Step 9 |
 | `dashboard not found` | Check provisioning: `docker compose logs grafana --tail 20` |
 | `claude not found` | `npm install -g @anthropic-ai/claude-code`, retry Step 9 |
-| `Messages API smoke test` and `did not respond` | Check virtual key in `~/.claude-code/.env`, verify Anthropic endpoint in config.yaml |
+| `Messages API smoke test` and `did not respond` | Check virtual key in `~/.claude/settings.json` (`env.ANTHROPIC_API_KEY`), verify Anthropic endpoint in config.yaml |
 
 > **Note:** `unhealthy_count > 0` is a **warning** in `5_validate.sh`, not a
 > failure — it does not cause a non-zero exit. If you see this warning, monitor
@@ -521,13 +534,17 @@ Grafana login:
   Username:        admin
   Password:        grep GRAFANA_ADMIN_PASSWORD .env
 
-Mode:              LiteLLM-only (no opencode)
+Mode:              LiteLLM-only (no tools)
 
 Next steps:
   1. LiteLLM Admin UI: http://127.0.0.1:4000/ui
   2. To add opencode later:
-     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY"
-  3. Or mint a virtual key only:
+     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --opencode-only
+  3. To add Codex CLI later:
+     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --codex-only
+  4. To add Claude Code CLI later:
+     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --claude-code-only
+  5. Or mint a virtual key only:
      ./scripts/4_mint-virtual-key.sh
 ```
 

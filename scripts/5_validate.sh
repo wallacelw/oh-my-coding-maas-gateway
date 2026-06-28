@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── Unified Validation: LiteLLM proxy + opencode + oh-my-opencode-slim ───
+# ─── Unified Validation: LiteLLM proxy + opencode + Codex CLI + Claude Code CLI ───
 #
 # Run after bootstrap.sh to verify everything works end-to-end.
 # Combines LiteLLM E2E validation and opencode configuration checks.
@@ -12,6 +12,7 @@ set -euo pipefail
 #   ./validate.sh --litellm-only  # only LiteLLM proxy checks
 #   ./validate.sh --opencode-only  # only opencode config checks
 #   ./validate.sh --codex-only  # only Codex CLI config checks
+#   ./validate.sh --claude-code-only  # only Claude Code CLI config checks
 
 PASS=0
 FAIL=0

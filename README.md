@@ -19,7 +19,7 @@ sudo apt-get install -y jq                         # jq
 ```bash
 git clone https://github.com/wallacelw/oh-my-litellm-opencode
 cd oh-my-litellm-opencode
-./scripts/0_bootstrap.sh      # prompts for MaaS key, starts Docker, installs opencode + Codex CLI
+./scripts/0_bootstrap.sh      # prompts for MaaS key, starts Docker, installs opencode + Codex CLI + Claude Code CLI
 ./scripts/5_validate.sh       # verify
 opencode                      # or: codex  or:  claude --bare
 ```
@@ -30,7 +30,7 @@ After install, open the Grafana dashboard at `http://127.0.0.1:3000`
 If opencode was already running, exit it (`/exit` or Ctrl+C) and start fresh
 to pick up the new configuration.
 
-**LiteLLM-only?** Skip opencode and Codex CLI, just deploy the proxy:
+**LiteLLM-only?** Skip opencode, Codex CLI, and Claude Code CLI, just deploy the proxy:
 
 ```bash
 ./scripts/0_bootstrap.sh --litellm-only    # LiteLLM proxy only
@@ -46,6 +46,12 @@ to pick up the new configuration.
 
 ```bash
 ./scripts/0_bootstrap.sh --claude-code-only   # LiteLLM proxy + Claude Code CLI
+```
+
+**opencode CLI only?** Skip Codex and Claude Code:
+
+```bash
+./scripts/0_bootstrap.sh --opencode-only    # LiteLLM proxy + opencode
 ```
 
 ## One-Click Agent Install
@@ -114,3 +120,4 @@ Rules:
 
 - **[SKILL.md](./SKILL.md)** — Deterministic install procedure (for agents and humans)
 - **[REFERENCE.md](./REFERENCE.md)** — Architecture, presets, models, repair guide
+- **[CHANGELOG.md](./CHANGELOG.md)** — Version history

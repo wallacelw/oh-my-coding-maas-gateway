@@ -14,7 +14,7 @@ set -euo pipefail
 # Canonical path: /home/oh-my-litellm-opencode
 #
 # Usage:
-#   ./0_bootstrap.sh                                    # interactive — installs all (litellm + opencode + codex)
+#   ./0_bootstrap.sh                                    # interactive — installs all (litellm + opencode + codex + claude-code)
 #   ./0_bootstrap.sh --maas-key=KEY                     # non-interactive (agent mode)
 #   ./0_bootstrap.sh --agent --maas-key=KEY             # agent mode: non-interactive, fail-fast, validate + summary
 #   ./0_bootstrap.sh --virtual-key=sk-...               # use existing virtual key (skip minting)
@@ -605,7 +605,7 @@ print(d.get('provider',{}).get('LiteLLM',{}).get('options',{}).get('apiKey',''))
       echo "  ${INSTALL_OPENCODE:+3}. Run Codex CLI: codex"
     fi
     if [ "$INSTALL_CLAUDE_CODE" = true ]; then
-      echo "  - Run Claude Code CLI: source ~/.claude-code/.env && claude"
+      echo "  4. Run Claude Code CLI: claude --bare"
     fi
     echo ""
     echo "⚠️  Security: API keys were shared with the agent via command line"
