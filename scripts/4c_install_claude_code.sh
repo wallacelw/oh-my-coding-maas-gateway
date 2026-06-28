@@ -146,72 +146,18 @@ if [ -z "$VIRTUAL_KEY" ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   fi
 fi
 
-# Try to reuse existing key by alias via /key/list + /key/info (slow, remote)
-if [ -z "$VIRTUAL_KEY" ] && [ -n "${LITELLM_MASTER_KEY:-}" ]; then
-  KEY_LIST=$(curl -sf -m 10 "$LITELLM_URL/key/list" \
-    -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
-  if [ -n "$KEY_LIST" ]; then
-    KEY_LOOKUP_COUNT=0
-    for KEY_ID in $(echo "$KEY_LIST" | jq -r '.keys[]' 2>/dev/null); do
-      [ "$KEY_LOOKUP_COUNT" -ge 50 ] && { echo "   Stopped alias lookup after 50 keys."; break; }
-      KEY_LOOKUP_COUNT=$((KEY_LOOKUP_COUNT + 1))
-      KEY_INFO=$(curl -sf -m 10 "$LITELLM_URL/key/info?key=$KEY_ID" \
-        -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
-      if [ -n "$KEY_INFO" ]; then
-        ALIAS=$(echo "$KEY_INFO" | jq -r '.info.key_alias // empty' 2>/dev/null)
-        if [ "$ALIAS" = "claude-code" ]; then
-          ALIAS_KEY=$(echo "$KEY_INFO" | jq -r '.info.key_name // empty' 2>/dev/null)
-          if [ -n "$ALIAS_KEY" ] && [[ "$ALIAS_KEY" == sk-* ]]; then
-            if [ "$DRY_RUN" = true ]; then
-              echo "   Would test existing key by alias: ${ALIAS_KEY:0:8}...${ALIAS_KEY: -4}"
-              VIRTUAL_KEY="$ALIAS_KEY"
-            elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/messages" \
-                 -H "x-api-key: $ALIAS_KEY" \
-                 -H "Content-Type: application/json" \
-                 -H "anthropic-version: 2023-06-01" \
-                 -d '{"model":"claude-deepseek-v3.2","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
-              echo "   Existing virtual key (alias 'claude-code') is valid. Reusing: ${ALIAS_KEY:0:8}...${ALIAS_KEY: -4}"
-              VIRTUAL_KEY="$ALIAS_KEY"
-            else
-              echo "   Existing virtual key (alias 'claude-code') is invalid or expired. Will mint new key."
-            fi
-            break
-          fi
-        fi
-      fi
-    done
-  fi
-fi
-
-# Mint new key if needed
+# Mint new key via 3_mint_key.sh if needed
 if [ -z "$VIRTUAL_KEY" ]; then
-  if [ -z "${LITELLM_MASTER_KEY:-}" ]; then
-    echo "  LITELLM_MASTER_KEY not set. Enter it (or Ctrl+C to abort):"
-    read -r LITELLM_MASTER_KEY < /dev/tty
-    if [ -z "$LITELLM_MASTER_KEY" ]; then
-      echo "ERROR: LITELLM_MASTER_KEY is required to mint virtual keys."
-      exit 1
-    fi
-    export LITELLM_MASTER_KEY
-  fi
   if [ "$DRY_RUN" = true ]; then
-    echo "   Would mint new virtual key with alias 'claude-code', unlimited budget & duration, all models"
+    echo "   Would mint key via 3_mint_key.sh --alias=claude-code --no-budget --quiet"
+    VIRTUAL_KEY="sk-dryrun-placeholder"
   else
-    echo "   Minting virtual key from LiteLLM (unlimited budget, unlimited duration)..."
-    RESPONSE=$(retry_curl -o -sf -X POST "$LITELLM_URL/key/generate" \
-      -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-      -H "Content-Type: application/json" \
-      -d '{"key_alias": "claude-code", "duration": null}' || true)
-    if [ -z "$RESPONSE" ]; then
-      echo "ERROR: Failed to mint virtual key after 3 attempts. Check LiteLLM health and master key."
+    VIRTUAL_KEY=$("$SCRIPT_DIR/3_mint_key.sh" --alias=claude-code --no-budget --quiet)
+    if [ -z "$VIRTUAL_KEY" ] || [[ "$VIRTUAL_KEY" != sk-* ]]; then
+      echo "ERROR: Failed to mint virtual key."
       exit 1
     fi
-    VIRTUAL_KEY=$(echo "$RESPONSE" | jq -r '.key')
-    if [ -z "$VIRTUAL_KEY" ] || [ "$VIRTUAL_KEY" = "null" ]; then
-      echo "ERROR: Failed to mint virtual key. Response: $RESPONSE"
-      exit 1
-    fi
-    echo "   Virtual key minted: ${VIRTUAL_KEY:0:8}...${VIRTUAL_KEY: -4}"
+    echo "   Virtual key: ${VIRTUAL_KEY:0:8}...${VIRTUAL_KEY: -4}"
   fi
 fi
 echo ""
