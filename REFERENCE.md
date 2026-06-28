@@ -6,22 +6,22 @@ This is reference documentation. For the install procedure, read
 ## Architecture
 
 ```
-  opencode                LiteLLM (:4000)              Huawei MaaS
-  ────────                ───────────────              ────────────
-  orchestrator ─┐                                ┌───→ glm-5.2
-  oracle ───────┤                                ├───→ glm-5.1
-  council ──────┤  virtual key (sk-...)          ├───→ glm-5
-  librarian ────┤──────────────→ LiteLLM ────────├───→ deepseek-v4-pro
-  explorer ─────┤  (scoped, unlimited) │         ├───→ deepseek-v4-flash
-  designer ─────┤                      │         └───→ deepseek-v3.2
-  fixer ────────┘                      │
-                                       │    N API keys (load-balanced)
-  Codex CLI ────┤                      │    (OpenAI endpoint)
-  Claude Code ───┤                      │    (Anthropic endpoint)
-                                       │
-                                PostgreSQL (:5432)
+  Tools               LiteLLM (:4000)                  Huawei MaaS
+  ─────               ───────────────                  ────────────
 
-  LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
+  opencode ──→ /v1/chat/completions ──→ openai/ provider ──→ /openai/v1/chat/completions
+  Codex CLI ──→ /v1/responses ────────→ openai/ provider ──→ /openai/v1/chat/completions
+  Claude Code ─→ /v1/messages ────────→ anthropic/ provider ─→ /anthropic/v1/messages
+
+  opencode: 7 agents, 4 presets (LiteLLM-Huawei-MaaS-Full default)
+  Codex CLI: Responses API bridged to Chat Completions by LiteLLM
+  Claude Code: Anthropic Messages API forwarded to MaaS Anthropic endpoint
+
+  Each tool: separate virtual key (sk-...) · unlimited budget · all 6 models
+  LiteLLM: load-balances across N MaaS API keys · PostgreSQL (:5432)
+  Models: glm-5.2 · glm-5.1 · glm-5 · deepseek-v4-pro · deepseek-v4-flash · deepseek-v3.2
+
+  Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
 ```
 
 ## Endpoints
