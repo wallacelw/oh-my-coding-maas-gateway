@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Codex CLI integration via `3b_install_codex.sh` — installs Codex CLI, mints
+  virtual key, writes config + model catalog.
+- `configs/codex/model_catalog.json` — metadata for all 6 Huawei MaaS models
+  (context window, max output tokens, reasoning effort levels).
+- `configs/codex/config.toml.template` — Codex CLI config with custom
+  `litellm_proxy` model provider (`wire_api = "responses"`, HTTP SSE).
+- `--codex-only` flag for `0_bootstrap.sh` and `5_validate.sh`.
+- `CODEX_VIRTUAL_KEY` placeholder in `.env.template`.
+
+### Changed
+
+- LiteLLM models use `openai/` prefix with `use_chat_completions_api: true`
+  (documented LiteLLM feature for bridging Responses API → Chat Completions).
+- Codex CLI API key stored in `~/.codex/.env` (auto-loaded by Codex CLI via
+  dotenvy) instead of shell profile or `auth.json`.
+- `multi_agent` feature disabled in Codex CLI config (sends `type: "namespace"`
+  tools that Huawei MaaS rejects).
+- `3_install.sh` renamed to `3a_install_opencode.sh` for consistency with
+  `3b_install_codex.sh`.
+- opencode model keys use LiteLLM `model_name` directly (no `openai/` prefix).
+
+### Fixed
+
+- Codex CLI WebSocket transport avoided — LiteLLM v1.89.3 has a bug in the
+  WebSocket Responses API bridge (`litellm_params` passed to
+  `AsyncCompletions.create()`). Custom provider with `wire_api = "responses"`
+  forces HTTP SSE.
+
 ## [0.2.0] - 2026-06-27
 
 ### Added

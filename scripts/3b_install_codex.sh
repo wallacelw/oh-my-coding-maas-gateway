@@ -81,6 +81,14 @@ if ! command -v jq &>/dev/null; then
 fi
 echo "   jq: $(jq --version)"
 
+if ! command -v bwrap &>/dev/null; then
+  echo "ERROR: bubblewrap (bwrap) is not installed. Codex CLI requires it for sandboxing."
+  echo "  Install with: apt-get install -y bubblewrap  (Debian/Ubuntu)"
+  echo "               dnf install -y bubblewrap       (Fedora)"
+  exit 1
+fi
+echo "   bwrap: $(bwrap --version 2>/dev/null || echo 'installed')"
+
 # Check LiteLLM is reachable
 if curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
   echo "   LiteLLM proxy: reachable at $LITELLM_URL"
@@ -108,7 +116,45 @@ echo ""
 # ── 3. Acquire virtual key (idempotent — reuse existing if valid) ──
 echo "3. Configuring LiteLLM virtual key..."
 
-# Try to reuse existing key by alias via /key/list + /key/info
+# Try to reuse existing key from ~/.codex/.env (fast, local)
+if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
+  EXISTING_KEY=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$CODEX_DIR/.env" 2>/dev/null || true)
+  if [ -n "$EXISTING_KEY" ] && [[ "$EXISTING_KEY" == sk-* ]]; then
+    if [ "$DRY_RUN" = true ]; then
+      echo "   Would test existing key from .env: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
+      VIRTUAL_KEY="$EXISTING_KEY"
+    elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/responses" \
+         -H "Authorization: Bearer $EXISTING_KEY" \
+         -H "Content-Type: application/json" \
+         -d '{"model":"deepseek-v3.2","input":"ok"}'; then
+      echo "   Existing virtual key from .env is valid. Reusing: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
+      VIRTUAL_KEY="$EXISTING_KEY"
+    else
+      echo "   Existing virtual key from .env is invalid or expired. Will try alias lookup."
+    fi
+  fi
+fi
+
+# Try to reuse existing key from environment (fast, local)
+if [ -z "$VIRTUAL_KEY" ] && [ -n "${LITELLM_CODEX_API_KEY:-}" ]; then
+  EXISTING_KEY="$LITELLM_CODEX_API_KEY"
+  if [[ "$EXISTING_KEY" == sk-* ]]; then
+    if [ "$DRY_RUN" = true ]; then
+      echo "   Would test existing key from env: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
+      VIRTUAL_KEY="$EXISTING_KEY"
+    elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/responses" \
+         -H "Authorization: Bearer $EXISTING_KEY" \
+         -H "Content-Type: application/json" \
+         -d '{"model":"deepseek-v3.2","input":"ok"}'; then
+      echo "   Existing virtual key from env is valid. Reusing: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
+      VIRTUAL_KEY="$EXISTING_KEY"
+    else
+      echo "   Existing virtual key from env is invalid or expired. Will try alias lookup."
+    fi
+  fi
+fi
+
+# Try to reuse existing key by alias via /key/list + /key/info (slow, remote)
 if [ -z "$VIRTUAL_KEY" ] && [ -n "${LITELLM_MASTER_KEY:-}" ]; then
   KEY_LIST=$(curl -sf -m 10 "$LITELLM_URL/key/list" \
     -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
@@ -133,47 +179,14 @@ if [ -z "$VIRTUAL_KEY" ] && [ -n "${LITELLM_MASTER_KEY:-}" ]; then
                  -d '{"model":"deepseek-v3.2","input":"ok"}'; then
               echo "   Existing virtual key (alias 'codex') is valid. Reusing: ${ALIAS_KEY:0:8}...${ALIAS_KEY: -4}"
               VIRTUAL_KEY="$ALIAS_KEY"
+            else
+              echo "   Existing virtual key (alias 'codex') is invalid or expired. Will mint new key."
             fi
             break
           fi
         fi
       fi
     done
-  fi
-fi
-
-# Try to reuse existing key from ~/.codex/.env or environment
-if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
-  EXISTING_KEY=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$CODEX_DIR/.env" 2>/dev/null || true)
-  if [ -n "$EXISTING_KEY" ] && [[ "$EXISTING_KEY" == sk-* ]]; then
-    if [ "$DRY_RUN" = true ]; then
-      echo "   Would test existing key from .env: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
-      VIRTUAL_KEY="$EXISTING_KEY"
-    elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/responses" \
-         -H "Authorization: Bearer $EXISTING_KEY" \
-         -H "Content-Type: application/json" \
-         -d '{"model":"deepseek-v3.2","input":"ok"}'; then
-      echo "   Existing virtual key from .env is valid. Reusing: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
-      VIRTUAL_KEY="$EXISTING_KEY"
-    else
-      echo "   Existing virtual key from .env is invalid or expired. Minting new key."
-    fi
-  fi
-elif [ -z "$VIRTUAL_KEY" ] && [ -n "${LITELLM_CODEX_API_KEY:-}" ]; then
-  EXISTING_KEY="$LITELLM_CODEX_API_KEY"
-  if [[ "$EXISTING_KEY" == sk-* ]]; then
-    if [ "$DRY_RUN" = true ]; then
-      echo "   Would test existing key from env: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
-      VIRTUAL_KEY="$EXISTING_KEY"
-    elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/responses" \
-         -H "Authorization: Bearer $EXISTING_KEY" \
-         -H "Content-Type: application/json" \
-         -d '{"model":"deepseek-v3.2","input":"ok"}'; then
-      echo "   Existing virtual key from env is valid. Reusing: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
-      VIRTUAL_KEY="$EXISTING_KEY"
-    else
-      echo "   Existing virtual key from env is invalid or expired. Minting new key."
-    fi
   fi
 fi
 
