@@ -358,7 +358,7 @@ This is idempotent — safe to re-run. In **full** mode it will:
 5. Mint a virtual key (alias "opencode")
 6. Write opencode config
 7. Install Codex CLI + mint virtual key (alias "codex")
-8. Write Codex CLI config (`~/.codex/config.toml`)
+8. Write Codex CLI config (`~/.codex/config.toml` + `model_catalog.json` + `.env`)
 9. Run validation
 
 In **LiteLLM-only** mode it will:
