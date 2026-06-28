@@ -43,12 +43,12 @@ This is reference documentation. For the install procedure, read
 
 | # | Script | Purpose |
 |---|--------|---------|
-| 0 | `0_bootstrap.sh` | End-to-end orchestrator: prereqs → deploy → install → validate. `--litellm-only`, `--opencode-only`, `--codex-only` for modular installs |
+| 0 | `0_bootstrap.sh` | End-to-end orchestrator: prereqs → deploy → install → validate. `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only` for modular installs |
 | 1 | `1_init_env.sh` | Generate `.env` with secrets + MaaS keys |
 | 2 | `2_generate_config.sh` | Build `configs/litellm/config.yaml` from `.env` |
 | 3a | `3a_install_opencode.sh` | Install opencode + plugin + mint key + write config |
 | 3b | `3b_install_codex.sh` | Install Codex CLI + mint key + write `~/.codex/config.toml` + `model_catalog.json` + `.env` |
-| 3c | `3c_install_claude_code.sh` | Install Claude Code CLI + mint key + write `~/.claude-code/.env` |
+| 3c | `3c_install_claude_code.sh` | Install Claude Code CLI + mint key + write `~/.claude/settings.json` |
 | 4 | `4_mint-virtual-key.sh` | Mint a scoped virtual key (standalone) |
 | 5 | `5_validate.sh` | Validate all components (`--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only` for scoped checks) |
 
@@ -188,7 +188,7 @@ with no OpenAI format conversion.
 | Grafana dashboard stale after upgrade | `docker compose restart grafana` — hard restart picks up provisioning changes |
 | Claude Code `claude not found` | `npm install -g @anthropic-ai/claude-code` |
 | Claude Code 401 | Check `ANTHROPIC_API_KEY` in `~/.claude/settings.json` env block — must start with `sk-` |
-| Claude Code model rejected | Model name case-sensitive — use exact Huawei MaaS names |
+| Claude Code model rejected | Model name case-sensitive — use `claude-` prefixed names (e.g., `claude-glm-5.2`) |
 
 **Full reset:** `docker compose down -v; rm -f .env`
 
