@@ -111,17 +111,17 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CLAUDE_SETTINGS" ]; then
   EXISTING_KEY=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
   if [ -n "$EXISTING_KEY" ] && [[ "$EXISTING_KEY" == sk-* ]]; then
     if [ "$DRY_RUN" = true ]; then
-      echo "   Would test existing key from .env: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
+      echo "   Would test existing key from settings.json: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
       VIRTUAL_KEY="$EXISTING_KEY"
     elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/messages" \
          -H "x-api-key: $EXISTING_KEY" \
          -H "Content-Type: application/json" \
          -H "anthropic-version: 2023-06-01" \
          -d '{"model":"claude-deepseek-v3.2","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
-      echo "   Existing virtual key from .env is valid. Reusing: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
+      echo "   Existing virtual key from settings.json is valid. Reusing: ${EXISTING_KEY:0:8}...${EXISTING_KEY: -4}"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
-      echo "   Existing virtual key from .env is invalid or expired. Will try alias lookup."
+      echo "   Existing virtual key from settings.json is invalid or expired. Will try alias lookup."
     fi
   fi
 fi
@@ -269,5 +269,5 @@ echo "All 6 models available via LiteLLM proxy (Anthropic Messages API)"
 echo "LiteLLM proxy URL: $LITELLM_URL"
 echo ""
 echo "Next steps:"
-echo "  1. Run:              claude"
+echo "  1. Run:              claude --bare"
 echo "  2. Validate:         $SCRIPT_DIR/5_validate.sh"

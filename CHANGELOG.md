@@ -11,10 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Claude Code CLI integration via `3c_install_claude_code.sh` — installs
   Claude Code CLI, mints virtual key (alias "claude-code", unlimited budget),
-  writes `~/.claude-code/.env`.
-- `configs/claude-code/.env.template` — Claude Code CLI env config template
-  (`ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`,
-  `ANTHROPIC_SMALL_FAST_MODEL`).
+  writes `~/.claude/settings.json`.
+- `configs/claude-code/.env.template` — reference template documenting
+  `~/.claude/settings.json` format (`env` block with `ANTHROPIC_BASE_URL`,
+  `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_SMALL_FAST_MODEL`).
 - Huawei MaaS Anthropic-compatible endpoint support
   (`HUAWEI_MAAS_ANTHROPIC_API_BASE`).
 - `2_generate_config.sh` now generates dual-format deployments: OpenAI

@@ -137,7 +137,7 @@ fi
       echo "      api_key: os.environ/HUAWEI_MAAS_API_KEY_$i"
       echo "      tpm: $tpm"
       echo "      rpm: $rpm"
-    echo "    model_info:"
+      echo "    model_info:"
       echo "      max_tokens: $max_tokens"
       echo "      max_input_tokens: $max_input"
       echo "      max_output_tokens: $max_output"

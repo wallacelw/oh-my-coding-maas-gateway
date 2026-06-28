@@ -365,7 +365,7 @@ This is idempotent — safe to re-run. In **full** mode it will:
 7. Install Codex CLI + mint virtual key (alias "codex")
 8. Write Codex CLI config (`~/.codex/config.toml` + `model_catalog.json` + `.env`)
 9. Install Claude Code CLI + mint virtual key (alias "claude-code")
-10. Write Claude Code CLI config (`~/.claude-code/.env`)
+10. Write Claude Code CLI config (`~/.claude/settings.json`)
 11. Run validation
 
 In **LiteLLM-only** mode it will:
