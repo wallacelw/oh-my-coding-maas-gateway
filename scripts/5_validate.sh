@@ -11,6 +11,7 @@ set -euo pipefail
 #   ./validate.sh --dry-run  # syntax and structure checks only (no network)
 #   ./validate.sh --litellm-only  # only LiteLLM proxy checks
 #   ./validate.sh --opencode-only  # only opencode config checks
+#   ./validate.sh --codex-only  # only Codex CLI config checks
 
 PASS=0
 FAIL=0
@@ -18,6 +19,7 @@ WARN=0
 DRY_RUN=false
 LITELLM_ONLY=false
 OPENCODE_ONLY=false
+CODEX_ONLY=false
 LITELLM_URL="http://127.0.0.1:4000"
 
 for arg in "$@"; do
@@ -25,12 +27,32 @@ for arg in "$@"; do
     --dry-run)        DRY_RUN=true ;;
     --litellm-only)   LITELLM_ONLY=true ;;
     --opencode-only)  OPENCODE_ONLY=true ;;
+    --codex-only)     CODEX_ONLY=true ;;
   esac
 done
 
-if [ "$LITELLM_ONLY" = true ] && [ "$OPENCODE_ONLY" = true ]; then
-  echo "ERROR: --litellm-only and --opencode-only are mutually exclusive."
+# ── Mode exclusivity ──
+MODE_COUNT=0
+[ "$LITELLM_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
+[ "$OPENCODE_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
+[ "$CODEX_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
+if [ "$MODE_COUNT" -gt 1 ]; then
+  echo "ERROR: --litellm-only, --opencode-only, and --codex-only are mutually exclusive."
   exit 1
+fi
+
+# ── Derive which sections to run ──
+# Default (no flags): run all sections
+RUN_LITELLM=true
+RUN_OPENCODE=true
+RUN_CODEX=true
+RUN_OBSERVABILITY=true
+if [ "$LITELLM_ONLY" = true ]; then
+  RUN_OPENCODE=false; RUN_CODEX=false
+elif [ "$OPENCODE_ONLY" = true ]; then
+  RUN_CODEX=false
+elif [ "$CODEX_ONLY" = true ]; then
+  RUN_OPENCODE=false
 fi
 
 # ── Colors ──
@@ -119,7 +141,7 @@ echo ""
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION A: LiteLLM Proxy Validation
 # ════════════════════════════════════════════════════════════════════════════
-if [ "$OPENCODE_ONLY" = false ]; then
+if [ "$RUN_LITELLM" = true ]; then
   echo "━━━ A. LiteLLM Proxy ━━━"
 
   # A1. .env check
@@ -269,7 +291,7 @@ fi
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION B: opencode Configuration Validation
 # ════════════════════════════════════════════════════════════════════════════
-if [ "$LITELLM_ONLY" = false ]; then
+if [ "$RUN_OPENCODE" = true ]; then
   echo "━━━ B. opencode Configuration ━━━"
 
   OPENCODE_DIR="$HOME/.config/opencode"
@@ -441,7 +463,7 @@ fi
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION C: Observability (Prometheus + Grafana)
 # ════════════════════════════════════════════════════════════════════════════
-if [ "$OPENCODE_ONLY" = false ]; then
+if [ "$RUN_OBSERVABILITY" = true ]; then
   echo ""
   echo "━━━ C. Observability ━━━"
 
@@ -516,6 +538,95 @@ if [ "$OPENCODE_ONLY" = false ]; then
     fi
   else
     fail "Grafana not reachable at :3000"
+  fi
+
+  echo ""
+fi
+
+# ════════════════════════════════════════════════════════════════════════════
+# SECTION D: Codex CLI Configuration Validation
+# ════════════════════════════════════════════════════════════════════════════
+if [ "$RUN_CODEX" = true ]; then
+  echo ""
+  echo "━━━ D. Codex CLI Configuration ━━━"
+
+  CODEX_DIR="$HOME/.codex"
+  CODEX_CONFIG="$CODEX_DIR/config.toml"
+
+  # D1. Codex CLI binary
+  echo ""
+  echo "D1. Codex CLI binary"
+  if command -v codex &>/dev/null; then
+    pass "codex installed: $(codex --version 2>/dev/null || echo 'unknown')"
+  else
+    fail "codex not found — run: npm install -g @openai/codex"
+  fi
+
+  # D2. Config file
+  echo ""
+  echo "D2. Config file"
+  if [ -f "$CODEX_CONFIG" ]; then
+    pass "config.toml exists: $CODEX_CONFIG"
+  else
+    fail "config.toml not found in $CODEX_DIR"
+  fi
+
+  # D3. Provider configuration
+  echo ""
+  echo "D3. Provider configuration"
+  if [ -f "$CODEX_CONFIG" ]; then
+    if grep -q '^openai_base_url\s*=\s*"http://127.0.0.1:4000/v1"' "$CODEX_CONFIG"; then
+      pass "openai_base_url points to LiteLLM proxy"
+    else
+      fail "openai_base_url not pointing to LiteLLM proxy"
+    fi
+
+    if grep -qP '^openai_api_key\s*=\s*"sk-' "$CODEX_CONFIG"; then
+      pass "openai_api_key set (starts with sk-)"
+    else
+      fail "openai_api_key not set or invalid"
+    fi
+
+    if grep -qP '^model\s*=\s*"\S+"' "$CODEX_CONFIG"; then
+      CODEX_MODEL=$(grep -oP '^model\s*=\s*"\K[^"]+' "$CODEX_CONFIG" 2>/dev/null || true)
+      pass "default model set: $CODEX_MODEL"
+    else
+      fail "default model not set"
+    fi
+
+    PERMS=$(stat -c '%a' "$CODEX_CONFIG" 2>/dev/null || stat -f '%Lp' "$CODEX_CONFIG" 2>/dev/null)
+    if [ "$PERMS" = "600" ]; then
+      pass "Config file permissions 600"
+    else
+      warn "Config file permissions $PERMS (expected 600)"
+    fi
+  else
+    fail "No Codex config file — skipping provider checks"
+    FAIL=$((FAIL + 4))
+  fi
+
+  # D4. Responses API smoke test
+  echo ""
+  echo "D4. Responses API smoke test"
+  if [ "$DRY_RUN" = true ]; then
+    skip "Responses API smoke test"
+  elif [ -f "$CODEX_CONFIG" ]; then
+    CODEX_VK=$(grep -oP '^openai_api_key\s*=\s*"\K[^"]+' "$CODEX_CONFIG" 2>/dev/null || true)
+    if [ -z "$CODEX_VK" ]; then
+      fail "No API key for Responses API test"
+    else
+      SMOKE_MODEL="deepseek-v3.2"
+      if curl -sf -m 30 "$LITELLM_URL/v1/responses" \
+          -H "Authorization: Bearer $CODEX_VK" \
+          -H "Content-Type: application/json" \
+          -d "{\"model\":\"$SMOKE_MODEL\",\"input\":\"ok\"}" >/dev/null 2>&1; then
+        pass "Responses API smoke test: $SMOKE_MODEL responded"
+      else
+        fail "Responses API smoke test: $SMOKE_MODEL did not respond"
+      fi
+    fi
+  else
+    skip "Responses API smoke test (no config file)"
   fi
 
   echo ""

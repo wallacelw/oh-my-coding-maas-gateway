@@ -14,11 +14,13 @@ set -euo pipefail
 # Canonical path: /home/oh-my-litellm-opencode
 #
 # Usage:
-#   ./0_bootstrap.sh                                    # interactive — prompts for keys
+#   ./0_bootstrap.sh                                    # interactive — installs all (litellm + opencode + codex)
 #   ./0_bootstrap.sh --maas-key=KEY                     # non-interactive (agent mode)
 #   ./0_bootstrap.sh --agent --maas-key=KEY             # agent mode: non-interactive, fail-fast, validate + summary
 #   ./0_bootstrap.sh --virtual-key=sk-...               # use existing virtual key (skip minting)
-#   ./0_bootstrap.sh --litellm-only                     # LiteLLM proxy only, skip opencode installation
+#   ./0_bootstrap.sh --litellm-only                     # LiteLLM proxy only, skip tool installation
+#   ./0_bootstrap.sh --opencode-only                    # LiteLLM + opencode (skip Codex CLI)
+#   ./0_bootstrap.sh --codex-only                       # LiteLLM + Codex CLI (skip opencode)
 #   ./0_bootstrap.sh --dry-run                          # preview changes
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -34,6 +36,8 @@ VIRTUAL_KEY=""
 DRY_RUN=false
 AGENT_MODE=false
 LITELLM_ONLY=false
+OPENCODE_ONLY=false
+CODEX_ONLY=false
 
 # ── Parse command-line arguments ──
 for arg in "$@"; do
@@ -42,14 +46,39 @@ for arg in "$@"; do
     --virtual-key=*)    VIRTUAL_KEY="${arg#--virtual-key=}" ;;
     --agent)            AGENT_MODE=true ;;
     --litellm-only)     LITELLM_ONLY=true ;;
+    --opencode-only)    OPENCODE_ONLY=true ;;
+    --codex-only)       CODEX_ONLY=true ;;
     --dry-run)          DRY_RUN=true ;;
     *)
       echo "ERROR: Unknown argument: $arg"
-      echo "Usage: $0 [--maas-key=KEY] [--agent] [--virtual-key=sk-...] [--dry-run]"
+      echo "Usage: $0 [--maas-key=KEY] [--agent] [--virtual-key=sk-...] [--litellm-only|--opencode-only|--codex-only] [--dry-run]"
       exit 1
       ;;
   esac
 done
+
+# ── Mode validation ──
+MODE_COUNT=0
+[ "$LITELLM_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
+[ "$OPENCODE_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
+[ "$CODEX_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
+if [ "$MODE_COUNT" -gt 1 ]; then
+  echo "ERROR: --litellm-only, --opencode-only, and --codex-only are mutually exclusive."
+  exit 1
+fi
+
+# ── Derive install flags ──
+# Default (no flags): install everything
+INSTALL_OPENCODE=true
+INSTALL_CODEX=true
+if [ "$LITELLM_ONLY" = true ]; then
+  INSTALL_OPENCODE=false
+  INSTALL_CODEX=false
+elif [ "$OPENCODE_ONLY" = true ]; then
+  INSTALL_CODEX=false
+elif [ "$CODEX_ONLY" = true ]; then
+  INSTALL_OPENCODE=false
+fi
 
 # ── Agent mode validation ──
 if [ "$AGENT_MODE" = true ] && [ -z "$MAAS_KEY" ]; then
@@ -60,6 +89,12 @@ fi
 # ── Mutual exclusion: --litellm-only and --virtual-key ──
 if [ "$LITELLM_ONLY" = true ] && [ -n "$VIRTUAL_KEY" ]; then
   echo "ERROR: --litellm-only and --virtual-key are mutually exclusive."
+  exit 1
+fi
+
+# ── Virtual key only applies to opencode ──
+if [ "$CODEX_ONLY" = true ] && [ -n "$VIRTUAL_KEY" ]; then
+  echo "ERROR: --codex-only and --virtual-key are mutually exclusive (--virtual-key is for opencode)."
   exit 1
 fi
 
@@ -155,8 +190,12 @@ check_prereq() {
   fi
 }
 
-if [ "$LITELLM_ONLY" = false ]; then
+if [ "$INSTALL_OPENCODE" = true ]; then
   check_prereq "bun"   bun     "install from https://bun.sh (needed for oh-my-opencode-slim plugin)"
+  check_prereq "jq"    jq      "install from https://stedolan.github.io/jq/"
+fi
+if [ "$INSTALL_CODEX" = true ]; then
+  check_prereq "npm"   npm     "install from https://nodejs.org/ (needed for Codex CLI)"
   check_prereq "jq"    jq      "install from https://stedolan.github.io/jq/"
 fi
 check_prereq "docker"  docker  "install from https://docs.docker.com/engine/install/"
@@ -352,13 +391,13 @@ fi
 export LITELLM_MASTER_KEY="${LITELLM_MASTER_KEY:-}"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Step 4: Install opencode + plugin + configure
+# Step 4: Install tools (opencode + Codex CLI)
 # ──────────────────────────────────────────────────────────────────────────────
-print_step "4" "Install opencode, plugin, and configure"
+print_step "4" "Install tools and configure"
 
-if [ "$LITELLM_ONLY" = true ]; then
-  echo "  (--litellm-only: skipping opencode installation)"
-else
+# ── 4a. opencode ──
+if [ "$INSTALL_OPENCODE" = true ]; then
+  echo "  ── opencode + oh-my-opencode-slim ──"
   INSTALL_CMD=("$SCRIPT_DIR/3_install.sh")
   [ -n "$VIRTUAL_KEY" ] && INSTALL_CMD+=("--virtual-key=$VIRTUAL_KEY")
   [ "$DRY_RUN" = true ] && INSTALL_CMD+=("--dry-run")
@@ -367,8 +406,28 @@ else
     echo "  Would run: ${INSTALL_CMD[*]}"
   else
     "${INSTALL_CMD[@]}"
-    echo "  Installation and configuration complete."
+    echo "  opencode installation and configuration complete."
   fi
+  echo ""
+else
+  echo "  (skipping opencode installation)"
+fi
+
+# ── 4b. Codex CLI ──
+if [ "$INSTALL_CODEX" = true ]; then
+  echo "  ── Codex CLI ──"
+  CODEX_CMD=("$SCRIPT_DIR/3b_install_codex.sh")
+  [ "$DRY_RUN" = true ] && CODEX_CMD+=("--dry-run")
+
+  if [ "$DRY_RUN" = true ]; then
+    echo "  Would run: ${CODEX_CMD[*]}"
+  else
+    "${CODEX_CMD[@]}"
+    echo "  Codex CLI installation and configuration complete."
+  fi
+  echo ""
+else
+  echo "  (skipping Codex CLI installation)"
 fi
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -378,7 +437,13 @@ print_step "5" "Validate"
 
 VALIDATE_CMD=("$SCRIPT_DIR/5_validate.sh")
 [ "$DRY_RUN" = true ] && VALIDATE_CMD+=("--dry-run")
-[ "$LITELLM_ONLY" = true ] && VALIDATE_CMD+=("--litellm-only")
+if [ "$INSTALL_OPENCODE" = false ] && [ "$INSTALL_CODEX" = false ]; then
+  VALIDATE_CMD+=("--litellm-only")
+elif [ "$INSTALL_OPENCODE" = false ]; then
+  VALIDATE_CMD+=("--codex-only")
+elif [ "$INSTALL_CODEX" = false ]; then
+  VALIDATE_CMD+=("--opencode-only")
+fi
 
 if [ "$DRY_RUN" = true ]; then
   echo "  Would run: ${VALIDATE_CMD[*]}"
@@ -415,13 +480,15 @@ echo "  Username:        admin"
 echo "  Password:        grep GRAFANA_ADMIN_PASSWORD .env"
 if [ "$LITELLM_ONLY" = true ]; then
   echo ""
-  echo "Mode:              LiteLLM-only (no opencode)"
+  echo "Mode:              LiteLLM-only (no tools)"
   echo ""
   echo "Next steps:"
   echo "  1. LiteLLM Admin UI: ${LITELLM_URL}/ui"
   echo "  2. To add opencode later:"
-  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\""
-  echo "  3. Or mint a virtual key only:"
+  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\" --opencode-only"
+  echo "  3. To add Codex CLI later:"
+  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\" --codex-only"
+  echo "  4. Or mint a virtual key only:"
   echo "     ./scripts/4_mint-virtual-key.sh"
   if [ "$AGENT_MODE" = true ]; then
     echo ""
@@ -435,10 +502,11 @@ if [ "$LITELLM_ONLY" = true ]; then
     echo "  5. Re-validate:      ./scripts/5_validate.sh --litellm-only"
   fi
 else
-  echo "opencode config:    ~/.config/opencode/opencode.jsonc"
-  echo "plugin config:      ~/.config/opencode/oh-my-opencode-slim.json"
-  # Show virtual key (masked) from config
-  FINAL_VK=$(python3 -c "
+  if [ "$INSTALL_OPENCODE" = true ]; then
+    echo "opencode config:    ~/.config/opencode/opencode.jsonc"
+    echo "plugin config:      ~/.config/opencode/oh-my-opencode-slim.json"
+    # Show virtual key (masked) from config
+    FINAL_VK=$(python3 -c "
 import sys, json
 text = open(sys.argv[1]).read()
 # Quick JSONC strip: remove // line comments outside strings
@@ -448,7 +516,7 @@ while i < len(text):
     if esc: result.append(c); esc = False; i += 1; continue
     if in_str:
         result.append(c)
-        if c == '\\': esc = True
+        if c == '\\\\': esc = True
         elif c == '\"': in_str = False
         i += 1; continue
     if c == '\"': in_str = True; result.append(c); i += 1; continue
@@ -459,16 +527,29 @@ while i < len(text):
 d = json.loads(''.join(result))
 print(d.get('provider',{}).get('LiteLLM',{}).get('options',{}).get('apiKey',''))
 " "$HOME/.config/opencode/opencode.jsonc" 2>/dev/null || true)
-  if [ -n "$FINAL_VK" ]; then
-    echo "Virtual key:        ${FINAL_VK:0:8}...${FINAL_VK: -4}"
+    if [ -n "$FINAL_VK" ]; then
+      echo "opencode key:       ${FINAL_VK:0:8}...${FINAL_VK: -4}"
+    fi
+  fi
+  if [ "$INSTALL_CODEX" = true ]; then
+    echo "Codex CLI config:   ~/.codex/config.toml"
+    CODEX_VK=$(grep -oP '^openai_api_key\s*=\s*"\K[^"]+' "$HOME/.codex/config.toml" 2>/dev/null || true)
+    if [ -n "$CODEX_VK" ]; then
+      echo "Codex CLI key:      ${CODEX_VK:0:8}...${CODEX_VK: -4}"
+    fi
   fi
   echo ""
   if [ "$AGENT_MODE" = true ]; then
     echo "Next steps:"
-    echo "  1. Restart opencode to apply the new configuration:"
-    echo "       - Exit any running opencode session (Ctrl+C or /exit)"
-    echo "       - Start fresh: opencode"
-    echo "  2. Switch preset: /preset LiteLLM-Huawei-MaaS-Core"
+    if [ "$INSTALL_OPENCODE" = true ]; then
+      echo "  1. Restart opencode to apply the new configuration:"
+      echo "       - Exit any running opencode session (Ctrl+C or /exit)"
+      echo "       - Start fresh: opencode"
+      echo "  2. Switch preset: /preset LiteLLM-Huawei-MaaS-Core"
+    fi
+    if [ "$INSTALL_CODEX" = true ]; then
+      echo "  ${INSTALL_OPENCODE:+3}. Run Codex CLI: codex"
+    fi
     echo ""
     echo "⚠️  Security: API keys were shared with the agent via command line"
     echo "   and environment variables. Rotate them to prevent unauthorized use."
@@ -482,15 +563,22 @@ print(d.get('provider',{}).get('LiteLLM',{}).get('options',{}).get('apiKey',''))
     echo "  Note: Virtual key is still valid — it's tied to LITELLM_MASTER_KEY,"
     echo "  not MaaS keys. No need to re-mint unless you also rotate the master key."
   else
-    echo "Preset: LiteLLM-Huawei-MaaS-Full (default) — all 6 models via LiteLLM"
-    echo "Core:    LiteLLM-Huawei-MaaS-Core — 4 models (no v4-pro/v4-flash)"
-    echo "Direct: Huawei-MaaS-Full / Huawei-MaaS-Core — bypass LiteLLM proxy"
+    if [ "$INSTALL_OPENCODE" = true ]; then
+      echo "Preset: LiteLLM-Huawei-MaaS-Full (default) — all 6 models via LiteLLM"
+      echo "Core:    LiteLLM-Huawei-MaaS-Core — 4 models (no v4-pro/v4-flash)"
+      echo "Direct: Huawei-MaaS-Full / Huawei-MaaS-Core — bypass LiteLLM proxy"
+    fi
     echo ""
     echo "Next steps:"
-    echo "  1. Restart opencode if it's already running (exit and start fresh)"
-    echo "  2. Run: opencode"
-    echo "  3. Verify preset: status bar should show LiteLLM-Huawei-MaaS-Full"
-    echo "  4. Switch preset: /preset LiteLLM-Huawei-MaaS-Core"
+    if [ "$INSTALL_OPENCODE" = true ]; then
+      echo "  1. Restart opencode if it's already running (exit and start fresh)"
+      echo "  2. Run: opencode"
+      echo "  3. Verify preset: status bar should show LiteLLM-Huawei-MaaS-Full"
+      echo "  4. Switch preset: /preset LiteLLM-Huawei-MaaS-Core"
+    fi
+    if [ "$INSTALL_CODEX" = true ]; then
+      echo "  ${INSTALL_OPENCODE:+5}. Run Codex CLI: codex"
+    fi
   fi
 fi
 
