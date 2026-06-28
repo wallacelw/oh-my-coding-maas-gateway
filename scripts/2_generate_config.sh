@@ -99,7 +99,7 @@ fi
       fi
       echo "  - model_name: $model_name"
       echo "    litellm_params:"
-      echo "      model: openai/$model_name"
+      echo "      model: custom_openai/$model_name"
       echo "      api_base: os.environ/HUAWEI_MAAS_API_BASE"
       echo "      api_key: os.environ/HUAWEI_MAAS_API_KEY_$i"
       echo "      tpm: $tpm"

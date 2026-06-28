@@ -100,6 +100,7 @@ configs/litellm/   — LiteLLM config, entrypoint, template
 configs/prometheus/ — Prometheus config, rules, alerts
 configs/grafana/   — Grafana dashboards and provisioning
 configs/opencode/  — opencode + slim plugin templates
+configs/codex/     — Codex CLI config template
 docs              — SKILL.md (procedure), REFERENCE.md (reference), README.md (human)
 ```
 

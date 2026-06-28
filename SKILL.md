@@ -340,6 +340,10 @@ Run the bootstrap:
 cd "$PROJECT_DIR"
 if [ "$INSTALL_MODE" = "litellm-only" ]; then
   ./scripts/0_bootstrap.sh --agent --litellm-only --maas-key="$MAAS_KEY"
+elif [ "$INSTALL_MODE" = "opencode-only" ]; then
+  ./scripts/0_bootstrap.sh --agent --opencode-only --maas-key="$MAAS_KEY"
+elif [ "$INSTALL_MODE" = "codex-only" ]; then
+  ./scripts/0_bootstrap.sh --agent --codex-only --maas-key="$MAAS_KEY"
 else
   ./scripts/0_bootstrap.sh --agent --maas-key="$MAAS_KEY"
 fi
@@ -351,9 +355,11 @@ This is idempotent — safe to re-run. In **full** mode it will:
 2. Generate `configs/litellm/config.yaml`
 3. Start Docker Compose (LiteLLM + PostgreSQL + Prometheus + Grafana)
 4. Install opencode + oh-my-opencode-slim plugin
-5. Mint a virtual key
+5. Mint a virtual key (alias "opencode")
 6. Write opencode config
-7. Run validation
+7. Install Codex CLI + mint virtual key (alias "codex")
+8. Write Codex CLI config (`~/.codex/config.toml`)
+9. Run validation
 
 In **LiteLLM-only** mode it will:
 

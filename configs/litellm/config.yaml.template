@@ -19,7 +19,7 @@ model_list:
 
   - model_name: glm-5.2
     litellm_params:
-      model: openai/glm-5.2
+      model: custom_openai/glm-5.2
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 198000
@@ -33,7 +33,7 @@ model_list:
 
   - model_name: glm-5.1
     litellm_params:
-      model: openai/glm-5.1
+      model: custom_openai/glm-5.1
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 500000
@@ -47,7 +47,7 @@ model_list:
 
   - model_name: glm-5
     litellm_params:
-      model: openai/glm-5
+      model: custom_openai/glm-5
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 500000
@@ -61,7 +61,7 @@ model_list:
 
   - model_name: deepseek-v4-pro
     litellm_params:
-      model: openai/deepseek-v4-pro
+      model: custom_openai/deepseek-v4-pro
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 30000
@@ -75,7 +75,7 @@ model_list:
 
   - model_name: deepseek-v4-flash
     litellm_params:
-      model: openai/deepseek-v4-flash
+      model: custom_openai/deepseek-v4-flash
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 30000
@@ -89,7 +89,7 @@ model_list:
 
   - model_name: deepseek-v3.2
     litellm_params:
-      model: openai/deepseek-v3.2
+      model: custom_openai/deepseek-v3.2
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 500000

@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Codex CLI Config Template
+#
+# Codex CLI uses the OpenAI Responses API (/v1/responses) exclusively.
+# LiteLLM auto-bridges Responses API → Chat Completions for custom_openai
+# providers, so Codex CLI works with Huawei MaaS models through LiteLLM.
+#
+# This template is processed by scripts/3b_install_codex.sh which substitutes:
+#   <LITELLM_VIRTUAL_KEY> → minted virtual key (alias "codex")
+#
+# Config is written to ~/.codex/config.toml
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Default model for Codex CLI
+model = "glm-5.2"
+
+# LiteLLM proxy as the OpenAI-compatible endpoint
+openai_base_url = "http://127.0.0.1:4000/v1"
+openai_api_key = "<LITELLM_VIRTUAL_KEY>"
