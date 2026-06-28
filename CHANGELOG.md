@@ -24,21 +24,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CLAUDE_CODE_VIRTUAL_KEY` placeholder in `.env.template`.
 - Validation Section E: Claude Code CLI checks (binary, config, provider,
   Messages API smoke test).
+- Claude Code config written to `~/.claude/settings.json` (native settings
+  file with `env` block, read automatically on startup — no
+  `source`/`export` needed).
+- `REFERENCE.md`: added Claude Code CLI section, Anthropic endpoint to
+  architecture diagram and endpoints table, dual-format architecture
+  documentation.
 
 ### Changed
 
-- Claude Code config moved from `~/.claude-code/.env` (shell env vars
-  requiring `source`/`export`) to `~/.claude/settings.json` (native
-  settings file with `env` block, read automatically on startup).
 - Total deployment count doubled: 6 OpenAI + 6 Anthropic per API key
   (12 × N total, was 6 × N).
 - Anthropic deployments use `claude-` prefixed model names (e.g.,
   `claude-glm-5.2`) to avoid LiteLLM routing conflicts. OpenAI deployments
   keep base names (e.g., `glm-5.2`). Claude Code uses `claude-glm-5.2`
   as `ANTHROPIC_MODEL`.
-- `REFERENCE.md`: added Claude Code CLI section, Anthropic endpoint to
-  architecture diagram and endpoints table, dual-format architecture
-  documentation.
 
 ## [0.3.0] - 2026-06-28
 

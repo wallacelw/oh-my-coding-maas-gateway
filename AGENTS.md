@@ -101,7 +101,8 @@ configs/prometheus/ — Prometheus config, rules, alerts
 configs/grafana/   — Grafana dashboards and provisioning
 configs/opencode/  — opencode + slim plugin templates
 configs/codex/     — Codex CLI config template + model catalog
-docs              — SKILL.md (procedure), REFERENCE.md (reference), README.md (human)
+configs/claude-code/ — Claude Code CLI config template
+root              — SKILL.md, REFERENCE.md, README.md, CHANGELOG.md, AGENTS.md
 ```
 
 ## When Unsure
