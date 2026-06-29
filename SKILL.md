@@ -349,13 +349,13 @@ Run the bootstrap:
 ```bash
 cd "$PROJECT_DIR"
 if [ "$INSTALL_MODE" = "litellm-only" ]; then
-  ./scripts/0_bootstrap.sh --agent --litellm-only --maas-key="$MAAS_KEY"
+  ./scripts/0_bootstrap.sh --agent --tool=litellm --maas-key="$MAAS_KEY"
 elif [ "$INSTALL_MODE" = "opencode-only" ]; then
-  ./scripts/0_bootstrap.sh --agent --opencode-only --maas-key="$MAAS_KEY"
+  ./scripts/0_bootstrap.sh --agent --tool=opencode --maas-key="$MAAS_KEY"
 elif [ "$INSTALL_MODE" = "codex-only" ]; then
-  ./scripts/0_bootstrap.sh --agent --codex-only --maas-key="$MAAS_KEY"
+  ./scripts/0_bootstrap.sh --agent --tool=codex --maas-key="$MAAS_KEY"
 elif [ "$INSTALL_MODE" = "claude-code-only" ]; then
-  ./scripts/0_bootstrap.sh --agent --claude-code-only --maas-key="$MAAS_KEY"
+  ./scripts/0_bootstrap.sh --agent --tool=claude --maas-key="$MAAS_KEY"
 else
   ./scripts/0_bootstrap.sh --agent --maas-key="$MAAS_KEY"
 fi
@@ -380,7 +380,7 @@ In **LiteLLM-only** mode it will:
 1. Generate `.env` (preserving existing immutable secrets)
 2. Generate `configs/litellm/config.yaml`
 3. Start Docker Compose (LiteLLM + PostgreSQL + Prometheus + Grafana)
-4. Run validation (`--litellm-only`)
+4. Run validation (`--tool=litellm`)
 
 > **Notes:**
 > - **Docker image pull:** Step 3 pulls 4 images: LiteLLM (~500 MB),
@@ -535,11 +535,11 @@ Mode:              LiteLLM-only (no tools)
 Next steps:
   1. LiteLLM Admin UI: http://127.0.0.1:4000/ui
   2. To add opencode later:
-     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --opencode-only
+     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --tool=opencode
   3. To add Codex CLI later:
-     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --codex-only
+     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --tool=codex
   4. To add Claude Code CLI later:
-     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --claude-code-only
+     ./scripts/0_bootstrap.sh --maas-key="$MAAS_KEY" --tool=claude
   5. Or mint a virtual key only:
      ./scripts/3_mint_key.sh
 ```
@@ -557,7 +557,7 @@ variables), append this warning to the summary:
   2. Edit .env: replace HUAWEI_MAAS_API_KEY and HUAWEI_MAAS_API_KEY_1..N
   3. Regenerate config: ./scripts/2_deploy_litellm.sh
   4. Restart LiteLLM:  docker compose restart litellm
-  5. Re-validate:      ./scripts/5_validate.sh [--litellm-only if applicable]
+  5. Re-validate:      ./scripts/5_validate.sh [--tool=litellm if applicable]
 ```
 
 For `INSTALL_MODE=full`, also add:

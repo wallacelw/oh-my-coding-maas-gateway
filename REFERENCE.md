@@ -70,14 +70,14 @@ This is reference documentation. For the install procedure, read
 
 | # | Script | Purpose |
 |---|--------|---------|
-| 0 | `0_bootstrap.sh` | End-to-end orchestrator: prereqs → deploy → install → validate. `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only` for modular installs |
+| 0 | `0_bootstrap.sh` | End-to-end orchestrator: prereqs → deploy → install → validate. Shows tool selection menu, or use --tool=all|litellm|opencode|codex|claude (comma-separated for combos) |
 | 1 | `1_init_env.sh` | Generate `.env` with secrets + MaaS keys |
 | 2 | `2_deploy_litellm.sh` | Generate `configs/litellm/config.yaml` from `.env` + deploy Docker Compose |
 | 3 | `3_mint_key.sh` | Mint a scoped virtual key (standalone or called by 4a/4b/4c) |
 | 4a | `4a_install_opencode.sh` | Install opencode + plugin + mint key + write config |
 | 4b | `4b_install_codex.sh` | Install Codex CLI + mint key + write `~/.codex/config.toml` + `model_catalog.json` + `.env` |
 | 4c | `4c_install_claude_code.sh` | Install Claude Code CLI + mint key + write `~/.claude/settings.json` + disable VSCode extension |
-| 5 | `5_validate.sh` | Validate all components (`--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only` for scoped checks) |
+| 5 | `5_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code for partial runs) |
 
 ### Models
 
