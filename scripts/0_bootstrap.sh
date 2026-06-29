@@ -330,7 +330,13 @@ print_step "3" "Deploy LiteLLM"
 
 # ── Port conflict check ──
 for port in 4000 5432 9090 3000; do
+  port_in_use=false
   if command -v ss &>/dev/null && ss -tlnp 2>/dev/null | grep -q ":${port} "; then
+    port_in_use=true
+  elif command -v netstat &>/dev/null && netstat -tlnp 2>/dev/null | grep -q ":${port} "; then
+    port_in_use=true
+  fi
+  if [ "$port_in_use" = true ]; then
     if [ "$AGENT_MODE" = true ]; then
       echo "ERROR: Port $port is in use. Agent mode cannot proceed."
       exit 1

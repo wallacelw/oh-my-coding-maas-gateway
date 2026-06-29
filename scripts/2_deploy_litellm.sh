@@ -22,6 +22,7 @@ CONFIG_FILE="$PROJECT_ROOT/configs/litellm/config.yaml"
 
 # ── Ensure prerequisites ──────────────────────────────────────────
 source "$(dirname "${BASH_SOURCE[0]}")/lib/prereqs.sh"
+prereq_ensure_apt "curl" curl curl
 prereq_ensure_docker
 
 # ── Parse args ────────────────────────────────────────────────────
