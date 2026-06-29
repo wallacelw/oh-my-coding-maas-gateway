@@ -30,18 +30,41 @@ This is reference documentation. For the install procedure, read
 
 ### Endpoints
 
+**LiteLLM Proxy (local):**
+
+| Endpoint | URL | Auth |
+|----------|-----|------|
+| Proxy base | `http://127.0.0.1:4000` | Virtual key (`sk-...`) |
+| Chat Completions | `http://127.0.0.1:4000/v1/chat/completions` | Virtual key |
+| Responses API | `http://127.0.0.1:4000/v1/responses` | Virtual key |
+| Anthropic Messages | `http://127.0.0.1:4000/v1/messages` | Virtual key |
+| Admin UI | `http://127.0.0.1:4000/ui` | Master key |
+| Liveness | `http://127.0.0.1:4000/health/liveliness` | None |
+| Health | `http://127.0.0.1:4000/health` | Master key |
+| Metrics | `http://127.0.0.1:4000/metrics` | None (Prometheus format) |
+
+**Observability (local):**
+
 | Service | URL | Auth |
-|---------|-----|------|
-| LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key (`sk-...`) |
-| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key |
-| LiteLLM Liveness | `http://127.0.0.1:4000/health/liveliness` | None |
-| LiteLLM Health | `http://127.0.0.1:4000/health` | Master key |
-| LiteLLM Metrics | `http://127.0.0.1:4000/metrics` | None (Prometheus format) |
+|----------|-----|------|
 | Prometheus | `http://127.0.0.1:9090` | None (bound to localhost) |
 | Grafana | `http://127.0.0.1:3000` | Anonymous (Viewer role) |
-| Codex CLI | `http://127.0.0.1:4000/v1` | Virtual key in `~/.codex/.env` |
-| Claude Code CLI | `http://127.0.0.1:4000/v1/messages` | Virtual key in `~/.claude/settings.json` |
-| Huawei MaaS Anthropic | `https://api-ap-southeast-1.modelarts-maas.com/anthropic/v1/messages` | MaaS API key (`x-api-key` header) |
+
+**Tool connections (what each tool points to):**
+
+| Tool | Endpoint | API Format | Auth source |
+|------|----------|------------|-------------|
+| opencode (default) | `http://127.0.0.1:4000` → `/v1/chat/completions` | OpenAI Chat Completions | `~/.config/opencode/opencode.jsonc` (provider apiKey) |
+| opencode (direct preset) | `https://api-ap-southeast-1.modelarts-maas.com/openai/v1` | OpenAI Chat Completions | `~/.config/opencode/opencode.jsonc` (provider apiKey) |
+| Codex CLI | `http://127.0.0.1:4000/v1` → `/v1/responses` | OpenAI Responses (bridged to Chat Completions by LiteLLM) | `~/.codex/.env` (`LITELLM_CODEX_API_KEY`) |
+| Claude Code CLI | `http://127.0.0.1:4000` → `/v1/messages` | Anthropic Messages | `~/.claude/settings.json` (env.ANTHROPIC_API_KEY) |
+
+**Huawei MaaS upstream (remote):**
+
+| Endpoint | URL | Auth |
+|----------|-----|------|
+| MaaS OpenAI-compatible | `https://api-ap-southeast-1.modelarts-maas.com/openai/v1/chat/completions` | MaaS API key (`Authorization: Bearer`) |
+| MaaS Anthropic-compatible | `https://api-ap-southeast-1.modelarts-maas.com/anthropic/v1/messages` | MaaS API key (`x-api-key` header) |
 
 ### Scripts
 
