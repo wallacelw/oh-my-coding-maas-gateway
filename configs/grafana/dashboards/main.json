@@ -2,7 +2,7 @@
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
   "schemaVersion": 39,
-  "version": 8,
+  "version": 9,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -941,8 +941,8 @@
     {
       "id": 15,
       "type": "timeseries",
-      "title": "Error rate by model",
-      "description": "Failed requests per minute broken down by model, from litellm_deployment_failure_responses_total. Each line shows the failure rate for one model. Spikes indicate model-specific issues (rate limits, model unavailable, provider outage).\n\nGOOD: All lines at or near zero.\nBAD: Sustained non-zero rate for a model — check provider status, rate limits, and model configuration.",
+      "title": "Errors by model",
+      "description": "Absolute count of failed requests per model in the selected time window, from litellm_deployment_failure_responses_total using increase() over $__range. Each line shows the total failure count for one model.\n\nHOW TO READ: This is a cumulative count over the visible time range, not a rate. Spikes indicate model-specific issues (rate limits, model unavailable, provider outage).\n\nGOOD: All lines at or near zero.\nBAD: Sustained non-zero count for a model — check provider status, rate limits, and model configuration.",
       "gridPos": {
         "x": 0,
         "y": 35,
@@ -951,7 +951,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (requested_model) (rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$window])) * 60",
+          "expr": "sum by (requested_model) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
           "refId": "A",
           "legendFormat": "{{requested_model}}",
           "hide": false,
@@ -965,7 +965,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "req/min",
+          "unit": "short",
           "color": {
             "mode": "palette-classic"
           },
@@ -997,7 +997,7 @@
       "id": 16,
       "type": "piechart",
       "title": "Error status codes",
-      "description": "Distribution of HTTP status codes for failed requests, from litellm_deployment_failure_responses_total grouped by exception_status. The pie chart shows which error types dominate.\n429 = rate limited (transient); 500 = server error; timeout = upstream unreachable.\n\nGOOD: Empty (no errors) or dominated by 429 (transient rate limits).\nBAD: Large 500 or timeout slices — upstream provider issues requiring investigation.",
+      "description": "Distribution of HTTP status codes for failed requests in the selected time window, from litellm_deployment_failure_responses_total grouped by exception_status.\n\nSTATUS CODE REFERENCE:\n  400 — Bad Request: malformed request, invalid model name, or bad parameters.\n  401 — Unauthorized: API key invalid, expired, or missing.\n  403 — Forbidden: API key lacks permission for the requested model or action.\n  404 — Not Found: requested model or endpoint does not exist.\n  408 — Timeout: request exceeded the configured timeout limit.\n  429 — Rate Limited: too many requests — hit MaaS provider RPM/TPM limit. Transient; should recover automatically via cooldown/retry.\n  500 — Internal Server Error: upstream provider returned an unexpected error. Investigate provider status.\n  502 — Bad Gateway: upstream provider unreachable or returned invalid response. Provider may be down.\n  503 — Service Unavailable: upstream temporarily overloaded. Usually transient.\n  504 — Gateway Timeout: upstream did not respond in time. Provider is slow or unresponsive.\n\nGOOD: Empty (no errors) or dominated by 429 (transient rate limits that auto-recover).\nBAD: Large 500/502/503/504 slices — upstream provider issues requiring investigation.",
       "gridPos": {
         "x": 12,
         "y": 35,
