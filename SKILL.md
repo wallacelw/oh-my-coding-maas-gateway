@@ -106,13 +106,13 @@ sudo mkdir -p "$PROJECT_DIR" && sudo chown "$USER" "$PROJECT_DIR"
 Prompt user with a numbered menu:
 
 ```
-What would you like to install?
-  1) Full stack (LiteLLM + opencode + Codex + Claude Code)  [default]
+Select installation scope:
+  1) Default — LiteLLM + opencode + Codex + Claude Code  [default]
   2) LiteLLM only
   3) LiteLLM + opencode
   4) LiteLLM + Codex
   5) LiteLLM + Claude Code
-  6) Custom (toggle each component)
+  6) Custom — toggle each component
 ```
 
 Map the choice to `INSTALL_MODE`:
@@ -162,11 +162,11 @@ In interactive mode, the user is prompted before installation. In agent mode
 > |--------|---------|
 > | `0_bootstrap.sh` | git, python3, curl, jq |
 > | `1_init_env.sh` | python3 |
-> | `2_deploy_litellm.sh` | docker + compose + daemon (via `prereq_ensure_docker`) |
+> | `2_deploy_litellm.sh` | curl, docker + compose + daemon (via `prereq_ensure_docker`) |
 > | `3_mint_key.sh` | curl, jq |
-> | `4a_install_opencode.sh` | bun, jq, curl |
-> | `4b_install_codex.sh` | npm/node, jq, bubblewrap |
-> | `4c_install_claude_code.sh` | npm/node, jq |
+> | `4a_install_opencode.sh` | curl, jq, bun |
+> | `4b_install_codex.sh` | curl, npm/node, jq, bubblewrap |
+> | `4c_install_claude_code.sh` | curl, npm/node, jq |
 > | `5_validate.sh` | curl, jq |
 >
 > This makes each script independently runnable. Repeated installs are
@@ -485,20 +485,21 @@ fi
 | `placeholder value` | Edit `.env`, set the named var, re-run bootstrap |
 | `services running` + `expected 4` | `docker compose up -d`, wait 30s, retry Step 9 |
 | `liveness probe returned` | `docker compose logs litellm --tail 50` |
-| `litellm_config.yaml not found` | `./scripts/2_deploy_litellm.sh` |
 | `Inference smoke test` + `did not respond` | Re-validate MaaS key; check logs |
 | `opencode not found` | `curl -fsSL https://opencode.ai/install \| bash` |
 | `opencode.json not found` | Re-run `4a_install_opencode.sh` |
+| `No opencode config file` | Re-run `4a_install_opencode.sh` |
 | `oh-my-opencode-slim.json not found` | Re-run `4a_install_opencode.sh` |
+| `No oh-my-opencode-slim config` | Re-run `4a_install_opencode.sh` |
 | `No API key for model checks` | Check opencode.json has apiKey; re-run 4a |
 | `Model catalog not reachable` | Check LiteLLM healthy + virtual key valid |
 | `Prometheus not reachable` | `docker compose up -d prometheus`, wait 10s |
 | `/metrics endpoint not responding` | `docker compose restart litellm`, wait 15s |
 | `Prometheus scraping` + `target is down` | Check LiteLLM `/metrics` responds |
 | `Grafana not reachable` | `docker compose up -d grafana`, wait 20s |
-| `Grafana` + `dashboard not found` | `docker compose restart grafana` (re-provision) |
 | `codex not found` | `npm install -g @openai/codex` |
 | `config.toml not found` | Re-run `4b_install_codex.sh` |
+| `No Codex config file` | Re-run `4b_install_codex.sh` |
 | `base_url not pointing` | Re-run `4b_install_codex.sh` |
 | `env_key not set` | Re-run `4b_install_codex.sh` |
 | `wire_api not set` | Re-run `4b_install_codex.sh` |
@@ -506,14 +507,17 @@ fi
 | `Responses API smoke test` + `did not respond` | Check `~/.codex/.env` key; verify `/v1/responses` |
 | `claude not found` | `npm install -g @anthropic-ai/claude-code` |
 | `settings.json not found` | Re-run `4c_install_claude_code.sh` |
+| `No Claude Code config` | Re-run `4c_install_claude_code.sh` |
 | `ANTHROPIC_BASE_URL not pointing` | Re-run `4c_install_claude_code.sh` |
 | `ANTHROPIC_API_KEY not set` | Re-run `4c_install_claude_code.sh` |
+| `default model not set` (Claude Code) | Re-run `4c_install_claude_code.sh` |
 | `Messages API smoke test` + `did not respond` | Check `~/.claude/settings.json` key |
 
-> **Note:** WARN messages (permissions, `unhealthy_count > 0`, deployment
-> drift, scrape not-yet) do NOT cause a non-zero exit — they are advisory.
-> If you see `unhealthy_count > 0`, monitor it but proceed. If inference
-> fails later (smoke test), then investigate MaaS key/model/region validity.
+> **Note:** WARN messages (e.g. `litellm_config.yaml not found`, `dashboard
+> not found`, `unhealthy_count > 0`, deployment drift, scrape not-yet) do NOT
+> cause a non-zero exit — they are advisory. If you see `unhealthy_count > 0`,
+> monitor it but proceed. If inference fails later (smoke test), then
+> investigate MaaS key/model/region validity.
 
 After running the recovery command, re-run `5_validate.sh` **once**. If it
 still fails: escalate with the full validation output. Do not loop recovery

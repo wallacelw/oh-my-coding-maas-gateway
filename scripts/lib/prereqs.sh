@@ -13,6 +13,14 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
+# Sudo availability guard (checked once at source time)
+# ---------------------------------------------------------------------------
+if [ "$(id -u)" -ne 0 ] && ! command -v sudo &>/dev/null; then
+  echo "ERROR: sudo is required when not running as root. Install it or run as root." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
