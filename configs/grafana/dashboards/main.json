@@ -2,7 +2,7 @@
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
   "schemaVersion": 39,
-  "version": 10,
+  "version": 11,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -1091,94 +1091,13 @@
       }
     },
     {
-      "id": 18,
-      "type": "table",
-      "title": "Deployment health",
-      "description": "Per-model deployment summary table showing: Healthy count, Unhealthy count, Successes, Failures, and Cooldowns in the selected window. Use this as the primary diagnostic table when models are degraded.\n\nHOW TO READ: Healthy should be >0 for all models. Failures and Cooldowns should be 0 or near-zero.\n\nGOOD: Healthy >0 for all models, Failures = 0.\nBAD: Unhealthy >0 or Failures >>0 — investigate the affected model's upstream provider and API key status.",
-      "gridPos": {
-        "x": 0,
-        "y": 47,
-        "w": 24,
-        "h": 7
-      },
-      "targets": [
-        {
-          "expr": "count by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"} == 0)",
-          "refId": "A",
-          "legendFormat": "Healthy",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
-          "expr": "count by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"} > 0)",
-          "refId": "B",
-          "legendFormat": "Unhealthy",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
-          "expr": "sum by (litellm_model_name) (increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range]))",
-          "refId": "C",
-          "legendFormat": "Successes",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
-          "expr": "sum by (requested_model) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
-          "refId": "D",
-          "legendFormat": "Failures",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
-          "expr": "sum by (litellm_model_name) (increase(litellm_deployment_cooled_down_total[$__range]))",
-          "refId": "E",
-          "legendFormat": "Cooldowns",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true
-      }
-    },
-    {
       "id": 19,
       "type": "row",
       "title": "Throughput & Capacity",
       "description": "Request and token throughput rates, traffic distribution across models, and RPM utilization against provider limits. Use these to understand load patterns and capacity headroom.",
       "gridPos": {
         "x": 0,
-        "y": 54,
+        "y": 46,
         "w": 24,
         "h": 1
       },
@@ -1192,13 +1111,13 @@
       "description": "Absolute count of all requests (successful + failed) across all deployments. This is a cumulative counter, not a rate — use it to understand total volume over the proxy's lifetime.\n\nGOOD: Increases steadily, with failures being a small fraction.\nBAD: Stagnant (no traffic) or failures dominate the count.",
       "gridPos": {
         "x": 0,
-        "y": 55,
+        "y": 47,
         "w": 8,
         "h": 4
       },
       "targets": [
         {
-          "expr": "sum(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}) + sum(litellm_deployment_failure_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
+          "expr": "sum(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}) + sum(litellm_deployment_failure_responses_total{requested_model=~\"$model\"})",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -1250,7 +1169,7 @@
       "description": "Absolute count of successful responses across all deployments. Compare with Total Requests and Failed Requests to compute success rate.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.",
       "gridPos": {
         "x": 8,
-        "y": 55,
+        "y": 47,
         "w": 8,
         "h": 4
       },
@@ -1308,13 +1227,13 @@
       "description": "Absolute count of failed responses across all deployments. This is the raw failure count, useful for understanding error volume (not just percentage).\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Error rate by model for per-model details.",
       "gridPos": {
         "x": 16,
-        "y": 55,
+        "y": 47,
         "w": 8,
         "h": 4
       },
       "targets": [
         {
-          "expr": "sum(litellm_deployment_failure_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
+          "expr": "sum(litellm_deployment_failure_responses_total{requested_model=~\"$model\"})",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -1374,7 +1293,7 @@
       "description": "Requests per minute broken down by model, from litellm_proxy_total_requests_metric_total. Each line shows traffic volume for one model. Use this to understand which models receive the most traffic and spot usage pattern changes.\n\nGOOD: Matches expected traffic distribution.\nBAD: One model suddenly dominates (misconfigured client) or a model drops to zero (clients can't reach it).",
       "gridPos": {
         "x": 0,
-        "y": 59,
+        "y": 51,
         "w": 12,
         "h": 12
       },
@@ -1429,7 +1348,7 @@
       "description": "Tokens per minute broken down by model, from litellm_total_tokens_metric. Shows token consumption per model. Compare with RPM by model — a model with low RPM but high TPM has long conversations.\n\nGOOD: Matches expected usage pattern.\nBAD: Unexpected spikes — runaway clients or unexpectedly long outputs.",
       "gridPos": {
         "x": 12,
-        "y": 59,
+        "y": 51,
         "w": 12,
         "h": 12
       },
@@ -1484,7 +1403,7 @@
       "description": "Pie chart showing each model's share of total requests in the selected window. Use this to quickly see which models dominate traffic.\n\nGOOD: Distribution matches intended usage pattern.\nBAD: One model takes >90% (clients not load-balancing) or a model disappears (unreachable or removed).",
       "gridPos": {
         "x": 0,
-        "y": 71,
+        "y": 63,
         "w": 12,
         "h": 10
       },
@@ -1526,7 +1445,7 @@
       "description": "Current RPM as a percentage of the MaaS provider's RPM limit per deployment, from litellm_deployment_total_requests_total / litellm_deployment_rpm_limit. This is the key capacity headroom indicator.\n\nGOOD: <70% — safe headroom.\nWARNING: 70–90% — approaching limit, monitor closely.\nBAD: >90% — expect 429 rate-limit errors; add more API keys or reduce traffic.",
       "gridPos": {
         "x": 12,
-        "y": 71,
+        "y": 63,
         "w": 12,
         "h": 10
       },
@@ -1581,7 +1500,7 @@
       "description": "Token usage broken down by type: input (prompt), output (completion), and reasoning (thinking). Use these to understand cost drivers and model behavior.",
       "gridPos": {
         "x": 0,
-        "y": 81,
+        "y": 73,
         "w": 24,
         "h": 1
       },
@@ -1595,7 +1514,7 @@
       "description": "Input (prompt) tokens per minute per model, from litellm_input_tokens_metric. Input tokens are what the client sends — prompts, context, system instructions. They drive prefill latency and cost.\n\nGOOD: Proportional to request rate.\nBAD: Disproportionately high — clients sending excessive context (large prompts, untrimmed conversation history).",
       "gridPos": {
         "x": 0,
-        "y": 82,
+        "y": 74,
         "w": 8,
         "h": 12
       },
@@ -1650,7 +1569,7 @@
       "description": "Output (completion) tokens per minute per model, from litellm_output_tokens_metric. Output tokens are the model's response. They drive generation time and cost.\n\nGOOD: Proportional to expected response length.\nBAD: Unexpectedly high — model generating excessively long responses; check max_tokens settings.",
       "gridPos": {
         "x": 8,
-        "y": 82,
+        "y": 74,
         "w": 8,
         "h": 12
       },
@@ -1705,7 +1624,7 @@
       "description": "Reasoning (thinking) tokens per minute per model, from litellm_output_reasoning_tokens_metric. These are internal tokens generated by reasoning models (chain-of-thought) before the final response. They consume time and cost but are not visible to the user.\n\nGOOD: Expected for reasoning models; near-zero for non-reasoning models.\nBAD: Unexpectedly high for non-reasoning models (misconfigured) or dominating total output (expensive reasoning overhead).",
       "gridPos": {
         "x": 16,
-        "y": 82,
+        "y": 74,
         "w": 8,
         "h": 12
       },
@@ -1760,7 +1679,7 @@
       "description": "Spend accumulation and rate per model. Use these to track cost trends and spot runaway spending in real time.",
       "gridPos": {
         "x": 0,
-        "y": 94,
+        "y": 86,
         "w": 24,
         "h": 1
       },
@@ -1774,7 +1693,7 @@
       "description": "Cumulative USD spent across all models since the proxy started, from litellm_spend_metric_total. This is a lifetime counter — use it for budget tracking.\n\nGOOD: Within budget.\nBAD: Approaching or exceeding budget — check Spend rate panel for real-time cost trajectory.",
       "gridPos": {
         "x": 0,
-        "y": 95,
+        "y": 87,
         "w": 6,
         "h": 8
       },
@@ -1832,7 +1751,7 @@
       "description": "Cumulative USD spend over time per model. Each line shows the running total for one model. Use this to identify which models cost the most over time.\n\nGOOD: Linear growth at expected rate.\nBAD: Sudden steep slope — runaway costs on a model; check for expensive model selection or excessive usage.",
       "gridPos": {
         "x": 6,
-        "y": 95,
+        "y": 87,
         "w": 12,
         "h": 8
       },
@@ -1887,7 +1806,7 @@
       "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate. Use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
       "gridPos": {
         "x": 18,
-        "y": 95,
+        "y": 87,
         "w": 6,
         "h": 8
       },
@@ -1942,7 +1861,7 @@
       "description": "Cost efficiency metrics. Use these to understand how much value you get per dollar spent.",
       "gridPos": {
         "x": 0,
-        "y": 103,
+        "y": 95,
         "w": 24,
         "h": 1
       },
@@ -1956,7 +1875,7 @@
       "description": "USD per 1,000 tokens (input + output), from litellm_spend_metric_total / litellm_total_tokens_metric_total. This is the blended cost efficiency across all models. Lower means you're getting more tokens per dollar. Compare against model pricing to verify billing.\n\nGOOD: Matches expected blended model pricing.\nBAD: Higher than expected — expensive models dominating traffic, or pricing/billing misconfiguration.",
       "gridPos": {
         "x": 0,
-        "y": 104,
+        "y": 96,
         "w": 12,
         "h": 8
       },
