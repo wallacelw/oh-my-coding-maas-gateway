@@ -2,7 +2,7 @@
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
   "schemaVersion": 39,
-  "version": 13,
+  "version": 14,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -154,7 +154,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -212,7 +212,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -270,7 +270,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -336,7 +336,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -394,7 +394,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -452,7 +452,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -510,7 +510,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -568,7 +568,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -1107,8 +1107,8 @@
     {
       "id": 36,
       "type": "stat",
-      "title": "Total Requests",
-      "description": "Absolute count of all requests (successful + failed) across all deployments. This is a cumulative counter, not a rate — use it to understand total volume over the proxy's lifetime.\n\nGOOD: Increases steadily, with failures being a small fraction.\nBAD: Stagnant (no traffic) or failures dominate the count.",
+      "title": "Total Requests (window)",
+      "description": "Absolute count of all requests (successful + failed) across all deployments. Count of all requests (successful + failed) in the selected Grafana time range, using increase() over $__range.\n\nGOOD: Increases steadily, with failures being a small fraction.\nBAD: Stagnant (no traffic) or failures dominate the count.",
       "gridPos": {
         "x": 0,
         "y": 47,
@@ -1117,7 +1117,7 @@
       },
       "targets": [
         {
-          "expr": "sum(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}) + sum(litellm_deployment_failure_responses_total{requested_model=~\"$model\"})",
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range])) + sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -1150,7 +1150,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -1165,8 +1165,8 @@
     {
       "id": 37,
       "type": "stat",
-      "title": "Successful Requests",
-      "description": "Absolute count of successful responses across all deployments. Compare with Total Requests and Failed Requests to compute success rate.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.",
+      "title": "Successful Requests (window)",
+      "description": "Absolute count of successful responses across all deployments. Count of successful responses in the selected Grafana time range.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.",
       "gridPos": {
         "x": 8,
         "y": 47,
@@ -1175,7 +1175,7 @@
       },
       "targets": [
         {
-          "expr": "sum(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range]))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -1208,7 +1208,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -1223,8 +1223,8 @@
     {
       "id": 38,
       "type": "stat",
-      "title": "Failed Requests",
-      "description": "Absolute count of failed responses across all deployments. This is the raw failure count, useful for understanding error volume (not just percentage).\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Error rate by model for per-model details.",
+      "title": "Failed Requests (window)",
+      "description": "Absolute count of failed responses across all deployments. Count of failed responses in the selected Grafana time range.\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Error rate by model for per-model details.",
       "gridPos": {
         "x": 16,
         "y": 47,
@@ -1233,7 +1233,7 @@
       },
       "targets": [
         {
-          "expr": "sum(litellm_deployment_failure_responses_total{requested_model=~\"$model\"})",
+          "expr": "sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -1274,7 +1274,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -1635,7 +1635,7 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
