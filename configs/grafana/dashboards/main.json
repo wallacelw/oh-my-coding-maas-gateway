@@ -2,7 +2,7 @@
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
   "schemaVersion": 39,
-  "version": 7,
+  "version": 8,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -708,7 +708,7 @@
       "id": 11,
       "type": "timeseries",
       "title": "End-to-end latency",
-      "description": "Total request latency at P50, P95, and P99 percentiles — the full round-trip from request received to response completed, from litellm_request_total_latency_metric. P50 = typical experience; P95 = slow tail; P99 = worst-case outliers.\n\nHOW TO READ: Compare P99 to P50 — a large gap means intermittent latency spikes affecting a small fraction of users.\n\nGOOD: P50 <2s, P95 <5s, P99 <10s for chat models.\nBAD: P99 >> P50 — large tail latency suggests intermittent upstream issues or queue saturation.",
+      "description": "Total request latency P95 (seconds) — the full round-trip from request received to response completed, from litellm_request_total_latency_metric. P95 captures the slow tail that affects user experience.\n\nGOOD: <2s for chat models, <5s for reasoning models.\nBAD: >5s — check Queue wait, LLM API latency, and Proxy overhead to isolate the bottleneck.",
       "gridPos": {
         "x": 0,
         "y": 22,
@@ -717,33 +717,9 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "A",
-          "legendFormat": "{{model}} P50",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
           "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "B",
-          "legendFormat": "{{model}} P95",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "C",
-          "legendFormat": "{{model}} P99",
+          "refId": "A",
+          "legendFormat": "{{model}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
@@ -787,7 +763,7 @@
       "id": 35,
       "type": "timeseries",
       "title": "LLM API latency",
-      "description": "Upstream LLM API call latency at P50/P95/P99 — time spent waiting for the model provider, from litellm_llm_api_latency_metric. This excludes proxy overhead and queue wait. Compare with End-to-end latency to isolate where time is spent.\n\nGOOD: Close to End-to-end latency (proxy adds minimal overhead).\nBAD: Much higher than expected — provider is slow, rate-limiting, or experiencing an outage.",
+      "description": "Upstream LLM API call latency P95 (seconds) — time spent waiting for the model provider, from litellm_llm_api_latency_metric. This excludes proxy overhead and queue wait. Compare with End-to-end latency to isolate where time is spent.\n\nGOOD: Close to End-to-end latency (proxy adds minimal overhead).\nBAD: Much higher than expected — provider is slow, rate-limiting, or experiencing an outage.",
       "gridPos": {
         "x": 6,
         "y": 22,
@@ -796,33 +772,9 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum by (le, model) (rate(litellm_llm_api_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "A",
-          "legendFormat": "{{model}} P50",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
           "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_llm_api_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "B",
-          "legendFormat": "{{model}} P95",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum by (le, model) (rate(litellm_llm_api_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "C",
-          "legendFormat": "{{model}} P99",
+          "refId": "A",
+          "legendFormat": "{{model}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
