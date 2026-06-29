@@ -14,14 +14,16 @@ set -euo pipefail
 # Canonical path: /home/oh-my-litellm-opencode
 #
 # Usage:
-#   ./0_bootstrap.sh                                    # interactive — installs all (litellm + opencode + codex + claude-code)
+#   ./0_bootstrap.sh                                    # interactive — shows tool selection menu
 #   ./0_bootstrap.sh --maas-key=KEY                     # non-interactive (agent mode)
 #   ./0_bootstrap.sh --agent --maas-key=KEY             # agent mode: non-interactive, fail-fast, validate + summary
 #   ./0_bootstrap.sh --virtual-key=sk-...               # use existing virtual key (skip minting)
-#   ./0_bootstrap.sh --litellm-only                     # LiteLLM proxy only, skip tool installation
-#   ./0_bootstrap.sh --opencode-only                    # LiteLLM + opencode (skip Codex CLI)
-#   ./0_bootstrap.sh --codex-only                       # LiteLLM + Codex CLI (skip opencode)
-#   ./0_bootstrap.sh --claude-code-only                   # LiteLLM + Claude Code CLI (skip opencode + Codex)
+#   ./0_bootstrap.sh --tool=all                         # install all (default)
+#   ./0_bootstrap.sh --tool=litellm                     # LiteLLM proxy only, skip tool installation
+#   ./0_bootstrap.sh --tool=opencode                    # LiteLLM + opencode
+#   ./0_bootstrap.sh --tool=codex                       # LiteLLM + Codex CLI
+#   ./0_bootstrap.sh --tool=claude                      # LiteLLM + Claude Code CLI
+#   ./0_bootstrap.sh --tool=opencode,codex              # LiteLLM + opencode + Codex (custom combo)
 #   ./0_bootstrap.sh --dry-run                          # preview changes
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -36,10 +38,12 @@ MAAS_KEY=""
 VIRTUAL_KEY=""
 DRY_RUN=false
 AGENT_MODE=false
-LITELLM_ONLY=false
-OPENCODE_ONLY=false
-CODEX_ONLY=false
-CLAUDE_CODE_ONLY=false
+TOOL_SPECIFIED=false
+TOOL_SELECTION=""
+# Install flags default to true (overridden by --tool= or menu)
+INSTALL_OPENCODE=true
+INSTALL_CODEX=true
+INSTALL_CLAUDE_CODE=true
 
 # ── Parse command-line arguments ──
 for arg in "$@"; do
@@ -47,48 +51,43 @@ for arg in "$@"; do
     --maas-key=*)       MAAS_KEY="${arg#--maas-key=}" ;;
     --virtual-key=*)    VIRTUAL_KEY="${arg#--virtual-key=}" ;;
     --agent)            AGENT_MODE=true ;;
-    --litellm-only)     LITELLM_ONLY=true ;;
-    --opencode-only)    OPENCODE_ONLY=true ;;
-    --codex-only)       CODEX_ONLY=true ;;
-    --claude-code-only)  CLAUDE_CODE_ONLY=true ;;
+    --tool=*)           TOOL_SPECIFIED=true; TOOL_SELECTION="${arg#--tool=}" ;;
+    # Legacy aliases (deprecated, map to --tool=)
+    --litellm-only)     TOOL_SPECIFIED=true; TOOL_SELECTION="litellm" ;;
+    --opencode-only)    TOOL_SPECIFIED=true; TOOL_SELECTION="opencode" ;;
+    --codex-only)       TOOL_SPECIFIED=true; TOOL_SELECTION="codex" ;;
+    --claude-code-only) TOOL_SPECIFIED=true; TOOL_SELECTION="claude" ;;
     --dry-run)          DRY_RUN=true ;;
     *)
       echo "ERROR: Unknown argument: $arg"
-      echo "Usage: $0 [--maas-key=KEY] [--agent] [--virtual-key=sk-...] [--litellm-only|--opencode-only|--codex-only|--claude-code-only] [--dry-run]"
+      echo "Usage: $0 [--maas-key=KEY] [--agent] [--virtual-key=sk-...] [--tool=all|litellm|opencode|codex|claude|opencode,codex,...] [--dry-run]"
       exit 1
       ;;
   esac
 done
 
-# ── Mode validation ──
-MODE_COUNT=0
-[ "$LITELLM_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
-[ "$OPENCODE_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
-[ "$CODEX_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
-[ "$CLAUDE_CODE_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
-if [ "$MODE_COUNT" -gt 1 ]; then
-  echo "ERROR: --litellm-only, --opencode-only, --codex-only, and --claude-code-only are mutually exclusive."
-  exit 1
-fi
-
-# ── Derive install flags ──
-# Default (no flags): install everything
-INSTALL_OPENCODE=true
-INSTALL_CODEX=true
-INSTALL_CLAUDE_CODE=true
-if [ "$LITELLM_ONLY" = true ]; then
+# ── Parse --tool= selection into INSTALL_* flags ──
+if [ "$TOOL_SPECIFIED" = true ]; then
+  # Reset to false, then enable based on selection
   INSTALL_OPENCODE=false
   INSTALL_CODEX=false
   INSTALL_CLAUDE_CODE=false
-elif [ "$OPENCODE_ONLY" = true ]; then
-  INSTALL_CODEX=false
-  INSTALL_CLAUDE_CODE=false
-elif [ "$CODEX_ONLY" = true ]; then
-  INSTALL_OPENCODE=false
-  INSTALL_CLAUDE_CODE=false
-elif [ "$CLAUDE_CODE_ONLY" = true ]; then
-  INSTALL_OPENCODE=false
-  INSTALL_CODEX=false
+  # Split comma-separated values
+  IFS=',' read -ra TOOL_PARTS <<< "$TOOL_SELECTION"
+  for part in "${TOOL_PARTS[@]}"; do
+    case "$part" in
+      all)       INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true ;;
+      litellm)   ;;  # LiteLLM always installed, no tools
+      opencode)  INSTALL_OPENCODE=true ;;
+      codex)     INSTALL_CODEX=true ;;
+      claude)    INSTALL_CLAUDE_CODE=true ;;
+      *)
+        echo "ERROR: Unknown tool '$part' in --tool=$TOOL_SELECTION"
+        echo "Valid values: all, litellm, opencode, codex, claude (or comma-separated combo)"
+        exit 1
+        ;;
+    esac
+  done
 fi
 
 # ── Agent mode validation ──
@@ -97,20 +96,9 @@ if [ "$AGENT_MODE" = true ] && [ -z "$MAAS_KEY" ]; then
   exit 1
 fi
 
-# ── Mutual exclusion: --litellm-only and --virtual-key ──
-if [ "$LITELLM_ONLY" = true ] && [ -n "$VIRTUAL_KEY" ]; then
-  echo "ERROR: --litellm-only and --virtual-key are mutually exclusive."
-  exit 1
-fi
-
 # ── Virtual key only applies to opencode ──
-if [ "$CODEX_ONLY" = true ] && [ -n "$VIRTUAL_KEY" ]; then
-  echo "ERROR: --codex-only and --virtual-key are mutually exclusive (--virtual-key is for opencode)."
-  exit 1
-fi
-
-if [ "$CLAUDE_CODE_ONLY" = true ] && [ -n "$VIRTUAL_KEY" ]; then
-  echo "ERROR: --claude-code-only and --virtual-key are mutually exclusive (--virtual-key is for opencode)."
+if [ -n "$VIRTUAL_KEY" ] && [ "$INSTALL_OPENCODE" = false ]; then
+  echo "ERROR: --virtual-key requires opencode in the selection (opencode uses the virtual key)."
   exit 1
 fi
 
@@ -181,6 +169,43 @@ wait_for_litellm() {
 
 print_step() { echo ""; echo "─── Step ${1}: ${2} ───"; }
 
+# ── Tool selection menu ──
+show_tool_menu() {
+  echo ""
+  echo "Select installation scope:"
+  echo "  1) Default — LiteLLM + opencode + Codex + Claude Code"
+  echo "  2) LiteLLM only"
+  echo "  3) LiteLLM + opencode"
+  echo "  4) LiteLLM + Codex"
+  echo "  5) LiteLLM + Claude Code"
+  echo "  6) Custom — toggle each component"
+  echo -n "Enter choice [1]: "
+  local choice=""
+  read -r choice < /dev/tty || choice="1"
+  case "${choice:-1}" in
+    1) INSTALL_OPENCODE=true;  INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=true ;;
+    2) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false ;;
+    3) INSTALL_OPENCODE=true;  INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false ;;
+    4) INSTALL_OPENCODE=false; INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=false ;;
+    5) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=true ;;
+    6)
+      echo ""
+      echo "Custom selection (LiteLLM is always installed):"
+      local yn=""
+      echo -n "  Install opencode? [y/N]: ";    read -r yn < /dev/tty || yn="n"
+      INSTALL_OPENCODE=false; [[ "$yn" =~ ^[Yy] ]] && INSTALL_OPENCODE=true
+      echo -n "  Install Codex? [y/N]: ";       read -r yn < /dev/tty || yn="n"
+      INSTALL_CODEX=false;    [[ "$yn" =~ ^[Yy] ]] && INSTALL_CODEX=true
+      echo -n "  Install Claude Code? [y/N]: "; read -r yn < /dev/tty || yn="n"
+      INSTALL_CLAUDE_CODE=false; [[ "$yn" =~ ^[Yy] ]] && INSTALL_CLAUDE_CODE=true
+      ;;
+    *)
+      echo "Invalid choice. Defaulting to all."
+      INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true
+      ;;
+  esac
+}
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Step 1: Banner
 # ──────────────────────────────────────────────────────────────────────────────
@@ -190,9 +215,9 @@ echo "   Project dir: $PROJECT_DIR"
 [ "$DRY_RUN" = true ] && echo "   (DRY RUN — no changes will be made)"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Step 2: Check prerequisites
+# Step 2: Check core prerequisites (always needed for LiteLLM)
 # ──────────────────────────────────────────────────────────────────────────────
-print_step "2" "Check prerequisites"
+print_step "2" "Check core prerequisites"
 
 PREREQ_OK=true
 
@@ -206,29 +231,52 @@ check_prereq() {
   fi
 }
 
-if [ "$INSTALL_OPENCODE" = true ]; then
-  check_prereq "bun"   bun     "install from https://bun.sh (needed for oh-my-opencode-slim plugin)"
-  check_prereq "jq"    jq      "install from https://stedolan.github.io/jq/"
-fi
-if [ "$INSTALL_CODEX" = true ]; then
-  check_prereq "npm"   npm     "install from https://nodejs.org/ (needed for Codex CLI)"
-  check_prereq "jq"    jq      "install from https://stedolan.github.io/jq/"
-fi
-if [ "$INSTALL_CLAUDE_CODE" = true ]; then
-  check_prereq "npm"   npm     "install from https://nodejs.org/ (needed for Claude Code CLI)"
-  check_prereq "jq"    jq      "install from https://stedolan.github.io/jq/"
-fi
-if [ "$INSTALL_CODEX" = true ]; then
-  check_prereq "bwrap" bwrap   "install with: apt-get install -y bubblewrap (needed for Codex CLI sandboxing)"
-fi
 check_prereq "docker"  docker  "install from https://docs.docker.com/engine/install/"
 check_prereq "git"     git     "install git"
 check_prereq "python3" python3 "install Python 3"
+check_prereq "jq"      jq      "install from https://stedolan.github.io/jq/"
+check_prereq "curl"    curl    "install curl"
 
 if command -v docker &>/dev/null && ! docker compose version &>/dev/null; then
   echo "  ✗ docker compose V2 NOT found"
   PREREQ_OK=false
 fi
+
+[ "$PREREQ_OK" = false ] && { echo ""; echo "ERROR: Core prerequisites missing. Install them and re-run."; exit 1; }
+
+# ── Tool selection (menu or --tool= flag) ──
+if [ "$TOOL_SPECIFIED" = false ]; then
+  if [ "$AGENT_MODE" = true ]; then
+    echo ""
+    echo "  Agent mode: no --tool specified, defaulting to all."
+  else
+    show_tool_menu
+  fi
+fi
+
+# Show selected scope
+echo ""
+echo "  Installation scope:"
+echo "    LiteLLM:      yes (always)"
+echo "    opencode:     $( [ "$INSTALL_OPENCODE" = true ] && echo "yes" || echo "no" )"
+echo "    Codex:        $( [ "$INSTALL_CODEX" = true ] && echo "yes" || echo "no" )"
+echo "    Claude Code:  $( [ "$INSTALL_CLAUDE_CODE" = true ] && echo "yes" || echo "no" )"
+
+# ── Tool-specific prerequisites (batch, based on selection) ──
+echo ""
+echo "  Checking tool-specific prerequisites..."
+
+if [ "$INSTALL_OPENCODE" = true ]; then
+  check_prereq "bun" bun "install from https://bun.sh (needed for oh-my-opencode-slim plugin)"
+fi
+if [ "$INSTALL_CODEX" = true ] || [ "$INSTALL_CLAUDE_CODE" = true ]; then
+  check_prereq "npm" npm "install from https://nodejs.org/ (needed for Codex/Claude Code CLI)"
+fi
+if [ "$INSTALL_CODEX" = true ]; then
+  check_prereq "bwrap" bwrap "install with: apt-get install -y bubblewrap (needed for Codex CLI sandboxing)"
+fi
+
+[ "$PREREQ_OK" = false ] && { echo ""; echo "ERROR: Tool prerequisites missing. Install them and re-run."; exit 1; }
 
 # Resolve MaaS key
 if [ -z "$MAAS_KEY" ]; then MAAS_KEY="${HUAWEI_MAAS_API_KEY:-}"; fi
@@ -469,15 +517,9 @@ print_step "5" "Validate"
 
 VALIDATE_CMD=("$SCRIPT_DIR/5_validate.sh")
 [ "$DRY_RUN" = true ] && VALIDATE_CMD+=("--dry-run")
-if [ "$INSTALL_OPENCODE" = false ] && [ "$INSTALL_CODEX" = false ] && [ "$INSTALL_CLAUDE_CODE" = false ]; then
-  VALIDATE_CMD+=("--litellm-only")
-elif [ "$INSTALL_OPENCODE" = false ] && [ "$INSTALL_CODEX" = false ]; then
-  VALIDATE_CMD+=("--claude-code-only")
-elif [ "$INSTALL_OPENCODE" = false ] && [ "$INSTALL_CLAUDE_CODE" = false ]; then
-  VALIDATE_CMD+=("--codex-only")
-elif [ "$INSTALL_CODEX" = false ] && [ "$INSTALL_CLAUDE_CODE" = false ]; then
-  VALIDATE_CMD+=("--opencode-only")
-fi
+[ "$INSTALL_OPENCODE" = false ] && VALIDATE_CMD+=("--skip-opencode")
+[ "$INSTALL_CODEX" = false ] && VALIDATE_CMD+=("--skip-codex")
+[ "$INSTALL_CLAUDE_CODE" = false ] && VALIDATE_CMD+=("--skip-claude-code")
 
 if [ "$DRY_RUN" = true ]; then
   echo "  Would run: ${VALIDATE_CMD[*]}"
@@ -508,18 +550,18 @@ echo "LiteLLM proxy:     $LITELLM_URL"
 echo "LiteLLM Admin UI:  ${LITELLM_URL}/ui"
 echo "Grafana:           http://127.0.0.1:3000 (anonymous, no login)"
 echo "Prometheus:        http://127.0.0.1:9090"
-if [ "$LITELLM_ONLY" = true ]; then
+if [ "$INSTALL_OPENCODE" = false ] && [ "$INSTALL_CODEX" = false ] && [ "$INSTALL_CLAUDE_CODE" = false ]; then
   echo ""
   echo "Mode:              LiteLLM-only (no tools)"
   echo ""
   echo "Next steps:"
   echo "  1. LiteLLM Admin UI: ${LITELLM_URL}/ui"
   echo "  2. To add opencode later:"
-  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\" --opencode-only"
+  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\" --tool=opencode"
   echo "  3. To add Codex CLI later:"
-  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\" --codex-only"
+  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\" --tool=codex"
   echo "  4. To add Claude Code CLI later:"
-  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\" --claude-code-only"
+  echo "     ./scripts/0_bootstrap.sh --maas-key=\"\$KEY\" --tool=claude"
   echo "  5. Or mint a virtual key only:"
   echo "     ./scripts/3_mint_key.sh"
   if [ "$AGENT_MODE" = true ]; then

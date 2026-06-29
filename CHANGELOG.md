@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Tool selection menu in `0_bootstrap.sh` — interactive 6-option menu
+  (default all, litellm-only, litellm+opencode, litellm+codex, litellm+claude,
+  custom toggle). Use `--tool=all|litellm|opencode|codex|claude` for
+  non-interactive selection (comma-separated for custom combos).
+  Legacy `--litellm-only`/`--opencode-only`/`--codex-only`/`--claude-code-only`
+  flags still work as aliases.
+- Just-in-time prerequisite checking in `0_bootstrap.sh` — core prereqs
+  checked first, then tool-specific prereqs checked after selection.
+- `--skip-opencode`/`--skip-codex`/`--skip-claude-code` flags for
+  `5_validate.sh` (additive, combinable with existing --xxx-only flags).
 - Claude Code CLI integration via `4c_install_claude_code.sh` — installs
   Claude Code CLI, mints virtual key (alias "claude-code", unlimited budget),
   writes `~/.claude/settings.json`, disables VSCode extension auto-install

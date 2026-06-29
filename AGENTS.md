@@ -16,8 +16,8 @@ multiple unrelated changes in one commit. Do not leave uncommitted changes.
 Before committing, validate the change from **all** relevant perspectives:
 
 1. **Script validation:** Run `./scripts/5_validate.sh` (or
-   `--litellm-only` / `--opencode-only` as appropriate). Must pass (or
-   fail only on expected checks like placeholder MaaS key).
+   `--litellm-only` / `--opencode-only` / `--skip-*` as appropriate).
+   Must pass (or fail only on expected checks like placeholder MaaS key).
 
 2. **Cross-file consistency:** If you changed one file, check every file
    that references it:
@@ -36,6 +36,7 @@ Before committing, validate the change from **all** relevant perspectives:
 
 4. **Edge cases:** Consider:
    - `--agent` mode vs interactive mode
+   - `--tool=` mode variants (litellm, opencode, codex, claude, custom combos)
    - `--litellm-only` vs full mode
    - `--dry-run` mode
    - Idempotent re-run (existing .env, running containers)
@@ -69,6 +70,9 @@ Fix bugs found in end-to-end review
 - 5_validate.sh: --litellm-only --opencode-only silent no-op
 - 3_mint_key.sh: empty duration display
 ```
+
+Note: `5_validate.sh` uses `--xxx-only` flags (still valid). `0_bootstrap.sh`
+uses `--tool=` flags (new syntax).
 
 ## Never Commit
 

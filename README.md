@@ -29,10 +29,11 @@ models, then configures three coding tools to use it:
 | Flag | What gets installed |
 |------|-------------------|
 | *(none)* | LiteLLM + opencode + Codex CLI + Claude Code CLI |
-| `--litellm-only` | LiteLLM proxy only |
-| `--opencode-only` | LiteLLM + opencode |
-| `--codex-only` | LiteLLM + Codex CLI |
-| `--claude-code-only` | LiteLLM + Claude Code CLI |
+| `--tool=litellm` | LiteLLM proxy only |
+| `--tool=opencode` | LiteLLM + opencode |
+| `--tool=codex` | LiteLLM + Codex CLI |
+| `--tool=claude` | LiteLLM + Claude Code CLI |
+| `--tool=opencode,codex` | Custom combo (comma-separated) |
 
 ---
 
@@ -74,8 +75,8 @@ If opencode was already running, exit it (`/exit` or Ctrl+C) and start fresh.
 
 For a different install mode:
 ```bash
-./scripts/0_bootstrap.sh --litellm-only    # proxy only
-./scripts/0_bootstrap.sh --codex-only      # proxy + Codex CLI
+./scripts/0_bootstrap.sh --tool=litellm    # proxy only
+./scripts/0_bootstrap.sh --tool=codex      # proxy + Codex CLI
 # etc.
 ```
 
@@ -134,7 +135,7 @@ Upgrade oh-my-litellm-opencode on this machine by following Section D
    If pull fails, ask me: "Reset to origin/main? (y/n)"
 5. Run bootstrap with the key from .env:
    ./scripts/0_bootstrap.sh --agent --maas-key="$MAAS_KEY"
-   (add --litellm-only, --opencode-only, --codex-only, or --claude-code-only
+   (add --tool=litellm, --tool=opencode, --tool=codex, or --tool=claude
    if the existing install used one of those modes)
    Bootstrap is idempotent — it preserves all existing secrets and data.
 6. The upgrade is complete when scripts/5_validate.sh exits 0.

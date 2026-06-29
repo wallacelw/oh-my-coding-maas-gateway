@@ -13,6 +13,7 @@ set -euo pipefail
 #   ./validate.sh --opencode-only  # only opencode config checks
 #   ./validate.sh --codex-only  # only Codex CLI config checks
 #   ./validate.sh --claude-code-only  # only Claude Code CLI config checks
+#   ./validate.sh --skip-opencode --skip-codex  # LiteLLM + Claude Code only
 
 PASS=0
 FAIL=0
@@ -22,19 +23,25 @@ LITELLM_ONLY=false
 OPENCODE_ONLY=false
 CODEX_ONLY=false
 CLAUDE_CODE_ONLY=false
+SKIP_OPENCODE=false
+SKIP_CODEX=false
+SKIP_CLAUDE_CODE=false
 LITELLM_URL="http://127.0.0.1:4000"
 
 for arg in "$@"; do
   case "$arg" in
-    --dry-run)        DRY_RUN=true ;;
-    --litellm-only)   LITELLM_ONLY=true ;;
-    --opencode-only)  OPENCODE_ONLY=true ;;
-    --codex-only)     CODEX_ONLY=true ;;
+    --dry-run)          DRY_RUN=true ;;
+    --litellm-only)     LITELLM_ONLY=true ;;
+    --opencode-only)    OPENCODE_ONLY=true ;;
+    --codex-only)       CODEX_ONLY=true ;;
     --claude-code-only) CLAUDE_CODE_ONLY=true ;;
+    --skip-opencode)    SKIP_OPENCODE=true ;;
+    --skip-codex)       SKIP_CODEX=true ;;
+    --skip-claude-code) SKIP_CLAUDE_CODE=true ;;
   esac
 done
 
-# ── Mode exclusivity ──
+# ── Mode exclusivity (only for --xxx-only flags) ──
 MODE_COUNT=0
 [ "$LITELLM_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
 [ "$OPENCODE_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
@@ -61,6 +68,10 @@ elif [ "$CODEX_ONLY" = true ]; then
 elif [ "$CLAUDE_CODE_ONLY" = true ]; then
   RUN_OPENCODE=false; RUN_CODEX=false
 fi
+# Apply --skip-* flags (additive, can combine with --xxx-only)
+[ "$SKIP_OPENCODE" = true ] && RUN_OPENCODE=false
+[ "$SKIP_CODEX" = true ] && RUN_CODEX=false
+[ "$SKIP_CLAUDE_CODE" = true ] && RUN_CLAUDE_CODE=false
 
 # ── Colors ──
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
