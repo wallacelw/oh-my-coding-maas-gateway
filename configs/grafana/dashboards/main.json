@@ -58,12 +58,12 @@
         "type": "custom",
         "query": "1m,5m,15m,1h",
         "refresh": 1,
+        "includeAll": false,
+        "multi": false,
         "current": {
           "text": "5m",
           "value": "5m"
         },
-        "includeAll": false,
-        "multi": false,
         "options": [
           {
             "text": "1m",
@@ -90,7 +90,7 @@
       "id": 1,
       "type": "row",
       "title": "At-a-glance",
-      "description": "Snapshot of live proxy load and health.",
+      "description": "Live proxy load and health snapshot.",
       "gridPos": {
         "x": 0,
         "y": 0,
@@ -468,7 +468,7 @@
       "id": 8,
       "type": "row",
       "title": "Latency",
-      "description": "Streaming and end-to-end latency percentiles per model.",
+      "description": "Streaming, end-to-end, overhead, and queue latency per model.",
       "gridPos": {
         "x": 0,
         "y": 5,
@@ -482,18 +482,18 @@
       "id": 9,
       "type": "timeseries",
       "title": "TTFT by model",
-      "description": "Time To First Token P95 (seconds) \u2014 slow tail latency per model.",
+      "description": "Time To First Token P95 (seconds) \u2014 slow tail per model.",
       "gridPos": {
         "x": 0,
         "y": 6,
         "w": 12,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_llm_api_time_to_first_token_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "B",
-          "legendFormat": "{{model}} P95",
+          "refId": "A",
+          "legendFormat": "{{model}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
@@ -537,18 +537,18 @@
       "id": 10,
       "type": "timeseries",
       "title": "TPOT by model",
-      "description": "Time Per Output Token P95 (seconds) \u2014 slow tail per model. Lower = smoother streaming.",
+      "description": "Time Per Output Token P95 (seconds) \u2014 slow tail per model.",
       "gridPos": {
         "x": 12,
         "y": 6,
         "w": 12,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le, litellm_model_name) (rate(litellm_deployment_latency_per_output_token_bucket{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$window])))",
-          "refId": "B",
-          "legendFormat": "{{litellm_model_name}} P95",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
@@ -592,42 +592,18 @@
       "id": 11,
       "type": "timeseries",
       "title": "End-to-end latency",
-      "description": "Total request latency (seconds) \u2014 what users actually experience. TTFT + generation + overhead.",
+      "description": "Total request latency P95 (seconds) \u2014 what users experience.",
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 18,
         "w": 8,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "A",
-          "legendFormat": "{{model}} P50",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
           "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "B",
-          "legendFormat": "{{model}} P95",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "C",
-          "legendFormat": "{{model}} P99",
+          "refId": "A",
+          "legendFormat": "{{model}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
@@ -671,18 +647,18 @@
       "id": 12,
       "type": "timeseries",
       "title": "Proxy overhead",
-      "description": "Latency added by LiteLLM processing (seconds). If high, proxy is the bottleneck, not MaaS.",
+      "description": "LiteLLM processing overhead P95 (seconds). High = proxy bottleneck.",
       "gridPos": {
         "x": 8,
-        "y": 14,
+        "y": 18,
         "w": 8,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le, litellm_model_name) (rate(litellm_overhead_latency_metric_bucket{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$window])))",
           "refId": "A",
-          "legendFormat": "{{litellm_model_name}} P95",
+          "legendFormat": "{{litellm_model_name}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
@@ -726,18 +702,18 @@
       "id": 13,
       "type": "timeseries",
       "title": "Queue wait",
-      "description": "Time requests spend queued before processing (seconds). Spikes = deployment saturation.",
+      "description": "Queue wait time P95 (seconds). Spikes = deployment saturation.",
       "gridPos": {
         "x": 16,
-        "y": 14,
+        "y": 18,
         "w": 8,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_request_queue_time_seconds_bucket{model=~\"$model\"}[$window])))",
           "refId": "A",
-          "legendFormat": "{{model}} P95",
+          "legendFormat": "{{model}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
@@ -781,10 +757,10 @@
       "id": 14,
       "type": "row",
       "title": "Errors & Health",
-      "description": "Error rates, status breakdown, cooldowns, and deployment health.",
+      "description": "Error rates, status breakdown, cooldowns, deployment health.",
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 30,
         "w": 24,
         "h": 1
       },
@@ -798,9 +774,9 @@
       "description": "Failed requests per minute per model.",
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 31,
         "w": 12,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
@@ -850,12 +826,12 @@
       "id": 16,
       "type": "piechart",
       "title": "Error status codes",
-      "description": "Distribution of error status codes in selected window.",
+      "description": "Error status code distribution in window.",
       "gridPos": {
         "x": 12,
-        "y": 23,
+        "y": 31,
         "w": 6,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
@@ -892,12 +868,12 @@
       "id": 17,
       "type": "timeseries",
       "title": "Cooldown events",
-      "description": "Deployments pulled from rotation per minute. Spikes = rate-limit hits or failures.",
+      "description": "Deployments pulled from rotation per minute.",
       "gridPos": {
         "x": 18,
-        "y": 23,
+        "y": 31,
         "w": 6,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
@@ -947,12 +923,12 @@
       "id": 18,
       "type": "table",
       "title": "Deployment health",
-      "description": "Per-model deployment state, success/failure counts, and cooldowns in window.",
+      "description": "Per-model deployment state and counts in window.",
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 43,
         "w": 24,
-        "h": 6
+        "h": 7
       },
       "targets": [
         {
@@ -1028,10 +1004,10 @@
       "id": 19,
       "type": "row",
       "title": "Throughput & Capacity",
-      "description": "Request and token rates, traffic distribution, and RPM utilization.",
+      "description": "Request/token rates, traffic distribution, RPM utilization.",
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 50,
         "w": 24,
         "h": 1
       },
@@ -1045,9 +1021,9 @@
       "description": "Requests per minute per model.",
       "gridPos": {
         "x": 0,
-        "y": 38,
+        "y": 51,
         "w": 12,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
@@ -1100,9 +1076,9 @@
       "description": "Tokens per minute per model.",
       "gridPos": {
         "x": 12,
-        "y": 38,
+        "y": 51,
         "w": 12,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
@@ -1152,12 +1128,12 @@
       "id": 22,
       "type": "piechart",
       "title": "Traffic distribution",
-      "description": "Request share per model in selected window.",
+      "description": "Request share per model in window.",
       "gridPos": {
         "x": 0,
-        "y": 46,
+        "y": 63,
         "w": 12,
-        "h": 8
+        "h": 10
       },
       "targets": [
         {
@@ -1194,12 +1170,12 @@
       "id": 23,
       "type": "timeseries",
       "title": "RPM utilization vs limit",
-      "description": "Current RPM as % of MaaS RPM limit per model. \u2192100% means expect 429s.",
+      "description": "Current RPM as % of MaaS RPM limit. \u2192100% = expect 429s.",
       "gridPos": {
         "x": 12,
-        "y": 46,
+        "y": 63,
         "w": 12,
-        "h": 8
+        "h": 10
       },
       "targets": [
         {
@@ -1249,10 +1225,10 @@
       "id": 24,
       "type": "row",
       "title": "Tokens",
-      "description": "Token usage breakdown: input, output, reasoning, and cached tokens.",
+      "description": "Token usage breakdown: input, output, reasoning, cached.",
       "gridPos": {
         "x": 0,
-        "y": 46,
+        "y": 73,
         "w": 24,
         "h": 1
       },
@@ -1263,12 +1239,12 @@
       "id": 25,
       "type": "timeseries",
       "title": "Token breakdown",
-      "description": "Tokens per minute by type. Reasoning tokens = glm-5.x thinking cost. Cached = prompt cache hits.",
+      "description": "Tokens per minute by type. Stacked. Reasoning = thinking cost. Cached = prompt cache hits.",
       "gridPos": {
         "x": 0,
-        "y": 47,
+        "y": 74,
         "w": 24,
-        "h": 8
+        "h": 12
       },
       "targets": [
         {
@@ -1361,7 +1337,7 @@
       "description": "Spend accumulation and rate per model.",
       "gridPos": {
         "x": 0,
-        "y": 55,
+        "y": 86,
         "w": 24,
         "h": 1
       },
@@ -1375,9 +1351,9 @@
       "description": "Cumulative USD spent.",
       "gridPos": {
         "x": 0,
-        "y": 56,
+        "y": 87,
         "w": 6,
-        "h": 6
+        "h": 8
       },
       "targets": [
         {
@@ -1433,9 +1409,9 @@
       "description": "Cumulative USD spend over time per model.",
       "gridPos": {
         "x": 6,
-        "y": 56,
+        "y": 87,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "targets": [
         {
@@ -1488,9 +1464,9 @@
       "description": "USD per minute \u2014 spot runaway costs in real time.",
       "gridPos": {
         "x": 18,
-        "y": 56,
+        "y": 87,
         "w": 6,
-        "h": 6
+        "h": 8
       },
       "targets": [
         {
@@ -1543,7 +1519,7 @@
       "description": "Cache effectiveness and cost efficiency.",
       "gridPos": {
         "x": 0,
-        "y": 62,
+        "y": 95,
         "w": 24,
         "h": 1
       },
@@ -1557,9 +1533,9 @@
       "description": "Cached input tokens as % of total input tokens.",
       "gridPos": {
         "x": 0,
-        "y": 63,
+        "y": 96,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "targets": [
         {
@@ -1623,9 +1599,9 @@
       "description": "USD per 1000 tokens \u2014 cost efficiency.",
       "gridPos": {
         "x": 12,
-        "y": 63,
+        "y": 96,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "targets": [
         {
