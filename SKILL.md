@@ -1,9 +1,9 @@
 ---
-name: oh-my-litellm-opencode
+name: oh-my-coding-maas-gateway
 description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + Codex CLI + Claude Code CLI with virtual keys and 4 presets.
 ---
 
-# oh-my-litellm-opencode — Deterministic Install Procedure
+# oh-my-coding-maas-gateway — Deterministic Install Procedure
 
 Deploy LiteLLM proxy → bootstrap opencode + Codex CLI + Claude Code CLI → mint virtual keys → configure. **Idempotent.**
 
@@ -68,10 +68,10 @@ Execute every step in order. For each step: check **precondition** → run
 uname -s   # must print "Linux"
 ```
 
-Prompt user: `"Enter install directory (default: /home/oh-my-litellm-opencode):"`
+Prompt user: `"Enter install directory (default: /home/oh-my-coding-maas-gateway):"`
 
 If user presses Enter or provides no input, set
-`PROJECT_DIR="/home/oh-my-litellm-opencode"`. Otherwise set `PROJECT_DIR` to
+`PROJECT_DIR="/home/oh-my-coding-maas-gateway"`. Otherwise set `PROJECT_DIR` to
 the user's input.
 
 If creating `$PROJECT_DIR` fails with permission denied:
@@ -204,7 +204,7 @@ Wait 5 seconds, retry `docker info`.
 If `$PROJECT_DIR` does not exist:
 
 ```bash
-git clone https://github.com/wallacelw/oh-my-litellm-opencode "$PROJECT_DIR"
+git clone https://github.com/wallacelw/oh-my-coding-maas-gateway "$PROJECT_DIR"
 ```
 
 If `$PROJECT_DIR` exists with a `.git` dir:
@@ -229,7 +229,7 @@ Ask user: `"Existing installation found at $PROJECT_DIR. Update in-place or fres
   cd "$PROJECT_DIR" && docker compose down -v
   cd /
   rm -rf "$PROJECT_DIR"
-  git clone https://github.com/wallacelw/oh-my-litellm-opencode "$PROJECT_DIR"
+  git clone https://github.com/wallacelw/oh-my-coding-maas-gateway "$PROJECT_DIR"
   ```
 
 **Postcondition:** `$PROJECT_DIR/scripts/0_bootstrap.sh` exists and is

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── oh-my-litellm-opencode Bootstrap ────────────────────────────────────────
+# ─── oh-my-coding-maas-gateway Bootstrap ────────────────────────────────────────
 #
 # End-to-end orchestrator: deploy LiteLLM proxy → install
 # opencode + oh-my-opencode-slim → mint virtual key → configure → validate.
@@ -11,7 +11,7 @@ set -euo pipefail
 # This is a single-repo skill. LiteLLM proxy and opencode config live together.
 # No monorepo extraction needed — just git clone this repo.
 #
-# Canonical path: /home/oh-my-litellm-opencode
+# Canonical path: /home/oh-my-coding-maas-gateway
 #
 # Usage:
 #   ./0_bootstrap.sh                                    # interactive — shows tool selection menu
@@ -210,7 +210,7 @@ show_tool_menu() {
 # Step 1: Banner
 # ──────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "=== oh-my-litellm-opencode Bootstrap ==="
+echo "=== oh-my-coding-maas-gateway Bootstrap ==="
 echo "   Project dir: $PROJECT_DIR"
 [ "$DRY_RUN" = true ] && echo "   (DRY RUN — no changes will be made)"
 

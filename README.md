@@ -1,4 +1,4 @@
-# oh-my-litellm-opencode
+# oh-my-coding-maas-gateway
 
 LiteLLM proxy routing Huawei MaaS models to opencode, Codex CLI, and Claude
 Code CLI — with virtual keys, multi-key load balancing, dual-format endpoints,
@@ -58,8 +58,8 @@ sudo apt-get install -y jq npm bubblewrap
 # Docker: https://docs.docker.com/get-docker/
 
 # 2. Clone and deploy
-git clone https://github.com/wallacelw/oh-my-litellm-opencode
-cd oh-my-litellm-opencode
+git clone https://github.com/wallacelw/oh-my-coding-maas-gateway
+cd oh-my-coding-maas-gateway
 ./scripts/0_bootstrap.sh      # prompts for MaaS key
 
 # 3. Verify
@@ -89,11 +89,11 @@ For a different install mode:
 Paste this into any coding agent:
 
 ```
-Install oh-my-litellm-opencode on this machine by following the procedure in
+Install oh-my-coding-maas-gateway on this machine by following the procedure in
 SKILL.md exactly, top to bottom.
 
 1. Fetch and read SKILL.md from:
-   https://raw.githubusercontent.com/wallacelw/oh-my-litellm-opencode/main/SKILL.md
+   https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
 2. Follow the procedure in SKILL.md — execute every step in order.
    For each step: check the precondition, run the action, verify the
    postcondition. If a step fails, run the documented recovery. If recovery
@@ -104,7 +104,7 @@ SKILL.md exactly, top to bottom.
 
 You will need to ask me for:
 - Install mode: full (LiteLLM + opencode + Codex CLI + Claude Code CLI), litellm-only, opencode-only, codex-only, or claude-code-only (default: full)
-- Install directory (default: /home/oh-my-litellm-opencode)
+- Install directory (default: /home/oh-my-coding-maas-gateway)
 - My Huawei MaaS API key (region: ap-southeast-1)
 - How many extra MaaS keys for load balancing (default: 0)
 - Permission to install missing prerequisites (batch ask once)
@@ -122,12 +122,12 @@ Rules:
 Paste this to upgrade an existing installation:
 
 ```
-Upgrade oh-my-litellm-opencode on this machine by following Section D
+Upgrade oh-my-coding-maas-gateway on this machine by following Section D
 (Upgrade Procedure) in SKILL.md.
 
 1. Fetch and read SKILL.md from:
-   https://raw.githubusercontent.com/wallacelw/oh-my-litellm-opencode/main/SKILL.md
-2. Find the existing install directory (default: /home/oh-my-litellm-opencode).
+   https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
+2. Find the existing install directory (default: /home/oh-my-coding-maas-gateway).
    Look for a .git directory inside it.
 3. Read the MaaS API key from .env in the install directory — do NOT ask me
    for it. If .env is missing or the key is not there, stop and report.
