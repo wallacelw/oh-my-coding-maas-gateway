@@ -167,6 +167,8 @@ echo "4. Writing Claude Code CLI config..."
 
 if [ "$DRY_RUN" = true ]; then
   echo "   Would write: $CLAUDE_SETTINGS (chmod 600)"
+  echo "   Would write: ~/.claude.json (autoInstallIdeExtension=false)"
+  echo "   Would uninstall: anthropic.claude-code VSCode extension (if present)"
   echo ""
   echo "=== Dry run complete — no changes made ==="
   exit 0
@@ -176,12 +178,13 @@ mkdir -p "$CLAUDE_CONFIG_DIR"
 
 # Build settings.json — Claude Code's native config format
 # The env block sets ANTHROPIC_* vars without needing shell exports
+# CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL=1 prevents VSCode extension auto-install
 NEW_SETTINGS=$(jq -n \
   --arg base_url "http://127.0.0.1:4000" \
   --arg api_key "$VIRTUAL_KEY" \
   --arg model "claude-glm-5.2" \
   --arg fast_model "claude-deepseek-v3.2" \
-  '{env: {ANTHROPIC_BASE_URL: $base_url, ANTHROPIC_API_KEY: $api_key, ANTHROPIC_MODEL: $model, ANTHROPIC_SMALL_FAST_MODEL: $fast_model}}')
+  '{env: {ANTHROPIC_BASE_URL: $base_url, ANTHROPIC_API_KEY: $api_key, ANTHROPIC_MODEL: $model, ANTHROPIC_SMALL_FAST_MODEL: $fast_model, CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL: "1"}}')
 
 if [ -f "$CLAUDE_SETTINGS" ]; then
   EXISTING_SETTINGS=$(cat "$CLAUDE_SETTINGS")
@@ -200,11 +203,44 @@ else
 fi
 echo ""
 
-# ── 5. Summary ──
+# ── 5. Disable VSCode extension auto-install ──
+echo "5. Disabling VSCode extension auto-install..."
+
+# ~/.claude.json controls IDE integration (separate from settings.json)
+CLAUDE_JSON="$HOME/.claude.json"
+if [ -f "$CLAUDE_JSON" ]; then
+  CURRENT=$(jq '.autoInstallIdeExtension // empty' "$CLAUDE_JSON" 2>/dev/null || true)
+  if [ "$CURRENT" = "false" ]; then
+    echo "   autoInstallIdeExtension already false in ~/.claude.json"
+  else
+    jq '.autoInstallIdeExtension = false' "$CLAUDE_JSON" > "$CLAUDE_JSON.tmp" && mv "$CLAUDE_JSON.tmp" "$CLAUDE_JSON"
+    echo "   Set autoInstallIdeExtension=false in ~/.claude.json"
+  fi
+else
+  echo '{"autoInstallIdeExtension": false}' > "$CLAUDE_JSON"
+  echo "   Created ~/.claude.json with autoInstallIdeExtension=false"
+fi
+
+# Uninstall VSCode extension if already installed
+if command -v code &>/dev/null; then
+  if code --list-extensions 2>/dev/null | grep -qi "anthropic.claude-code"; then
+    code --uninstall-extension anthropic.claude-code 2>/dev/null && \
+      echo "   Uninstalled anthropic.claude-code VSCode extension" || \
+      echo "   Warning: could not uninstall VSCode extension"
+  else
+    echo "   VSCode extension not installed — nothing to remove"
+  fi
+else
+  echo "   VSCode CLI (code) not found — skipping extension check"
+fi
+echo ""
+
+# ── 6. Summary ──
 echo "=== Installation complete ==="
 echo ""
 echo "Config files:"
 echo "  Claude Code: $CLAUDE_SETTINGS (chmod 600)"
+echo "  IDE disable: ~/.claude.json (autoInstallIdeExtension=false)"
 echo ""
 echo "Versions:"
 command -v claude &>/dev/null && echo "  claude:     $(claude --version 2>/dev/null || echo 'unknown')"
@@ -213,6 +249,7 @@ echo "Default model: claude-glm-5.2"
 echo "Fast model:    claude-deepseek-v3.2"
 echo "All 6 models available via LiteLLM proxy (Anthropic Messages API)"
 echo "LiteLLM proxy URL: $LITELLM_URL"
+echo "VSCode extension: disabled (CLI-only)"
 echo ""
 echo "Next steps:"
 echo "  1. Run:              claude --bare"
