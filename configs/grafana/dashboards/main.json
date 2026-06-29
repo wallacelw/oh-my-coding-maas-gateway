@@ -2,7 +2,7 @@
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
   "schemaVersion": 39,
-  "version": 9,
+  "version": 10,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -1006,9 +1006,9 @@
       },
       "targets": [
         {
-          "expr": "sum by (exception_status) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by (exception_status) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range])), \"status\", \"$1\", \"exception_status\", \"(.*)\"), \"status\", \"400 — Bad Request\", \"exception_status\", \"400\"), \"status\", \"401 — Unauthorized\", \"exception_status\", \"401\"), \"status\", \"403 — Forbidden\", \"exception_status\", \"403\"), \"status\", \"404 — Not Found\", \"exception_status\", \"404\"), \"status\", \"408 — Timeout\", \"exception_status\", \"408\"), \"status\", \"429 — Rate Limited\", \"exception_status\", \"429\"), \"status\", \"500 — Internal Server Error\", \"exception_status\", \"500\"), \"status\", \"502 — Bad Gateway\", \"exception_status\", \"502\"), \"status\", \"503 — Service Unavailable\", \"exception_status\", \"503\"), \"status\", \"504 — Gateway Timeout\", \"exception_status\", \"504\")",
           "refId": "A",
-          "legendFormat": "{{label}}",
+          "legendFormat": "{{status}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
