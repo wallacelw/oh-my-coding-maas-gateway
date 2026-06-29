@@ -1,4 +1,4 @@
-# oh-my-litellm-opencode — Reference
+# oh-my-coding-maas-gateway — Reference
 
 This is reference documentation. For the install procedure, read
 **[SKILL.md](./SKILL.md)**.

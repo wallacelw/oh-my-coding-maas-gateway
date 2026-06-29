@@ -149,7 +149,7 @@ fi
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
 
 printf '%b' "${YELLOW}╔══════════════════════════════════════════════════════╗\n"
-printf '%b' "║  oh-my-litellm-opencode — Unified Validation          ║\n"
+printf '%b' "║  oh-my-coding-maas-gateway — Unified Validation          ║\n"
 printf '%b' "╚══════════════════════════════════════════════════════╝${NC}\n"
 if [ "$DRY_RUN" = true ]; then
   echo "   (DRY RUN — network checks skipped)"
