@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Claude Code CLI integration via `4c_install_claude_code.sh` — installs
   Claude Code CLI, mints virtual key (alias "claude-code", unlimited budget),
-  writes `~/.claude/settings.json`.
+  writes `~/.claude/settings.json`, disables VSCode extension auto-install
+  (`~/.claude.json` + `CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL=1`), uninstalls
+  existing VSCode extension if present.
 - `configs/claude-code/.env.template` — reference template documenting
   `~/.claude/settings.json` format (`env` block with `ANTHROPIC_BASE_URL`,
   `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_SMALL_FAST_MODEL`).

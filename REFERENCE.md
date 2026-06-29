@@ -76,7 +76,7 @@ This is reference documentation. For the install procedure, read
 | 3 | `3_mint_key.sh` | Mint a scoped virtual key (standalone or called by 4a/4b/4c) |
 | 4a | `4a_install_opencode.sh` | Install opencode + plugin + mint key + write config |
 | 4b | `4b_install_codex.sh` | Install Codex CLI + mint key + write `~/.codex/config.toml` + `model_catalog.json` + `.env` |
-| 4c | `4c_install_claude_code.sh` | Install Claude Code CLI + mint key + write `~/.claude/settings.json` |
+| 4c | `4c_install_claude_code.sh` | Install Claude Code CLI + mint key + write `~/.claude/settings.json` + disable VSCode extension |
 | 5 | `5_validate.sh` | Validate all components (`--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only` for scoped checks) |
 
 ### Models
@@ -419,12 +419,15 @@ Claude Code CLI connects to LiteLLM via the Anthropic Messages API. LiteLLM
 forwards directly to Huawei MaaS's Anthropic-compatible endpoint using the
 `anthropic/` provider prefix — no format conversion needed.
 
-### Config File
+### Config Files
 
-Config lives in `~/.claude/settings.json` (chmod 600). Claude Code reads
-this file automatically on startup — no `source` or `export` needed.
+| File | Purpose |
+|------|---------|
+| `~/.claude/settings.json` | Runtime config: env vars, model selection (chmod 600) |
+| `~/.claude.json` | IDE integration settings: `autoInstallIdeExtension: false` |
 
-Run with `--bare` flag to skip keychain/OAuth checks:
+Claude Code reads `settings.json` automatically on startup — no `source` or
+`export` needed. Run with `--bare` flag to skip keychain/OAuth checks:
 
 ```bash
 claude --bare
@@ -442,6 +445,17 @@ Set in the `env` block of `~/.claude/settings.json`:
 | `ANTHROPIC_API_KEY` | `sk-...` (virtual key) | LiteLLM auth (alias: claude-code) |
 | `ANTHROPIC_MODEL` | `claude-glm-5.2` | Primary model |
 | `ANTHROPIC_SMALL_FAST_MODEL` | `claude-deepseek-v3.2` | Fast model for background tasks |
+| `CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL` | `1` | Prevent VSCode extension auto-install |
+
+### VSCode Extension Disabled
+
+Claude Code auto-installs its VSCode extension when run from a VS Code terminal.
+The installer prevents this two ways:
+
+1. **`~/.claude.json`** — sets `autoInstallIdeExtension: false` (controls IDE integration)
+2. **`CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL=1`** in settings.json env block (runtime override)
+
+The installer also uninstalls the extension if already present (`code --uninstall-extension anthropic.claude-code`).
 
 ### Why `claude-` Prefix
 
