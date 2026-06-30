@@ -46,6 +46,60 @@ opencode          # or: codex  or:  claude --bare
 
 ---
 
+## Agent Installation
+
+Paste this into any coding agent:
+
+```
+Install oh-my-coding-maas-gateway on this machine by following SKILL.md.
+
+1. Fetch SKILL.md from:
+   https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
+2. Follow the procedure — execute every step in order. For each step:
+   check precondition, run action, verify postcondition. If a step fails,
+   run the documented recovery. If recovery also fails, stop and report.
+3. The install is complete when scripts/5_validate.sh exits 0 (Step 7).
+4. Do NOT launch opencode. Report the summary from Step 8 and stop.
+
+You will need to ask me for:
+- Install mode: all, litellm, opencode, codex, or claude (default: all)
+- Install directory (default: /home/oh-my-coding-maas-gateway)
+- My Huawei MaaS API key (region: ap-southeast-1)
+- How many extra MaaS keys for load balancing (default: 0)
+- My sudo password if the system prompts for it
+
+Rules:
+- Do not skip steps. Do not improvise. Do not launch opencode.
+- If anything is unclear, ask me before proceeding.
+- If an existing installation is found, ask me: update in-place or fresh install.
+- After install: I will rotate my MaaS keys (they were shared with you).
+```
+
+### Agent Upgrade
+
+```
+Upgrade oh-my-coding-maas-gateway by following the Upgrade Procedure in SKILL.md.
+
+1. Fetch SKILL.md from:
+   https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
+2. Find the existing install directory (default: /home/oh-my-coding-maas-gateway).
+3. Read the MaaS API key from .env — do NOT ask me for it.
+   If .env is missing, stop and report.
+4. Run: git -C "$PROJECT_DIR" pull --ff-only
+   If pull fails, ask me: "Reset to origin/main? (y/n)"
+5. Run: ./scripts/0_bootstrap.sh --agent --maas-key="$MAAS_KEY"
+   (add --tool=... if the existing install used a specific mode)
+6. The upgrade is complete when scripts/5_validate.sh exits 0.
+7. Do NOT launch opencode. Report the summary and stop.
+
+Rules:
+- Do not skip steps. Do not improvise. Do not launch opencode.
+- If validation fails, follow the recovery table in SKILL.md Step 7.
+- After upgrade: I will rotate my MaaS keys if they were shared with you.
+```
+
+---
+
 ## What You Get
 
 | Service | URL | Auth | Purpose |
@@ -157,91 +211,11 @@ If Grafana dashboard looks stale after upgrade: `docker compose restart grafana`
 
 ---
 
-## Troubleshooting
-
-| Symptom | Fix |
-|---------|-----|
-| LiteLLM won't start | `docker compose logs litellm --tail 50` |
-| 401 Unauthorized | Key must start with `sk-` |
-| 404 model not found | Model name is case-sensitive |
-| MaaS 403 | Verify key at https://console.huaweicloud.com/modelarts/ — region must be `ap-southeast-1` |
-| Port conflict | `ss -tlnp \| grep -E ':(4000\|5432\|9090\|3000) '` |
-| Grafana blank | `docker compose restart grafana` |
-| Validation fails | `./scripts/5_validate.sh` — see recovery table in [SKILL.md](./SKILL.md) Step 7 |
-
-Full repair guide in [REFERENCE.md](./REFERENCE.md).
-
-### Lifecycle Commands
-
-| Action | Command |
-|--------|---------|
-| Stop | `docker compose down` (preserves data) |
-| Start | `docker compose up -d` |
-| Restart one | `docker compose restart <service>` |
-| View logs | `docker compose logs <service> --tail 50 -f` |
-| Full reset | `docker compose down -v; rm -f .env` (destroys all data) |
-
----
-
-## Agent Installation
-
-Paste this into any coding agent:
-
-```
-Install oh-my-coding-maas-gateway on this machine by following SKILL.md.
-
-1. Fetch SKILL.md from:
-   https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
-2. Follow the procedure — execute every step in order. For each step:
-   check precondition, run action, verify postcondition. If a step fails,
-   run the documented recovery. If recovery also fails, stop and report.
-3. The install is complete when scripts/5_validate.sh exits 0 (Step 7).
-4. Do NOT launch opencode. Report the summary from Step 8 and stop.
-
-You will need to ask me for:
-- Install mode: all, litellm, opencode, codex, or claude (default: all)
-- Install directory (default: /home/oh-my-coding-maas-gateway)
-- My Huawei MaaS API key (region: ap-southeast-1)
-- How many extra MaaS keys for load balancing (default: 0)
-- My sudo password if the system prompts for it
-
-Rules:
-- Do not skip steps. Do not improvise. Do not launch opencode.
-- If anything is unclear, ask me before proceeding.
-- If an existing installation is found, ask me: update in-place or fresh install.
-- After install: I will rotate my MaaS keys (they were shared with you).
-```
-
-### Agent Upgrade
-
-```
-Upgrade oh-my-coding-maas-gateway by following the Upgrade Procedure in SKILL.md.
-
-1. Fetch SKILL.md from:
-   https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
-2. Find the existing install directory (default: /home/oh-my-coding-maas-gateway).
-3. Read the MaaS API key from .env — do NOT ask me for it.
-   If .env is missing, stop and report.
-4. Run: git -C "$PROJECT_DIR" pull --ff-only
-   If pull fails, ask me: "Reset to origin/main? (y/n)"
-5. Run: ./scripts/0_bootstrap.sh --agent --maas-key="$MAAS_KEY"
-   (add --tool=... if the existing install used a specific mode)
-6. The upgrade is complete when scripts/5_validate.sh exits 0.
-7. Do NOT launch opencode. Report the summary and stop.
-
-Rules:
-- Do not skip steps. Do not improvise. Do not launch opencode.
-- If validation fails, follow the recovery table in SKILL.md Step 7.
-- After upgrade: I will rotate my MaaS keys if they were shared with you.
-```
-
----
-
 ## Documentation
 
 | File | For | Description |
 |------|-----|-------------|
 | **[SKILL.md](./SKILL.md)** | Agents | Deterministic install procedure (8 steps, agent-first) |
-| **[REFERENCE.md](./REFERENCE.md)** | Everyone | Architecture, config, env vars, tool integration, repair guide |
+| **[REFERENCE.md](./REFERENCE.md)** | Everyone | Architecture, config, env vars, tool integration, repair guide, lifecycle |
 | **[CHANGELOG.md](./CHANGELOG.md)** | Everyone | Version history |
 | **[AGENTS.md](./AGENTS.md)** | Contributors | Development rules, validation, commit conventions |
