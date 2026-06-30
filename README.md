@@ -31,6 +31,10 @@ deepseek-v3.2
 
 ## Quick Start
 
+Two ways to install:
+
+### 👤 Human — run it yourself
+
 ```bash
 git clone https://github.com/wallacelw/oh-my-coding-maas-gateway ~/oh-my-coding-maas-gateway
 cd ~/oh-my-coding-maas-gateway
@@ -44,11 +48,7 @@ prompted. Prerequisites are installed automatically. That's it.
 opencode          # or: codex  or:  claude --bare
 ```
 
----
-
-## Agent Installation
-
-Paste this into any coding agent:
+### 🤖 Agent — paste this prompt
 
 ```
 Install oh-my-coding-maas-gateway on this machine by following SKILL.md.
@@ -75,7 +75,7 @@ Rules:
 - After install: I will rotate my MaaS keys (they were shared with you).
 ```
 
-### Agent Upgrade
+### 🤖 Agent Upgrade
 
 ```
 Upgrade oh-my-coding-maas-gateway by following the Upgrade Procedure in SKILL.md.
