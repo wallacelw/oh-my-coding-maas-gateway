@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# generate_config.sh — Generate litellm_config.yaml from .env
+# 2_deploy_litellm.sh — Generate litellm_config.yaml from .env + deploy Docker Compose
 #
 # Creates N deployments per model where N = HUAWEI_MAAS_API_KEY_COUNT.
 # Each deployment uses a different API key (HUAWEI_MAAS_API_KEY_0 .. _N-1).
