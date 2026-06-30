@@ -12,7 +12,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 
 | Env var | Set by | Read by | Format | Immutable? |
 |---------|--------|---------|--------|------------|
-| `HUAWEI_MAAS_API_KEY` | User (prompted) | `1_init_env.sh`, `4a_install_opencode.sh` | Non-empty, no placeholders, validated via live API call | No |
+| `HUAWEI_MAAS_API_KEY` | User (prompted) | `1_init_env.sh`, `4a_install_opencode.sh` | Non-empty, no placeholders | No |
 | `HUAWEI_MAAS_API_KEY_COUNT` | Agent → recalculated by `0_bootstrap.sh` | `1_init_env.sh`, `2_deploy_litellm.sh` | Integer ≥ 1 | No |
 | `HUAWEI_MAAS_API_KEY_0` | `0_bootstrap.sh` (auto, = main key) | `1_init_env.sh`, `2_deploy_litellm.sh` | Non-empty | No |
 | `HUAWEI_MAAS_API_KEY_1..N` | User (prompted) → agent exports | `0_bootstrap.sh` → `1_init_env.sh` | Non-empty | No |
@@ -146,10 +146,10 @@ model_list:
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       use_chat_completions_api: true       # bridge Responses → Chat Completions
-      tpm: 100
+      tpm: 198000
       rpm: 100
     model_info:
-      max_tokens: 128000
+      max_tokens: 198000
       max_input_tokens: 192000
       max_output_tokens: 128000
       input_cost_per_token: 0.0000014
@@ -161,10 +161,10 @@ model_list:
       model: anthropic/glm-5.2             # provider prefix
       api_base: os.environ/HUAWEI_MAAS_ANTHROPIC_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
-      tpm: 100
+      tpm: 198000
       rpm: 100
     model_info:
-      max_tokens: 128000
+      max_tokens: 198000
       max_input_tokens: 192000
       max_output_tokens: 128000
       input_cost_per_token: 0.0000014
@@ -174,12 +174,13 @@ litellm_settings:
   num_retries: 3
   request_timeout: 600
   stream_timeout: 60
-  routing_settings:
-    num_retries: 3
-    retry_after: 5
   callbacks: ["prometheus"]
   prometheus_initialize_budget_metrics: true
   require_auth_for_metrics_endpoint: false
+
+router_settings:
+  cooldown_time: 30                        # seconds to cool down a failed deployment
+  allowed_fails: 3                         # failures before cooldown kicks in
 ```
 
 ### Provider Types
@@ -241,6 +242,8 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `callbacks` | `["prometheus"]` | Enable Prometheus metrics export |
 | `prometheus_initialize_budget_metrics` | true | Emit budget metrics for all keys |
 | `require_auth_for_metrics_endpoint` | false | Allow unauthenticated `/metrics` |
+| `router_settings.cooldown_time` | 30 | Seconds to cool down a failed deployment |
+| `router_settings.allowed_fails` | 3 | Failures before cooldown kicks in |
 
 ### Virtual Keys
 
@@ -271,17 +274,18 @@ dashboard.
 Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
 (default: `30d`).
 
-**Dashboard** (`configs/grafana/dashboards/main.json`) — 34 panels across 7
+**Dashboard** (`configs/grafana/dashboards/main.json`) — 34 panels across 6
 sections, default 15m time window, 30s refresh:
 
-1. **At-a-glance** — Active Requests, RPS, RPM, Error %, Models Healthy, TPS, TPM, Spend
-2. **Latency** — E2E latency P95 by model, LLM API latency P95 by model
-3. **Errors & Health** — Errors by model, Error status codes (pie with labels), Cooldown events
-4. **Throughput & Tokens** — Total/Successful/Failed requests (window), RPM by model, TPM by model, Token breakdown (input/output/reasoning separate panels)
-5. **Cost** — Total cost, Cost by model, Spend rate ($/min)
+1. **At-a-glance** — Active Requests, RPS, RPM, Error %, TPS, TPM, Models Healthy, Spend (8 stat panels)
+2. **Latency** — TTFT by model, TPOT by model, End-to-end latency, LLM API latency, Proxy overhead, Queue wait (6 timeseries)
+3. **Errors & Health** — Errors by model, Error status codes (pie), Deployment state (3 panels)
+4. **Throughput & Capacity** — Total/Successful/Failed Requests (window), RPM by model, TPM by model (5 panels)
+5. **Tokens** — Input tokens, Output tokens, Reasoning tokens (3 timeseries)
+6. **Cost** — Total cost, Cost per model, Spend rate (3 panels)
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
-`$window` (rate window: 5m/15m/30m/1h/3h, default 15m).
+`$window` (rate window: 1m/5m/15m/1h, default 15m).
 
 
 

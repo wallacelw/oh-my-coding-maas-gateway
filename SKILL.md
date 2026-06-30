@@ -144,17 +144,15 @@ systems, start the Docker daemon manually before running bootstrap.
 **Action:**
 
 Prompt for Huawei ModelArts MaaS API key (region: ap-southeast-1). Validate
-non-empty, not a placeholder, then verify via live API call:
+non-empty and not a placeholder:
 
 ```bash
-curl -sf --max-time 30 -X POST \
-  "https://api-ap-southeast-1.modelarts-maas.com/openai/v1/chat/completions" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $MAAS_KEY" \
-  -d '{"model":"glm-5.2","messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"Ping! Answer with only Pong!"}]}'
+[ -n "$MAAS_KEY" ] \
+  && [[ "$MAAS_KEY" != *"change-me"* ]] \
+  && [[ "$MAAS_KEY" != *"xxx"* ]]
 ```
 
-If the call fails: re-prompt. After 3 retries: escalate.
+If invalid: re-prompt.
 
 Optionally collect N additional keys for load balancing. Validate each the
 same way. Export:
@@ -166,10 +164,10 @@ export HUAWEI_MAAS_API_KEY_1="$EXTRA_KEY_1"   # if NUM_EXTRA_KEYS >= 1
 # ... (do NOT export HUAWEI_MAAS_API_KEY_0 — bootstrap sets it automatically)
 ```
 
-**Postcondition:** `MAAS_KEY` validated via live API call. `NUM_EXTRA_KEYS` set.
+**Postcondition:** `MAAS_KEY` is non-empty and not a placeholder.
+`NUM_EXTRA_KEYS` set.
 
-**On failure:** If API call fails after 3 retries: escalate
-`"MaaS API key validation failed. Key may be invalid, expired, or wrong region."`
+**On failure:** If key is empty or placeholder after 3 re-prompts: escalate.
 
 ---
 

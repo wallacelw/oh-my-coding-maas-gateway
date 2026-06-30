@@ -135,8 +135,8 @@ claude --bare --model claude-deepseek-v4-pro    # deep reasoning
 ### Monitoring
 
 - **Grafana:** `http://127.0.0.1:3000` — 34-panel dashboard (anonymous, no
-  login). Sections: At-a-glance, Latency, Errors & Health, Throughput & Tokens,
-  Cost. Time window selectable (default 15m).
+  login). 6 sections: At-a-glance, Latency, Errors & Health, Throughput &
+  Capacity, Tokens, Cost. Time window selectable (default 15m).
 - **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
   keys, spend, budgets. Login: `admin` / your master key.
 
