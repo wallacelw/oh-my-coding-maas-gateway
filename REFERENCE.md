@@ -502,13 +502,15 @@ claude --bare --model claude-deepseek-v3.2      # fast
 
 | Symptom | Fix |
 |---------|-----|
+| LiteLLM won't start | `docker compose logs litellm --tail 50` |
 | `litellm` keeps restarting | Check `docker compose logs db`, verify `DB_PASSWORD` |
 | 401 Unauthorized | Key must start with `sk-` |
 | 404 model not found | Model name case-sensitive |
-| MaaS 403 | Verify key; region must be `ap-southeast-1` |
+| MaaS 403 | Verify key at https://console.huaweicloud.com/modelarts/ — region must be `ap-southeast-1` |
 | `unhealthy_count > 0` | Check MaaS key/model/region — may be transient |
 | Virtual key 403 | Check with `/key/info` — may be expired |
 | Port conflict | `ss -tlnp \| grep -E ':(4000\|5432\|9090\|3000) '` |
+| Validation fails | `./scripts/5_validate.sh` — see recovery table in [SKILL.md](./SKILL.md) Step 7 |
 | Prometheus not scraping | Check `docker compose logs prometheus --tail 20`; verify `litellm:4000` reachable from Prometheus container |
 | Grafana dashboard blank | Check datasource UID: `curl http://127.0.0.1:3000/api/datasources/name/Prometheus \| jq .uid` — must be `prometheus` |
 | Grafana not loading | `docker compose restart grafana` |
