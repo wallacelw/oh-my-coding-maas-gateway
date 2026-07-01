@@ -26,6 +26,7 @@ CURL_TIMEOUT=15
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
+LOG_TAG="codex"
 source_env "$PROJECT_DIR"
 
 # ── Parse args ──
@@ -38,41 +39,38 @@ for arg in "$@"; do
   esac
 done
 
-echo "=== Step 04 — Codex CLI ==="
-[ "$DRY_RUN" = true ] && echo "   (DRY RUN — no changes will be made)"
-echo ""
+log_step "Step 04 — Codex CLI"
+[ "$DRY_RUN" = true ] && log_dim "(DRY RUN — no changes will be made)"
 
 # ── 1. Check prerequisites ──
-echo "1. Checking prerequisites..."
+log_info "1. Checking prerequisites..."
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_npm
 prereq_ensure_apt "jq" jq jq
 prereq_ensure_apt "bubblewrap" bwrap bubblewrap
 
 if curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
-  echo "   LiteLLM proxy: reachable"
+  log_ok "LiteLLM proxy: reachable"
 else
-  echo "ERROR: LiteLLM proxy not reachable at $LITELLM_URL. Start it first." >&2
+  log_error "LiteLLM proxy not reachable at $LITELLM_URL. Start it first."
   exit 1
 fi
-echo ""
 
 # ── 2. Install Codex CLI ──
-echo "2. Installing Codex CLI..."
+log_info "2. Installing Codex CLI..."
 if ! command -v codex &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
-    echo "   Would run: npm install -g @openai/codex"
+    log_info "Would run: npm install -g @openai/codex"
   else
-    npm install -g @openai/codex
-    echo "   Installed: $(codex --version 2>/dev/null || echo 'unknown')"
+    run_filtered "npm" npm install -g @openai/codex
+    log_ok "Installed: $(codex --version 2>/dev/null || echo 'unknown')"
   fi
 else
-  echo "   Already installed: $(codex --version 2>/dev/null || echo 'unknown')"
+  log_ok "Already installed: $(codex --version 2>/dev/null || echo 'unknown')"
 fi
-echo ""
 
 # ── 3. Acquire virtual key (idempotent) ──
-echo "3. Configuring LiteLLM virtual key..."
+log_info "3. Configuring LiteLLM virtual key..."
 
 if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
   EXISTING_KEY=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$CODEX_DIR/.env" 2>/dev/null || true)
@@ -83,82 +81,80 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
          -H "Authorization: Bearer $EXISTING_KEY" \
          -H "Content-Type: application/json" \
          -d '{"model":"deepseek-v3.2","input":"ok"}'; then
-      echo "   Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
+      log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
-      echo "   Existing virtual key is invalid. Minting new key."
+      log_info "Existing virtual key is invalid. Minting new key."
     fi
   fi
 fi
 
 if [ -z "$VIRTUAL_KEY" ]; then
   if [ "$DRY_RUN" = true ]; then
-    echo "   Would mint key (alias=codex, unlimited budget)"
+    log_info "Would mint key (alias=codex, unlimited budget)"
     VIRTUAL_KEY="sk-dryrun-placeholder"
   else
     resolve_master_key "$PROJECT_DIR" || exit 1
     VIRTUAL_KEY=$(mint_or_reuse_key "codex" --no-budget)
     if [ -z "$VIRTUAL_KEY" ] || [[ "$VIRTUAL_KEY" != sk-* ]]; then
-      echo "ERROR: Failed to mint virtual key." >&2
+      log_error "Failed to mint virtual key."
       exit 1
     fi
-    echo "   Virtual key: $(mask_key "$VIRTUAL_KEY")"
+    log_ok "Virtual key: $(mask_key "$VIRTUAL_KEY")"
   fi
 fi
-echo ""
 
 # ── 4. Write config.toml + model_catalog ──
-echo "4. Writing Codex CLI config..."
+log_info "4. Writing Codex CLI config..."
 if [ "$DRY_RUN" = true ]; then
-  echo "   Would write: $CODEX_CONFIG, $CODEX_DIR/model_catalog.json, $CODEX_DIR/.env"
+  log_info "Would write: $CODEX_CONFIG, $CODEX_DIR/model_catalog.json, $CODEX_DIR/.env"
   echo ""
-  echo "=== Dry run complete — no changes made ==="
+  log_ok "Dry run complete — no changes made"
   exit 0
 fi
 
 mkdir -p "$CODEX_DIR"
 cp "$PROJECT_DIR/configs/codex/model_catalog.json" "$CODEX_DIR/model_catalog.json"
-echo "   Written: $CODEX_DIR/model_catalog.json"
+log_ok "Written: $CODEX_DIR/model_catalog.json"
 
 TEMPLATE="$PROJECT_DIR/configs/codex/config.toml.template"
 NEW_CONFIG=$(sed "s|<CODEX_HOME>|$CODEX_DIR|g" "$TEMPLATE")
 
 if [ -f "$CODEX_CONFIG" ]; then
   if [ "$NEW_CONFIG" = "$(cat "$CODEX_CONFIG")" ]; then
-    echo "   Config unchanged — skipping write"
+    log_info "Config unchanged — skipping write"
   else
     cp "$CODEX_CONFIG" "$CODEX_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
     echo "$NEW_CONFIG" > "$CODEX_CONFIG"
     chmod 600 "$CODEX_CONFIG"
-    echo "   Updated: $CODEX_CONFIG (backup saved)"
+    log_ok "Updated: $CODEX_CONFIG (backup saved)"
   fi
 else
   echo "$NEW_CONFIG" > "$CODEX_CONFIG"
   chmod 600 "$CODEX_CONFIG"
-  echo "   Written: $CODEX_CONFIG"
+  log_ok "Written: $CODEX_CONFIG"
 fi
-echo ""
 
 # ── 5. Write API key to ~/.codex/.env ──
-echo "5. Writing API key to $CODEX_DIR/.env..."
+log_info "5. Writing API key to $CODEX_DIR/.env..."
 ENV_FILE="$CODEX_DIR/.env"
 NEW_ENV="LITELLM_CODEX_API_KEY=$VIRTUAL_KEY"
 
 if [ -f "$ENV_FILE" ]; then
   if [ "$NEW_ENV" = "$(cat "$ENV_FILE")" ]; then
-    echo "   .env unchanged — skipping write"
+    log_info ".env unchanged — skipping write"
   else
     echo "$NEW_ENV" > "$ENV_FILE"
     chmod 600 "$ENV_FILE"
-    echo "   Updated: $ENV_FILE (chmod 600)"
+    log_ok "Updated: $ENV_FILE (chmod 600)"
   fi
 else
   echo "$NEW_ENV" > "$ENV_FILE"
   chmod 600 "$ENV_FILE"
-  echo "   Written: $ENV_FILE (chmod 600)"
+  log_ok "Written: $ENV_FILE (chmod 600)"
 fi
-echo ""
 
-echo "=== Codex CLI installation complete ==="
-echo "  Default model: glm-5.2"
-echo "  Run: codex"
+echo ""
+log_ok "Codex CLI installation complete"
+log_info "Default model: glm-5.2"
+log_info "Run: codex"

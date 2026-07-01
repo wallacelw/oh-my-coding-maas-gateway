@@ -4,14 +4,15 @@ set -euo pipefail
 # ─── bootstrap.sh — Install orchestrator (entry point) ────────────────────────
 #
 # Domain:        Orchestration
-# Description:   Thin sequencer. Resolves the tool selection (interactive menu
-#                or --tool=), ensures core prerequisites, runs the numbered
-#                pipeline steps (01_env → 02_litellm → 03/04/05 tools →
-#                06_validate), and prints a summary. This is the only script a
-#                human needs to run. Each step is independently runnable too.
+# Description:   Thin sequencer. Prompts for install location (default /home),
+#                resolves the tool selection (interactive menu or --tool=),
+#                ensures core prerequisites, runs the numbered pipeline steps
+#                (01_env → 02_litellm → 03/04/05 tools → 06_validate), and
+#                prints a colored summary. This is the only script a human
+#                needs to run. Each step is independently runnable too.
 #
 # Usage:
-#   ./bootstrap.sh                          # interactive — shows tool selection menu
+#   ./bootstrap.sh                          # interactive — prompts + tool menu
 #   ./bootstrap.sh --tool=all               # install all (default)
 #   ./bootstrap.sh --tool=litellm           # LiteLLM proxy only
 #   ./bootstrap.sh --tool=opencode,codex    # custom combo
@@ -22,23 +23,17 @@ set -euo pipefail
 #   HUAWEI_MAAS_API_KEY=$KEY ./bootstrap.sh --tool=opencode
 # ──────────────────────────────────────────────────────────────────────────────
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_URL="https://github.com/wallacelw/oh-my-coding-maas-gateway"
+REPO_NAME="oh-my-coding-maas-gateway"
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd || echo ".")"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-LITELLM_URL="http://127.0.0.1:4000"
 
-source "$SCRIPT_DIR/helpers/prereqs.sh"
-source "$SCRIPT_DIR/helpers/common.sh"
-
-# ── Defaults ──
+# ── Parse args (early — needed before standalone check) ──
 VIRTUAL_KEY=""
 DRY_RUN=false
 TOOL_SPECIFIED=false
 TOOL_SELECTION=""
-INSTALL_OPENCODE=true
-INSTALL_CODEX=true
-INSTALL_CLAUDE_CODE=true
-
-# ── Parse args ──
 for arg in "$@"; do
   case "$arg" in
     --virtual-key=*) VIRTUAL_KEY="${arg#--virtual-key=}" ;;
@@ -50,6 +45,39 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+# ── Standalone detection ──
+# If helpers/common.sh doesn't exist, we're running outside the repo
+# (e.g., curl | bash). Prompt for install dir, clone, and re-exec.
+if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
+  echo ""
+  echo "=== $REPO_NAME — Standalone bootstrap ==="
+  echo ""
+  default_parent="/home"
+  if [ -t 0 ]; then
+    echo -n "  Where to install? [$default_parent]: "
+    read -r install_parent < /dev/tty || install_parent="$default_parent"
+    install_parent="${install_parent:-$default_parent}"
+  else
+    install_parent="$default_parent"
+  fi
+  target_dir="$install_parent/$REPO_NAME"
+  echo "  Cloning to $target_dir..."
+  git clone "$REPO_URL" "$target_dir"
+  cd "$target_dir"
+  exec ./scripts/bootstrap.sh "$@"
+fi
+
+# ── Now in the repo — source helpers ──
+LITELLM_URL="http://127.0.0.1:4000"
+source "$SCRIPT_DIR/helpers/prereqs.sh"
+source "$SCRIPT_DIR/helpers/common.sh"
+LOG_TAG="bootstrap"
+
+# ── Defaults ──
+INSTALL_OPENCODE=true
+INSTALL_CODEX=true
+INSTALL_CLAUDE_CODE=true
 
 # ── Parse --tool= into INSTALL_* flags ──
 if [ "$TOOL_SPECIFIED" = true ]; then
@@ -65,8 +93,8 @@ if [ "$TOOL_SPECIFIED" = true ]; then
       codex)     INSTALL_CODEX=true ;;
       claude)    INSTALL_CLAUDE_CODE=true ;;
       *)
-        echo "ERROR: Unknown tool '$part' in --tool=$TOOL_SELECTION"
-        echo "Valid values: all, litellm, opencode, codex, claude (or comma-separated combo)"
+        log_error "Unknown tool '$part' in --tool=$TOOL_SELECTION"
+        log_dim "Valid values: all, litellm, opencode, codex, claude (or comma-separated combo)"
         exit 1
         ;;
     esac
@@ -75,29 +103,58 @@ fi
 
 # ── Banner ──
 echo ""
-echo "=== oh-my-coding-maas-gateway Bootstrap ==="
-echo "   Project dir: $PROJECT_DIR"
-[ "$DRY_RUN" = true ] && echo "   (DRY RUN — no changes will be made)"
+echo -e "${C_BOLD}${C_CYAN}╔══════════════════════════════════════════════════════╗${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║  oh-my-coding-maas-gateway — Bootstrap                 ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}╚══════════════════════════════════════════════════════╝${C_RESET}"
 echo ""
 
+# ── Install directory prompt ──
+current_parent="$(dirname "$PROJECT_DIR")"
+if [ -t 0 ]; then
+  install_parent=$(prompt_input "Install directory (project will be in \$INSTALL_DIR/$REPO_NAME)" "$current_parent")
+else
+  install_parent="$current_parent"
+fi
+target_dir="$install_parent/$REPO_NAME"
+
+if [ "$target_dir" != "$PROJECT_DIR" ]; then
+  if [ -d "$target_dir/.git" ]; then
+    log_info "Project already exists at $target_dir"
+    if prompt_yesno "Switch to existing installation?" y; then
+      cd "$target_dir"
+      exec ./scripts/bootstrap.sh "$@"
+    fi
+  elif [ "$DRY_RUN" = true ]; then
+    log_dim "Would clone: $REPO_URL → $target_dir"
+  else
+    log_info "Cloning project to $target_dir..."
+    git clone "$REPO_URL" "$target_dir"
+    cd "$target_dir"
+    exec ./scripts/bootstrap.sh "$@"
+  fi
+fi
+
+log_info "Project dir: $PROJECT_DIR"
+[ "$DRY_RUN" = true ] && log_warn "DRY RUN — no changes will be made"
+
 # ── Core prerequisites ──
-echo "─── Core prerequisites ───"
+log_step "Core prerequisites"
+log_action "bootstrap" "Ensuring: git, python3, curl, jq"
 prereq_ensure_apt "git"     git     git
 prereq_ensure_apt "python3" python3 python3
 prereq_ensure_apt "curl"    curl    curl
-prereq_ensure_apt "jq"      jq      jq
-echo ""
+prereq_ensure_apt "jq"      jq     jq
 
 # ── Tool selection (menu if --tool= not given) ──
-if [ "$TOOL_SPECIFIED" = false ]; then
-  echo "Select installation scope:"
-  echo "  1) Default — LiteLLM + opencode + Codex + Claude Code"
-  echo "  2) LiteLLM only"
-  echo "  3) LiteLLM + opencode"
-  echo "  4) LiteLLM + Codex"
-  echo "  5) LiteLLM + Claude Code"
-  echo "  6) Custom — toggle each component"
-  echo -n "Enter choice [1]: "
+if [ "$TOOL_SPECIFIED" = false ] && [ -t 0 ]; then
+  log_step "Select installation scope"
+  echo -e "  ${C_BOLD}1)${C_RESET} Default — LiteLLM + opencode + Codex + Claude Code"
+  echo -e "  ${C_BOLD}2)${C_RESET} LiteLLM only"
+  echo -e "  ${C_BOLD}3)${C_RESET} LiteLLM + opencode"
+  echo -e "  ${C_BOLD}4)${C_RESET} LiteLLM + Codex"
+  echo -e "  ${C_BOLD}5)${C_RESET} LiteLLM + Claude Code"
+  echo -e "  ${C_BOLD}6)${C_RESET} Custom — toggle each component"
+  echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[1]${C_RESET}: "
   choice=""
   read -r choice < /dev/tty || choice="1"
   case "${choice:-1}" in
@@ -107,47 +164,39 @@ if [ "$TOOL_SPECIFIED" = false ]; then
     4) INSTALL_OPENCODE=false; INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=false ;;
     5) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=true ;;
     6)
-      echo ""
-      echo "Custom selection (LiteLLM is always installed):"
-      yn=""
-      echo -n "  Install opencode? [y/N]: ";    read -r yn < /dev/tty || yn="n"
-      INSTALL_OPENCODE=false; [[ "$yn" =~ ^[Yy] ]] && INSTALL_OPENCODE=true
-      echo -n "  Install Codex? [y/N]: ";       read -r yn < /dev/tty || yn="n"
-      INSTALL_CODEX=false;    [[ "$yn" =~ ^[Yy] ]] && INSTALL_CODEX=true
-      echo -n "  Install Claude Code? [y/N]: "; read -r yn < /dev/tty || yn="n"
-      INSTALL_CLAUDE_CODE=false; [[ "$yn" =~ ^[Yy] ]] && INSTALL_CLAUDE_CODE=true
+      log_dim "Custom selection (LiteLLM is always installed):"
+      prompt_yesno "Install opencode?" n && INSTALL_OPENCODE=true || INSTALL_OPENCODE=false
+      prompt_yesno "Install Codex?" n    && INSTALL_CODEX=true    || INSTALL_CODEX=false
+      prompt_yesno "Install Claude Code?" n && INSTALL_CLAUDE_CODE=true || INSTALL_CLAUDE_CODE=false
       ;;
     *)
-      echo "Invalid choice. Defaulting to all."
+      log_warn "Invalid choice. Defaulting to all."
       INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true
       ;;
   esac
-  echo ""
 fi
 
 # ── Show selected scope ──
-echo "  Installation scope:"
-echo "    LiteLLM:      yes (always)"
-echo "    opencode:     $( [ "$INSTALL_OPENCODE" = true ] && echo "yes" || echo "no" )"
-echo "    Codex:        $( [ "$INSTALL_CODEX" = true ] && echo "yes" || echo "no" )"
-echo "    Claude Code:  $( [ "$INSTALL_CLAUDE_CODE" = true ] && echo "yes" || echo "no" )"
 echo ""
+log_info "Installation scope:"
+echo -e "    ${C_DIM}LiteLLM:${C_RESET}      yes (always)"
+echo -e "    ${C_DIM}opencode:${C_RESET}     $( [ "$INSTALL_OPENCODE" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
+echo -e "    ${C_DIM}Codex:${C_RESET}        $( [ "$INSTALL_CODEX" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
+echo -e "    ${C_DIM}Claude Code:${C_RESET}  $( [ "$INSTALL_CLAUDE_CODE" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
 
 # ── Selection-driven prerequisite summary ──
-echo "  Prerequisites to install (as needed):"
-echo "    core: git, python3, curl, jq, docker"
-[ "$INSTALL_OPENCODE" = true ] && echo "    opencode: bun"
-[ "$INSTALL_CODEX" = true ] && echo "    codex: npm/node, bubblewrap"
-[ "$INSTALL_CLAUDE_CODE" = true ] && echo "    claude: npm/node"
-echo ""
+log_dim "Prerequisites to install (as needed):"
+echo -e "    ${C_DIM}core: git, python3, curl, jq, docker${C_RESET}"
+[ "$INSTALL_OPENCODE" = true ] && echo -e "    ${C_DIM}opencode: bun${C_RESET}"
+[ "$INSTALL_CODEX" = true ] && echo -e "    ${C_DIM}codex: npm/node, bubblewrap${C_RESET}"
+[ "$INSTALL_CLAUDE_CODE" = true ] && echo -e "    ${C_DIM}claude: npm/node${C_RESET}"
 
 # ── Helper to run a step ──
 run_step() {
   local step_name="$1"; shift
-  echo ""
-  echo "─── $step_name ───"
+  log_step "$step_name"
   if [ "$DRY_RUN" = true ]; then
-    echo "  Would run: $*"
+    log_dim "Would run: $*"
   else
     "$@"
   fi
@@ -155,9 +204,8 @@ run_step() {
 
 # ── Step 01: Environment & secrets ──
 if [ "$DRY_RUN" = true ]; then
-  echo ""
-  echo "─── Step 01: Environment & secrets ───"
-  echo "  Would run: scripts/01_env.sh"
+  log_step "Step 01: Environment & secrets"
+  log_dim "Would run: scripts/01_env.sh"
 else
   "$SCRIPT_DIR/01_env.sh"
 fi
@@ -173,7 +221,7 @@ if [ "$INSTALL_OPENCODE" = true ]; then
   [ "$DRY_RUN" = true ] && OPENCODE_ARGS+=("--dry-run")
   run_step "Step 03: opencode" "$SCRIPT_DIR/03_opencode.sh" "${OPENCODE_ARGS[@]}"
 else
-  echo "  (skipping opencode)"
+  log_dim "(skipping opencode)"
 fi
 
 # ── Step 04: Codex CLI (optional) ──
@@ -182,7 +230,7 @@ if [ "$INSTALL_CODEX" = true ]; then
   [ "$DRY_RUN" = true ] && CODEX_ARGS+=("--dry-run")
   run_step "Step 04: Codex CLI" "$SCRIPT_DIR/04_codex.sh" "${CODEX_ARGS[@]}"
 else
-  echo "  (skipping Codex CLI)"
+  log_dim "(skipping Codex CLI)"
 fi
 
 # ── Step 05: Claude Code CLI (optional) ──
@@ -191,7 +239,7 @@ if [ "$INSTALL_CLAUDE_CODE" = true ]; then
   [ "$DRY_RUN" = true ] && CLAUDE_ARGS+=("--dry-run")
   run_step "Step 05: Claude Code CLI" "$SCRIPT_DIR/05_claude_code.sh" "${CLAUDE_ARGS[@]}"
 else
-  echo "  (skipping Claude Code CLI)"
+  log_dim "(skipping Claude Code CLI)"
 fi
 
 # ── Step 06: Validate ──
@@ -205,49 +253,49 @@ VALIDATE_RC=$?
 
 # ── Summary ──
 echo ""
-echo "══════════════════════════════════════════════════════"
-echo "  Bootstrap complete"
-echo "══════════════════════════════════════════════════════"
+echo -e "${C_BOLD}${C_CYAN}══════════════════════════════════════════════════════${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}  Bootstrap complete${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}══════════════════════════════════════════════════════${C_RESET}"
 echo ""
-echo "Project dir:       $PROJECT_DIR"
-echo "LiteLLM proxy:     $LITELLM_URL"
-echo "LiteLLM Admin UI:  ${LITELLM_URL}/ui"
-echo "Grafana:           http://127.0.0.1:3000 (anonymous, no login)"
-echo "Prometheus:        http://127.0.0.1:9090"
+echo -e "  ${C_DIM}Project dir:${C_RESET}       $PROJECT_DIR"
+echo -e "  ${C_DIM}LiteLLM proxy:${C_RESET}     $LITELLM_URL"
+echo -e "  ${C_DIM}LiteLLM Admin UI:${C_RESET}  ${LITELLM_URL}/ui"
+echo -e "  ${C_DIM}Grafana:${C_RESET}           http://127.0.0.1:3000 (anonymous, no login)"
+echo -e "  ${C_DIM}Prometheus:${C_RESET}        http://127.0.0.1:9090"
 
 if [ "$INSTALL_OPENCODE" = true ] && [ -f "$HOME/.config/opencode/opencode.json" ]; then
-  echo "opencode config:   ~/.config/opencode/opencode.json"
+  echo -e "  ${C_DIM}opencode config:${C_RESET}   ~/.config/opencode/opencode.json"
   FINAL_VK=$(strip_jsonc "$HOME/.config/opencode/opencode.json" 2>/dev/null \
     | jq -r '.provider.LiteLLM.options.apiKey // empty' 2>/dev/null || true)
-  [ -n "$FINAL_VK" ] && echo "opencode key:      $(mask_key "$FINAL_VK")"
+  [ -n "$FINAL_VK" ] && echo -e "  ${C_DIM}opencode key:${C_RESET}      $(mask_key "$FINAL_VK")"
 fi
 if [ "$INSTALL_CODEX" = true ] && [ -f "$HOME/.codex/.env" ]; then
-  echo "Codex CLI config:   ~/.codex/config.toml"
+  echo -e "  ${C_DIM}Codex CLI config:${C_RESET}   ~/.codex/config.toml"
   CODEX_VK=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$HOME/.codex/.env" 2>/dev/null || true)
-  [ -n "$CODEX_VK" ] && echo "Codex CLI key:      $(mask_key "$CODEX_VK")"
+  [ -n "$CODEX_VK" ] && echo -e "  ${C_DIM}Codex CLI key:${C_RESET}      $(mask_key "$CODEX_VK")"
 fi
 if [ "$INSTALL_CLAUDE_CODE" = true ] && [ -f "$HOME/.claude/settings.json" ]; then
-  echo "Claude Code config: ~/.claude/settings.json"
+  echo -e "  ${C_DIM}Claude Code config:${C_RESET} ~/.claude/settings.json"
   CLAUDE_VK=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$HOME/.claude/settings.json" 2>/dev/null || true)
-  [ -n "$CLAUDE_VK" ] && echo "Claude Code key:    $(mask_key "$CLAUDE_VK")"
+  [ -n "$CLAUDE_VK" ] && echo -e "  ${C_DIM}Claude Code key:${C_RESET}    $(mask_key "$CLAUDE_VK")"
 fi
 
 echo ""
-echo "Next steps:"
-[ "$INSTALL_OPENCODE" = true ] && echo "  - opencode:  exit any running session, then run: opencode"
-[ "$INSTALL_CODEX" = true ] && echo "  - Codex:     codex"
-[ "$INSTALL_CLAUDE_CODE" = true ] && echo "  - Claude:    claude --bare"
+echo -e "  ${C_BOLD}Next steps:${C_RESET}"
+[ "$INSTALL_OPENCODE" = true ] && echo -e "    opencode:  exit any running session, then run: ${C_CYAN}opencode${C_RESET}"
+[ "$INSTALL_CODEX" = true ] && echo -e "    Codex:     ${C_CYAN}codex${C_RESET}"
+[ "$INSTALL_CLAUDE_CODE" = true ] && echo -e "    Claude:    ${C_CYAN}claude --bare${C_RESET}"
 echo ""
-echo "⚠️  Security: API keys were shared via environment variables and command line."
-echo "   Rotate your MaaS keys to prevent unauthorized use:"
-echo "     1. Get new key(s) from https://console.huaweicloud.com/modelarts/"
-echo "     2. Edit .env: replace HUAWEI_MAAS_API_KEY and HUAWEI_MAAS_API_KEY_1..N"
-echo "     3. Regenerate config: ./scripts/02_litellm.sh"
-echo "     4. Restart LiteLLM:  docker compose restart litellm"
-echo "     5. Re-validate:      ./scripts/06_validate.sh"
+echo -e "  ${C_YELLOW}⚠ Security:${C_RESET} API keys were shared via environment variables and command line."
+echo -e "    ${C_DIM}Rotate your MaaS keys to prevent unauthorized use:${C_RESET}"
+echo -e "      ${C_DIM}1. Get new key(s) from https://console.huaweicloud.com/modelarts/${C_RESET}"
+echo -e "      ${C_DIM}2. Edit .env: replace HUAWEI_MAAS_API_KEY and HUAWEI_MAAS_API_KEY_1..N${C_RESET}"
+echo -e "      ${C_DIM}3. Regenerate config: ./scripts/02_litellm.sh${C_RESET}"
+echo -e "      ${C_DIM}4. Restart LiteLLM:  docker compose restart litellm${C_RESET}"
+echo -e "      ${C_DIM}5. Re-validate:      ./scripts/06_validate.sh${C_RESET}"
 echo ""
-echo "Restart your shell (or open a new terminal) to clear exported environment"
-echo "variables and apply all changes:"
-echo "  exec \"\$SHELL\"    # or close and reopen your terminal"
+echo -e "  ${C_BOLD}Restart your shell${C_RESET} (or open a new terminal) to clear exported environment"
+echo -e "  variables and apply all changes:"
+echo -e "    ${C_CYAN}exec \"\$SHELL\"${C_RESET}    ${C_DIM}# or close and reopen your terminal${C_RESET}"
 
 exit "$VALIDATE_RC"

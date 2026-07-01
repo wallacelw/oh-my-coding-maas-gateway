@@ -7,10 +7,11 @@ set -euo pipefail
 # Order:         01 (first — everything needs .env)
 # Optional:      no (core, always runs)
 # Description:   Generate/update .env with immutable secrets, Huawei MaaS API
-#                keys, and endpoint URLs. Auto-generates and preserves secrets
-#                (idempotent); collects the MaaS key from the HUAWEI_MAAS_API_KEY
-#                env var or an interactive prompt. Configures git hooks to block
-#                committing secrets.
+#                keys, and endpoint URLs. For each secret, prompts to use an
+#                auto-generated value or enter a custom one (non-interactive
+#                defaults to auto). Collects the MaaS key from the
+#                HUAWEI_MAAS_API_KEY env var or an interactive prompt.
+#                Configures git hooks to block committing secrets.
 # Inputs:        HUAWEI_MAAS_API_KEY (env var or prompt),
 #                HUAWEI_MAAS_API_KEY_COUNT + HUAWEI_MAAS_API_KEY_1..N (env vars
 #                or prompt), --force (regenerate secrets)
@@ -27,6 +28,7 @@ ENV_FILE="$PROJECT_DIR/.env"
 # ── Helpers ──
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
+LOG_TAG="env"
 prereq_ensure_apt "python3" python3 python3
 prereq_ensure_apt "git"     git     git
 
@@ -38,18 +40,15 @@ FORCE=false
 for arg in "$@"; do
   case "$arg" in
     --force) FORCE=true ;;
-    *) echo "Usage: $0 [--force]" >&2; exit 1 ;;
+    *) log_error "Usage: $0 [--force]"; exit 1 ;;
   esac
 done
 
-echo "══════════════════════════════════════════════════════"
-echo "  Step 01 — Environment & secrets"
-echo "══════════════════════════════════════════════════════"
-echo ""
+log_step "Step 01 — Environment & secrets"
 
 # ── Check env template exists ──
 if [ ! -f "$ENV_EXAMPLE" ]; then
-  echo "ERROR: $ENV_EXAMPLE not found." >&2
+  log_error "$ENV_EXAMPLE not found."
   exit 1
 fi
 
@@ -74,35 +73,59 @@ fi
 # ── Generate / preserve secrets ──
 # Immutable secrets are preserved on re-run (changing them breaks existing
 # deployments). --force regenerates all (for key rotation).
-MASTER_KEY="$(generate_master_key)"
-SALT_KEY="$(generate_secret)"
-DB_PASSWORD="$(generate_secret)"
-GRAFANA_PASSWORD="$(generate_secret)"
-PROM_RETENTION="30d"
+# For fresh installs or --force, prompt for each: auto-generated or custom.
+
+IS_FRESH=true
+[ -f "$ENV_FILE" ] && [ "$FORCE" != true ] && IS_FRESH=false
+
+# Auto-generate defaults
+AUTO_MASTER_KEY="$(generate_master_key)"
+AUTO_SALT_KEY="$(generate_secret)"
+AUTO_DB_PASSWORD="$(generate_secret)"
+AUTO_GRAFANA_PASSWORD="$(generate_secret)"
+AUTO_PROM_RETENTION="30d"
 MAAS_API_BASE="https://api-ap-southeast-1.modelarts-maas.com/openai/v1"
 MAAS_ANTHROPIC_BASE="https://api-ap-southeast-1.modelarts-maas.com/anthropic"
 
-if [ "$FORCE" != true ]; then
-  [ -n "$EXISTING_MASTER_KEY" ]        && MASTER_KEY="$EXISTING_MASTER_KEY"
-  [ -n "$EXISTING_SALT_KEY" ]          && SALT_KEY="$EXISTING_SALT_KEY"
-  [ -n "$EXISTING_DB_PASSWORD" ]       && DB_PASSWORD="$EXISTING_DB_PASSWORD"
-  [ -n "$EXISTING_GRAFANA_PASSWORD" ]  && GRAFANA_PASSWORD="$EXISTING_GRAFANA_PASSWORD"
-  [ -n "$EXISTING_PROM_RETENTION" ]    && PROM_RETENTION="$EXISTING_PROM_RETENTION"
+if [ "$IS_FRESH" = false ]; then
+  # Preserve existing secrets (idempotent)
+  MASTER_KEY="$EXISTING_MASTER_KEY"
+  SALT_KEY="$EXISTING_SALT_KEY"
+  DB_PASSWORD="$EXISTING_DB_PASSWORD"
+  GRAFANA_PASSWORD="$EXISTING_GRAFANA_PASSWORD"
+  PROM_RETENTION="$EXISTING_PROM_RETENTION"
   [ -n "$EXISTING_MAAS_BASE" ]         && MAAS_API_BASE="$EXISTING_MAAS_BASE"
   [ -n "$EXISTING_MAAS_ANTHROPIC_BASE" ] && MAAS_ANTHROPIC_BASE="$EXISTING_MAAS_ANTHROPIC_BASE"
-  [ -f "$ENV_FILE" ] && echo "  Preserving existing secrets (idempotent). Use --force to regenerate."
+  log_ok "Preserving existing secrets (idempotent). Use --force to regenerate."
+else
+  # Fresh install or --force — prompt for each secret
+  if [ "$FORCE" = true ] && [ -f "$ENV_FILE" ]; then
+    log_warn "Regenerating all secrets (--force). Existing virtual keys will be invalidated."
+  fi
+
+  log_step "Secret configuration"
+  log_dim "For each secret, choose auto-generated or enter a custom value."
+  echo ""
+
+  MASTER_KEY=$(prompt_password "LITELLM_MASTER_KEY (proxy auth)" "$AUTO_MASTER_KEY")
+  SALT_KEY=$(prompt_password "LITELLM_SALT_KEY (virtual key signing)" "$AUTO_SALT_KEY")
+  DB_PASSWORD=$(prompt_password "DB_PASSWORD (PostgreSQL)" "$AUTO_DB_PASSWORD")
+  GRAFANA_PASSWORD=$(prompt_password "GRAFANA_ADMIN_PASSWORD" "$AUTO_GRAFANA_PASSWORD")
+
+  echo ""
+  PROM_RETENTION=$(prompt_input "PROMETHEUS_RETENTION (e.g. 30d, 14d, 7d)" "$AUTO_PROM_RETENTION")
 fi
 
 # ── Collect MaaS API key (env var or prompt) ──
+log_step "Huawei MaaS API key"
 MAAS_API_KEY="${HUAWEI_MAAS_API_KEY:-}"
 if [ -n "$MAAS_API_KEY" ]; then
-  echo "  ✓ HUAWEI_MAAS_API_KEY set from environment"
+  log_ok "HUAWEI_MAAS_API_KEY set from environment"
 elif [ -t 0 ]; then
   echo ""
-  echo "  Enter Huawei MaaS API key (region ap-southeast-1):"
-  read -r MAAS_API_KEY < /dev/tty
+  MAAS_API_KEY=$(prompt_input "Enter Huawei MaaS API key (region ap-southeast-1)" "")
 else
-  echo "ERROR: HUAWEI_MAAS_API_KEY is required. Set it as an env var or run interactively." >&2
+  log_error "HUAWEI_MAAS_API_KEY is required. Set it as an env var or run interactively."
   exit 1
 fi
 
@@ -114,19 +137,19 @@ if [ -n "${HUAWEI_MAAS_API_KEY_COUNT:-}" ] && [ "${HUAWEI_MAAS_API_KEY_COUNT:-1}
     VAL="${!VAR:-}"
     [ -n "$VAL" ] && EXTRA_KEYS+=("$VAL")
   done
-  [ ${#EXTRA_KEYS[@]} -gt 0 ] && echo "  ✓ ${#EXTRA_KEYS[@]} extra MaaS key(s) from environment"
+  [ ${#EXTRA_KEYS[@]} -gt 0 ] && log_ok "${#EXTRA_KEYS[@]} extra MaaS key(s) from environment"
 elif [ -t 0 ]; then
   echo ""
-  echo "  ── Additional MaaS API keys for load balancing ──"
-  echo "  Each extra key multiplies effective RPM/TPM across all models."
-  echo "  Press Enter without typing anything to skip (0 extra keys)."
+  log_dim "Additional MaaS API keys for load balancing."
+  log_dim "Each extra key multiplies effective RPM/TPM across all models."
+  log_dim "Press Enter without typing anything to skip (0 extra keys)."
   echo ""
   while true; do
     EXTRA_NUM=$(( ${#EXTRA_KEYS[@]} + 1 ))
-    read -r -p "  Enter MaaS API key #$EXTRA_NUM (or press Enter to finish): " extra_key < /dev/tty
+    extra_key=$(prompt_input "MaaS API key #$EXTRA_NUM (or press Enter to finish)" "")
     [ -z "$extra_key" ] && break
     EXTRA_KEYS+=("$extra_key")
-    echo "  ✓ Extra key #$EXTRA_NUM added"
+    log_ok "Extra key #$EXTRA_NUM added"
   done
 fi
 
@@ -135,34 +158,34 @@ KEY_COUNT=$(( 1 + ${#EXTRA_KEYS[@]} ))
 # ── Validate ──
 ERRORS=0
 if [[ ! "$MASTER_KEY" == sk-* ]]; then
-  echo "ERROR: LITELLM_MASTER_KEY must start with 'sk-'." >&2
+  log_error "LITELLM_MASTER_KEY must start with 'sk-'."
   ERRORS=$((ERRORS + 1))
 fi
 if [ -z "$MAAS_API_KEY" ]; then
-  echo "ERROR: HUAWEI_MAAS_API_KEY is required." >&2
+  log_error "HUAWEI_MAAS_API_KEY is required."
   ERRORS=$((ERRORS + 1))
 fi
 if [[ "$MAAS_API_KEY" == *"change-me"* ]] || [[ "$MAAS_API_KEY" == *"xxx"* ]]; then
-  echo "ERROR: HUAWEI_MAAS_API_KEY still has a placeholder value." >&2
+  log_error "HUAWEI_MAAS_API_KEY still has a placeholder value."
   ERRORS=$((ERRORS + 1))
 fi
 for i in "${!EXTRA_KEYS[@]}"; do
   key="${EXTRA_KEYS[$i]}"
   if [ -z "$key" ]; then
-    echo "ERROR: Additional MaaS API key $((i + 1)) is empty." >&2
+    log_error "Additional MaaS API key $((i + 1)) is empty."
     ERRORS=$((ERRORS + 1))
   elif [[ "$key" == *"change-me"* ]] || [[ "$key" == *"xxx"* ]]; then
-    echo "ERROR: Additional MaaS API key $((i + 1)) still has a placeholder value." >&2
+    log_error "Additional MaaS API key $((i + 1)) still has a placeholder value."
     ERRORS=$((ERRORS + 1))
   fi
 done
 if [[ ! "$PROM_RETENTION" =~ ^([0-9]+)([dhw])$ ]]; then
-  echo "ERROR: PROMETHEUS_RETENTION must be a Prometheus duration like 30d, 14d, 7d. Got: $PROM_RETENTION" >&2
+  log_error "PROMETHEUS_RETENTION must be a Prometheus duration like 30d, 14d, 7d. Got: $PROM_RETENTION"
   ERRORS=$((ERRORS + 1))
 fi
 if [ "$ERRORS" -gt 0 ]; then
-  echo "" >&2
-  echo "Validation failed with $ERRORS error(s)." >&2
+  echo ""
+  log_error "Validation failed with $ERRORS error(s)."
   exit 1
 fi
 
@@ -204,22 +227,22 @@ if [ -d "$PROJECT_DIR/.githooks" ]; then
   CURRENT_HOOKS=$(git -C "$PROJECT_DIR" config --local core.hooksPath 2>/dev/null || true)
   if [ "$CURRENT_HOOKS" != ".githooks" ]; then
     git -C "$PROJECT_DIR" config core.hooksPath .githooks
-    echo "  ✓ Git hooks configured (.githooks/pre-commit blocks .env and secrets)"
+    log_ok "Git hooks configured (.githooks/pre-commit blocks .env and secrets)"
   fi
 fi
 
 # ── Warn if --force was used ──
 if [ "$FORCE" = true ]; then
   echo ""
-  echo "WARNING: All secrets were regenerated (--force). Restart Docker to apply:"
-  echo "  docker compose up -d"
-  echo "Existing virtual keys are invalidated — re-run tool installs to mint new ones."
+  log_warn "All secrets were regenerated (--force). Restart Docker to apply:"
+  log_dim "docker compose up -d"
+  log_dim "Existing virtual keys are invalidated — re-run tool installs to mint new ones."
 fi
 
 # ── Summary ──
 echo ""
-echo "  .env written: $ENV_FILE (chmod 600)"
-echo "  HUAWEI_MAAS_API_KEY = $(mask_key "$MAAS_API_KEY")"
-echo "  MaaS API key count  = ${KEY_COUNT}"
-echo "  LITELLM_MASTER_KEY  = $(mask_key "$MASTER_KEY")"
-echo "  PROMETHEUS_RETENTION   = ${PROM_RETENTION}"
+log_ok ".env written: $ENV_FILE (chmod 600)"
+log_dim "HUAWEI_MAAS_API_KEY   = $(mask_key "$MAAS_API_KEY")"
+log_dim "MAAS API key count    = ${KEY_COUNT}"
+log_dim "LITELLM_MASTER_KEY    = $(mask_key "$MASTER_KEY")"
+log_dim "PROMETHEUS_RETENTION  = ${PROM_RETENTION}"

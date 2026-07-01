@@ -25,6 +25,7 @@ CURL_TIMEOUT=15
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
+LOG_TAG="claude"
 source_env "$PROJECT_DIR"
 
 # ── Parse args ──
@@ -37,40 +38,37 @@ for arg in "$@"; do
   esac
 done
 
-echo "=== Step 05 — Claude Code CLI ==="
-[ "$DRY_RUN" = true ] && echo "   (DRY RUN — no changes will be made)"
-echo ""
+log_step "Step 05 — Claude Code CLI"
+[ "$DRY_RUN" = true ] && log_dim "(DRY RUN — no changes will be made)"
 
 # ── 1. Check prerequisites ──
-echo "1. Checking prerequisites..."
+log_info "1. Checking prerequisites..."
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_npm
 prereq_ensure_apt "jq" jq jq
 
 if curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
-  echo "   LiteLLM proxy: reachable"
+  log_ok "LiteLLM proxy: reachable"
 else
-  echo "ERROR: LiteLLM proxy not reachable at $LITELLM_URL. Start it first." >&2
+  log_error "LiteLLM proxy not reachable at $LITELLM_URL. Start it first."
   exit 1
 fi
-echo ""
 
 # ── 2. Install Claude Code CLI ──
-echo "2. Installing Claude Code CLI..."
+log_info "2. Installing Claude Code CLI..."
 if ! command -v claude &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
-    echo "   Would run: npm install -g @anthropic-ai/claude-code"
+    log_info "Would run: npm install -g @anthropic-ai/claude-code"
   else
-    npm install -g @anthropic-ai/claude-code
-    echo "   Installed: $(claude --version 2>/dev/null || echo 'unknown')"
+    run_filtered "npm" npm install -g @anthropic-ai/claude-code
+    log_ok "Installed: $(claude --version 2>/dev/null || echo 'unknown')"
   fi
 else
-  echo "   Already installed: $(claude --version 2>/dev/null || echo 'unknown')"
+  log_ok "Already installed: $(claude --version 2>/dev/null || echo 'unknown')"
 fi
-echo ""
 
 # ── 3. Acquire virtual key (idempotent) ──
-echo "3. Configuring LiteLLM virtual key..."
+log_info "3. Configuring LiteLLM virtual key..."
 
 if [ -z "$VIRTUAL_KEY" ] && [ -f "$CLAUDE_SETTINGS" ]; then
   EXISTING_KEY=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
@@ -82,36 +80,35 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CLAUDE_SETTINGS" ]; then
          -H "Content-Type: application/json" \
          -H "anthropic-version: 2023-06-01" \
          -d '{"model":"claude-deepseek-v3.2","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
-      echo "   Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
+      log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
-      echo "   Existing virtual key is invalid. Minting new key."
+      log_info "Existing virtual key is invalid. Minting new key."
     fi
   fi
 fi
 
 if [ -z "$VIRTUAL_KEY" ]; then
   if [ "$DRY_RUN" = true ]; then
-    echo "   Would mint key (alias=claude-code, unlimited budget)"
+    log_info "Would mint key (alias=claude-code, unlimited budget)"
     VIRTUAL_KEY="sk-dryrun-placeholder"
   else
     resolve_master_key "$PROJECT_DIR" || exit 1
     VIRTUAL_KEY=$(mint_or_reuse_key "claude-code" --no-budget)
     if [ -z "$VIRTUAL_KEY" ] || [[ "$VIRTUAL_KEY" != sk-* ]]; then
-      echo "ERROR: Failed to mint virtual key." >&2
+      log_error "Failed to mint virtual key."
       exit 1
     fi
-    echo "   Virtual key: $(mask_key "$VIRTUAL_KEY")"
+    log_ok "Virtual key: $(mask_key "$VIRTUAL_KEY")"
   fi
 fi
-echo ""
 
 # ── 4. Write settings.json ──
-echo "4. Writing Claude Code CLI config..."
+log_info "4. Writing Claude Code CLI config..."
 if [ "$DRY_RUN" = true ]; then
-  echo "   Would write: $CLAUDE_SETTINGS, ~/.claude.json"
+  log_info "Would write: $CLAUDE_SETTINGS, ~/.claude.json"
   echo ""
-  echo "=== Dry run complete — no changes made ==="
+  log_ok "Dry run complete — no changes made"
   exit 0
 fi
 
@@ -126,49 +123,48 @@ NEW_SETTINGS=$(jq -n \
 
 if [ -f "$CLAUDE_SETTINGS" ]; then
   if [ "$NEW_SETTINGS" = "$(cat "$CLAUDE_SETTINGS")" ]; then
-    echo "   settings.json unchanged — skipping write"
+    log_info "settings.json unchanged — skipping write"
   else
     cp "$CLAUDE_SETTINGS" "$CLAUDE_SETTINGS.bak.$(date +%Y%m%d%H%M%S)"
     echo "$NEW_SETTINGS" > "$CLAUDE_SETTINGS"
     chmod 600 "$CLAUDE_SETTINGS"
-    echo "   Updated: $CLAUDE_SETTINGS (backup saved)"
+    log_ok "Updated: $CLAUDE_SETTINGS (backup saved)"
   fi
 else
   echo "$NEW_SETTINGS" > "$CLAUDE_SETTINGS"
   chmod 600 "$CLAUDE_SETTINGS"
-  echo "   Written: $CLAUDE_SETTINGS"
+  log_ok "Written: $CLAUDE_SETTINGS"
 fi
-echo ""
 
 # ── 5. Disable VSCode extension auto-install ──
-echo "5. Disabling VSCode extension auto-install..."
+log_info "5. Disabling VSCode extension auto-install..."
 CLAUDE_JSON="$HOME/.claude.json"
 if [ -f "$CLAUDE_JSON" ]; then
   CURRENT=$(jq '.autoInstallIdeExtension // empty' "$CLAUDE_JSON" 2>/dev/null || true)
   if [ "$CURRENT" = "false" ]; then
-    echo "   autoInstallIdeExtension already false"
+    log_info "autoInstallIdeExtension already false"
   else
     jq '.autoInstallIdeExtension = false' "$CLAUDE_JSON" > "$CLAUDE_JSON.tmp" && mv "$CLAUDE_JSON.tmp" "$CLAUDE_JSON"
-    echo "   Set autoInstallIdeExtension=false in ~/.claude.json"
+    log_ok "Set autoInstallIdeExtension=false in ~/.claude.json"
   fi
 else
   echo '{"autoInstallIdeExtension": false}' > "$CLAUDE_JSON"
-  echo "   Created ~/.claude.json with autoInstallIdeExtension=false"
+  log_ok "Created ~/.claude.json with autoInstallIdeExtension=false"
 fi
 
 if command -v code &>/dev/null; then
   if code --list-extensions 2>/dev/null | grep -qi "anthropic.claude-code"; then
     code --uninstall-extension anthropic.claude-code 2>/dev/null && \
-      echo "   Uninstalled anthropic.claude-code VSCode extension" || \
-      echo "   Warning: could not uninstall VSCode extension"
+      log_ok "Uninstalled anthropic.claude-code VSCode extension" || \
+      log_warn "could not uninstall VSCode extension"
   else
-    echo "   VSCode extension not installed — nothing to remove"
+    log_info "VSCode extension not installed — nothing to remove"
   fi
 else
-  echo "   VSCode CLI (code) not found — skipping extension check"
+  log_info "VSCode CLI (code) not found — skipping extension check"
 fi
-echo ""
 
-echo "=== Claude Code CLI installation complete ==="
-echo "  Default model: claude-glm-5.2"
-echo "  Run: claude --bare"
+echo ""
+log_ok "Claude Code CLI installation complete"
+log_info "Default model: claude-glm-5.2"
+log_info "Run: claude --bare"
