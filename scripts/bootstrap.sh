@@ -184,12 +184,28 @@ echo -e "    ${C_DIM}opencode:${C_RESET}     $( [ "$INSTALL_OPENCODE" = true ] &
 echo -e "    ${C_DIM}Codex:${C_RESET}        $( [ "$INSTALL_CODEX" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
 echo -e "    ${C_DIM}Claude Code:${C_RESET}  $( [ "$INSTALL_CLAUDE_CODE" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
 
-# ── Selection-driven prerequisite summary ──
+# ── Selection-driven prerequisite summary (prereq → needed by) ──
 log_dim "Prerequisites to install (as needed):"
-echo -e "    ${C_DIM}core: git, python3, curl, jq, docker${C_RESET}"
-[ "$INSTALL_OPENCODE" = true ] && echo -e "    ${C_DIM}opencode: bun${C_RESET}"
-[ "$INSTALL_CODEX" = true ] && echo -e "    ${C_DIM}codex: npm/node, bubblewrap${C_RESET}"
-[ "$INSTALL_CLAUDE_CODE" = true ] && echo -e "    ${C_DIM}claude: npm/node${C_RESET}"
+echo ""
+
+CURL_TOOLS="bootstrap, litellm, validate"
+JQ_TOOLS="bootstrap, validate"
+[ "$INSTALL_OPENCODE" = true ]   && CURL_TOOLS+=", opencode"  && JQ_TOOLS+=", opencode"
+[ "$INSTALL_CODEX" = true ]      && CURL_TOOLS+=", codex"     && JQ_TOOLS+=", codex"
+[ "$INSTALL_CLAUDE_CODE" = true ] && CURL_TOOLS+=", claude"   && JQ_TOOLS+=", claude"
+
+NPM_TOOLS=""
+[ "$INSTALL_CODEX" = true ]       && NPM_TOOLS="codex"
+[ "$INSTALL_CLAUDE_CODE" = true ] && NPM_TOOLS="${NPM_TOOLS:+$NPM_TOOLS, }claude"
+
+printf "    ${C_DIM}%-14s %s${C_RESET}\n" "git"          "— bootstrap, env"
+printf "    ${C_DIM}%-14s %s${C_RESET}\n" "python3"      "— bootstrap, env"
+printf "    ${C_DIM}%-14s %s${C_RESET}\n" "curl"         "— $CURL_TOOLS"
+printf "    ${C_DIM}%-14s %s${C_RESET}\n" "jq"           "— $JQ_TOOLS"
+printf "    ${C_DIM}%-14s %s${C_RESET}\n" "docker"       "— litellm"
+[ "$INSTALL_OPENCODE" = true ]    && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bun"        "— opencode"
+[ -n "$NPM_TOOLS" ]               && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "npm/node"   "— $NPM_TOOLS"
+[ "$INSTALL_CODEX" = true ]       && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bubblewrap" "— codex"
 
 # ── Helper to run a step ──
 run_step() {
