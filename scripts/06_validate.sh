@@ -39,6 +39,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
+LOG_TAG="validate"
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_apt "jq"   jq   jq
 
@@ -85,13 +86,11 @@ fi
 [ "$SKIP_CODEX" = true ] && RUN_CODEX=false
 [ "$SKIP_CLAUDE_CODE" = true ] && RUN_CLAUDE_CODE=false
 
-# ── Colors ──
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
-
-pass() { PASS=$((PASS + 1)); printf '%b' "${GREEN}✅ PASS${NC} — $1\n"; }
-fail() { FAIL=$((FAIL + 1)); printf '%b' "${RED}❌ FAIL${NC} — $1\n"; }
-warn() { WARN=$((WARN + 1)); printf '%b' "${YELLOW}⚠️  WARN${NC} — $1\n"; }
-skip() { printf '%b' "  ○ $1 (skipped)\n"; }
+# ── Validation output helpers ──
+pass() { PASS=$((PASS + 1)); log_ok "$1"; }
+fail() { FAIL=$((FAIL + 1)); log_error "$1"; }
+warn() { WARN=$((WARN + 1)); log_warn "$1"; }
+skip() { log_dim "$1 (skipped)"; }
 
 jqc() { printf '%s' "$1" | jq -e "$2" 2>/dev/null; }
 
@@ -99,22 +98,19 @@ jqc() { printf '%s' "$1" | jq -e "$2" 2>/dev/null; }
 source_env "$PROJECT_DIR"
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
 
-printf '%b' "${YELLOW}╔══════════════════════════════════════════════════════╗\n"
-printf '%b' "║  oh-my-coding-maas-gateway — Validation                ║\n"
-printf '%b' "╚══════════════════════════════════════════════════════╝${NC}\n"
+log_step "oh-my-coding-maas-gateway — Validation"
 if [ "$DRY_RUN" = true ]; then
-  echo "   (DRY RUN — network checks skipped)"
+  log_dim "(DRY RUN — network checks skipped)"
 fi
-echo ""
 
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION A: LiteLLM Proxy Validation
 # ════════════════════════════════════════════════════════════════════════════
 if [ "$RUN_LITELLM" = true ]; then
-  echo "━━━ A. LiteLLM Proxy ━━━"
+  log_step "A. LiteLLM Proxy"
 
   echo ""
-  echo "A1. .env completeness and permissions"
+  log_info "A1. .env completeness and permissions"
   if [ -f "$PROJECT_DIR/.env" ]; then
     pass ".env exists"
     PERMS=$(stat -c '%a' "$PROJECT_DIR/.env" 2>/dev/null || stat -f '%Lp' "$PROJECT_DIR/.env" 2>/dev/null)
@@ -141,7 +137,7 @@ if [ "$RUN_LITELLM" = true ]; then
   fi
 
   echo ""
-  echo "A2. Docker services"
+  log_info "A2. Docker services"
   if [ "$DRY_RUN" = true ]; then
     skip "Docker service health"
   else
@@ -154,7 +150,7 @@ if [ "$RUN_LITELLM" = true ]; then
   fi
 
   echo ""
-  echo "A3. LiteLLM health"
+  log_info "A3. LiteLLM health"
   if [ "$DRY_RUN" = true ]; then
     skip "LiteLLM liveness probe"
     skip "LiteLLM per-model health"
@@ -200,7 +196,7 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
   fi
 
   echo ""
-  echo "A4. Config validation"
+  log_info "A4. Config validation"
   CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
   TEMPLATE_FILE="$PROJECT_DIR/configs/litellm/config.yaml.template"
   if [ -f "$CONFIG_FILE" ]; then
@@ -227,7 +223,7 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
   fi
 
   echo ""
-  echo "A5. Inference smoke test"
+  log_info "A5. Inference smoke test"
   if [ "$DRY_RUN" = true ]; then
     skip "Inference smoke test"
   elif [ "$LITELLM_ONLY" = true ] && [ -n "${LITELLM_MASTER_KEY:-}" ]; then
@@ -253,14 +249,14 @@ fi
 # SECTION B: opencode Configuration Validation
 # ════════════════════════════════════════════════════════════════════════════
 if [ "$RUN_OPENCODE" = true ]; then
-  echo "━━━ B. opencode Configuration ━━━"
+  log_step "B. opencode Configuration"
 
   OPENCODE_DIR="$HOME/.config/opencode"
   CONFIG_FILE=""
   [ -f "$OPENCODE_DIR/opencode.json" ] && CONFIG_FILE="$OPENCODE_DIR/opencode.json"
 
   echo ""
-  echo "B1. opencode binary"
+  log_info "B1. opencode binary"
   if command -v opencode &>/dev/null; then
     pass "opencode installed: $(opencode --version 2>/dev/null || echo 'unknown')"
   else
@@ -268,7 +264,7 @@ if [ "$RUN_OPENCODE" = true ]; then
   fi
 
   echo ""
-  echo "B2. Config files"
+  log_info "B2. Config files"
   if [ -n "$CONFIG_FILE" ]; then
     pass "opencode.json exists: $CONFIG_FILE"
     CLEAN_CONFIG=$(strip_jsonc "$CONFIG_FILE")
@@ -284,7 +280,7 @@ if [ "$RUN_OPENCODE" = true ]; then
   fi
 
   echo ""
-  echo "B3. Provider configuration"
+  log_info "B3. Provider configuration"
   if [ -n "$CONFIG_FILE" ]; then
     CLEAN_CONFIG=$(strip_jsonc "$CONFIG_FILE")
     check_provider() {
@@ -318,7 +314,7 @@ if [ "$RUN_OPENCODE" = true ]; then
   fi
 
   echo ""
-  echo "B4. oh-my-opencode-slim preset"
+  log_info "B4. oh-my-opencode-slim preset"
   SLIM_CONFIG=""
   if [ -f "$OPENCODE_DIR/oh-my-opencode-slim.json" ]; then
     SLIM_CONFIG="$OPENCODE_DIR/oh-my-opencode-slim.json"
@@ -370,7 +366,7 @@ if [ "$RUN_OPENCODE" = true ]; then
   fi
 
   echo ""
-  echo "B5. Model availability (via proxy)"
+  log_info "B5. Model availability (via proxy)"
   if [ "$DRY_RUN" = true ]; then
     skip "Model catalog reachable"
     skip "Inference smoke test"
@@ -393,7 +389,7 @@ if [ "$RUN_OPENCODE" = true ]; then
         pass "Model catalog reachable"
         MODEL_COUNT=$(printf '%s' "$MODELS_JSON" | jq '.data | length' 2>/dev/null)
         MODEL_LIST=$(printf '%s' "$MODELS_JSON" | jq -r '.data[].id' 2>/dev/null)
-        echo "  ℹ Discovered $MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
+        log_dim "Discovered $MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
 
         SMOKE_MODEL="deepseek-v3.2"
         if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
@@ -416,10 +412,10 @@ fi
 # ════════════════════════════════════════════════════════════════════════════
 if [ "$RUN_OBSERVABILITY" = true ]; then
   echo ""
-  echo "━━━ C. Observability ━━━"
+  log_step "C. Observability"
 
   echo ""
-  echo "C1. Prometheus"
+  log_info "C1. Prometheus"
   if [ "$DRY_RUN" = true ]; then
     skip "Prometheus reachability"
   elif curl -sf -m 5 http://127.0.0.1:9090/-/ready >/dev/null 2>&1; then
@@ -429,7 +425,7 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
   fi
 
   echo ""
-  echo "C2. LiteLLM metrics endpoint"
+  log_info "C2. LiteLLM metrics endpoint"
   if [ "$DRY_RUN" = true ]; then
     skip "LiteLLM /metrics endpoint"
   elif curl -sf -L -m 5 http://127.0.0.1:4000/metrics >/dev/null 2>&1; then
@@ -444,7 +440,7 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
   fi
 
   echo ""
-  echo "C3. Prometheus scraping LiteLLM"
+  log_info "C3. Prometheus scraping LiteLLM"
   if [ "$DRY_RUN" = true ]; then
     skip "Prometheus scrape check"
   else
@@ -459,7 +455,7 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
   fi
 
   echo ""
-  echo "C4. Grafana"
+  log_info "C4. Grafana"
   if [ "$DRY_RUN" = true ]; then
     skip "Grafana reachability"
   elif curl -sf -m 5 http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
@@ -487,13 +483,13 @@ fi
 # ════════════════════════════════════════════════════════════════════════════
 if [ "$RUN_CODEX" = true ]; then
   echo ""
-  echo "━━━ D. Codex CLI Configuration ━━━"
+  log_step "D. Codex CLI Configuration"
 
   CODEX_DIR="$HOME/.codex"
   CODEX_CONFIG="$CODEX_DIR/config.toml"
 
   echo ""
-  echo "D1. Codex CLI binary"
+  log_info "D1. Codex CLI binary"
   if command -v codex &>/dev/null; then
     pass "codex installed: $(codex --version 2>/dev/null || echo 'unknown')"
   else
@@ -501,7 +497,7 @@ if [ "$RUN_CODEX" = true ]; then
   fi
 
   echo ""
-  echo "D2. Config file"
+  log_info "D2. Config file"
   if [ -f "$CODEX_CONFIG" ]; then
     pass "config.toml exists: $CODEX_CONFIG"
   else
@@ -509,7 +505,7 @@ if [ "$RUN_CODEX" = true ]; then
   fi
 
   echo ""
-  echo "D3. Provider configuration"
+  log_info "D3. Provider configuration"
   if [ -f "$CODEX_CONFIG" ]; then
     if grep -q 'base_url\s*=\s*"http://127.0.0.1:4000/v1"' "$CODEX_CONFIG"; then
       pass "model provider base_url points to LiteLLM proxy"
@@ -544,7 +540,7 @@ if [ "$RUN_CODEX" = true ]; then
   fi
 
   echo ""
-  echo "D4. Responses API smoke test"
+  log_info "D4. Responses API smoke test"
   CODEX_VK=""
   if [ -f "$HOME/.codex/.env" ]; then
     CODEX_VK=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$HOME/.codex/.env" 2>/dev/null || true)
@@ -576,13 +572,13 @@ fi
 # ════════════════════════════════════════════════════════════════════════════
 if [ "$RUN_CLAUDE_CODE" = true ]; then
   echo ""
-  echo "━━━ E. Claude Code CLI Configuration ━━━"
+  log_step "E. Claude Code CLI Configuration"
 
   CLAUDE_CONFIG_DIR="$HOME/.claude"
   CLAUDE_SETTINGS="$CLAUDE_CONFIG_DIR/settings.json"
 
   echo ""
-  echo "E1. Claude Code CLI binary"
+  log_info "E1. Claude Code CLI binary"
   if command -v claude &>/dev/null; then
     pass "claude installed: $(claude --version 2>/dev/null || echo 'unknown')"
   else
@@ -590,7 +586,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
   fi
 
   echo ""
-  echo "E2. Config file"
+  log_info "E2. Config file"
   if [ -f "$CLAUDE_SETTINGS" ]; then
     pass "settings.json exists: $CLAUDE_SETTINGS"
   else
@@ -598,7 +594,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
   fi
 
   echo ""
-  echo "E3. Provider configuration"
+  log_info "E3. Provider configuration"
   if [ -f "$CLAUDE_SETTINGS" ]; then
     CLAUDE_BASE_URL=$(jq -r '.env.ANTHROPIC_BASE_URL // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
     if [ "$CLAUDE_BASE_URL" = "http://127.0.0.1:4000" ]; then
@@ -631,7 +627,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
   fi
 
   echo ""
-  echo "E4. Messages API smoke test"
+  log_info "E4. Messages API smoke test"
   if [ "$DRY_RUN" = true ]; then
     skip "Messages API smoke test"
   elif [ -n "$CLAUDE_VK" ]; then
@@ -654,12 +650,13 @@ fi
 
 # ── Summary ──
 TOTAL=$((PASS + FAIL + WARN))
-printf '%b' "\n${YELLOW}══════════════════════════════════════════════════════${NC}\n"
-printf '%b' "Results: ${GREEN}$PASS passed${NC}, ${RED}$FAIL failed${NC}, ${YELLOW}$WARN warnings${NC} out of $TOTAL checks\n"
+echo ""
+printf '%b' "${C_YELLOW}══════════════════════════════════════════════════════${C_RESET}\n"
+printf '%b' "Results: ${C_GREEN}$PASS passed${C_RESET}, ${C_RED}$FAIL failed${C_RESET}, ${C_YELLOW}$WARN warnings${C_RESET} out of $TOTAL checks\n"
 if [ "$FAIL" -gt 0 ]; then
-  printf '%b' "${RED}VALIDATION FAILED — $FAIL check(s) did not pass${NC}\n"
+  printf '%b' "${C_RED}VALIDATION FAILED — $FAIL check(s) did not pass${C_RESET}\n"
   exit 1
 else
-  printf '%b' "${GREEN}VALIDATION PASSED${NC}\n"
+  printf '%b' "${C_GREEN}VALIDATION PASSED${C_RESET}\n"
   exit 0
 fi

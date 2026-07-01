@@ -24,6 +24,7 @@ CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
 
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
+LOG_TAG="litellm"
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_docker
 
@@ -42,10 +43,7 @@ for arg in "$@"; do
   esac
 done
 
-echo "══════════════════════════════════════════════════════"
-echo "  Step 02 — LiteLLM proxy + observability"
-echo "══════════════════════════════════════════════════════"
-echo ""
+log_step "Step 02 — LiteLLM proxy + observability"
 
 # ── Port conflict check ──
 for port in 4000 5432 9090 3000; do
@@ -56,13 +54,13 @@ for port in 4000 5432 9090 3000; do
     port_in_use=true
   fi
   if [ "$port_in_use" = true ]; then
-    echo "WARNING: Port $port is already in use. Docker Compose may fail."
+    log_warn "Port $port is already in use. Docker Compose may fail."
   fi
 done
 
 # ── Load .env ──
 if [ ! -f "$ENV_FILE" ]; then
-  echo "ERROR: .env not found. Run scripts/01_env.sh first." >&2
+  log_error ".env not found. Run scripts/01_env.sh first."
   exit 1
 fi
 source_env "$PROJECT_DIR"
@@ -70,7 +68,7 @@ source_env "$PROJECT_DIR"
 # ── Determine key count ──
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
 if [ "$KEY_COUNT" -lt 1 ]; then
-  echo "ERROR: HUAWEI_MAAS_API_KEY_COUNT must be >= 1. Got: $KEY_COUNT" >&2
+  log_error "HUAWEI_MAAS_API_KEY_COUNT must be >= 1. Got: $KEY_COUNT"
   exit 1
 fi
 
@@ -79,11 +77,11 @@ for i in $(seq 0 $((KEY_COUNT - 1))); do
   VAR="HUAWEI_MAAS_API_KEY_$i"
   VAL="${!VAR:-}"
   if [ -z "$VAL" ]; then
-    echo "ERROR: $VAR is not set in .env. Each key must be present." >&2
+    log_error "$VAR is not set in .env. Each key must be present."
     exit 1
   fi
   if echo "$VAL" | grep -qi 'change-me\|replace\|xxx'; then
-    echo "ERROR: $VAR still has a placeholder value." >&2
+    log_error "$VAR still has a placeholder value."
     exit 1
   fi
 done
@@ -106,7 +104,7 @@ TOTAL_DEPLOYMENTS=$((KEY_COUNT * MODEL_COUNT * 2))
 if [ -f "$CONFIG_FILE" ]; then
   BACKUP="${CONFIG_FILE}.bak.$(date +%Y%m%d%H%M%S)"
   cp "$CONFIG_FILE" "$BACKUP"
-  echo "Backed up existing config to $(basename "$BACKUP")"
+  log_info "Backed up existing config to $(basename "$BACKUP")"
 fi
 
 # ── Generate config ──
@@ -202,40 +200,40 @@ fi
 
 } > "$CONFIG_FILE"
 
-echo "  Generated: $CONFIG_FILE"
-echo "  Deployments: ${TOTAL_DEPLOYMENTS} total (${KEY_COUNT} per model × ${MODEL_COUNT} models × 2 formats)"
-echo "  Routing strategy: $ROUTING_STRATEGY"
+log_ok "Generated: $CONFIG_FILE"
+log_info "Deployments: ${TOTAL_DEPLOYMENTS} total (${KEY_COUNT} per model × ${MODEL_COUNT} models × 2 formats)"
+log_info "Routing strategy: $ROUTING_STRATEGY"
 if [ "$KEY_COUNT" -gt 1 ]; then
   echo ""
-  echo "  Effective capacity (per model):"
+  log_info "Effective capacity (per model):"
   for model_entry in "${MODELS[@]}"; do
     IFS=':' read -r model_name tpm rpm _ <<< "$model_entry"
     total_rpm=$((rpm * KEY_COUNT))
     total_tpm=$((tpm * KEY_COUNT))
-    echo "    $model_name: $total_rpm RPM, $total_tpm TPM ($KEY_COUNT × $rpm RPM, $KEY_COUNT × $tpm TPM)"
+    log_dim "  $model_name: $total_rpm RPM, $total_tpm TPM ($KEY_COUNT × $rpm RPM, $KEY_COUNT × $tpm TPM)"
   done
 fi
 
 # ── Deploy Docker Compose ──
 echo ""
 if [ "$DRY_RUN" = true ]; then
-  echo "  Would run: docker compose up -d"
+  log_info "Would run: docker compose up -d"
   exit 0
 fi
 
-echo "Starting Docker Compose (idempotent — no-op if already running)..."
-docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d
+log_info "Starting Docker Compose (idempotent — no-op if already running)..."
+run_filtered "docker" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d
 
 # Wait for LiteLLM to become healthy
 LITELLM_URL="http://127.0.0.1:4000"
 if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
-  echo "  ✓ LiteLLM already healthy."
+  log_ok "LiteLLM already healthy."
 else
-  echo "  Waiting for LiteLLM to become healthy (up to 90s)..."
+  log_info "Waiting for LiteLLM to become healthy (up to 90s)..."
   local_waited=0
   while [ $local_waited -lt 90 ]; do
     if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
-      echo "  ✓ LiteLLM healthy after ~${local_waited}s."
+      log_ok "LiteLLM healthy after ~${local_waited}s."
       break
     fi
     printf "  ."
@@ -244,7 +242,7 @@ else
   done
   if [ $local_waited -ge 90 ]; then
     echo ""
-    echo "ERROR: LiteLLM did not become healthy within 90s. Check: docker compose logs" >&2
+    log_error "LiteLLM did not become healthy within 90s. Check: docker compose logs"
     exit 1
   fi
 fi
