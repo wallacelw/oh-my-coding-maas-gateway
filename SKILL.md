@@ -87,7 +87,7 @@ Interactive mode prompts before installing; non-interactive shells auto-confirm.
 | Script | Ensures |
 |--------|---------|
 | `bootstrap.sh` | git, python3, curl, jq |
-| `01_env.sh` | python3 |
+| `01_env.sh` | python3, git |
 | `02_litellm.sh` | curl, docker + compose + daemon |
 | `03_opencode.sh` | curl, jq, bun |
 | `04_codex.sh` | curl, npm/node, jq, bubblewrap |
@@ -146,7 +146,7 @@ prompt). Validate each the same way. Export:
 export HUAWEI_MAAS_API_KEY="$MAAS_KEY"
 export HUAWEI_MAAS_API_KEY_COUNT="$((1 + NUM_EXTRA_KEYS))"
 export HUAWEI_MAAS_API_KEY_1="$EXTRA_KEY_1"   # if NUM_EXTRA_KEYS >= 1
-# ... (do NOT export HUAWEI_MAAS_API_KEY_0 — bootstrap sets it automatically)
+# ... (do NOT export HUAWEI_MAAS_API_KEY_0 — 01_env.sh sets it automatically from the main key)
 ```
 
 **Postcondition:** `MAAS_KEY` is non-empty and not a placeholder.
