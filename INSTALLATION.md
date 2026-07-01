@@ -12,24 +12,23 @@ and config reference, see [REFERENCE.md](./REFERENCE.md).
 
 ## Quick Start
 
-**From a clone:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
+```
+
+That's it. Bootstrap clones itself into `/home/oh-my-coding-maas-gateway`
+(or a directory you choose), shows a colored menu to select what to install,
+and prompts for your Huawei MaaS API key. For each secret, it offers an
+auto-generated value or custom entry. Prerequisites are installed
+automatically as needed.
+
+**Prefer to clone first?** Equivalent:
 
 ```bash
 git clone https://github.com/wallacelw/oh-my-coding-maas-gateway /home/oh-my-coding-maas-gateway
 cd /home/oh-my-coding-maas-gateway
 ./scripts/bootstrap.sh
 ```
-
-**Standalone (no clone needed):**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
-```
-
-Bootstrap prompts for an install directory (default: `/home`), clones if
-needed, shows a colored menu to choose what to install, and prompts for your
-Huawei MaaS API key. For each secret, it offers an auto-generated value or
-custom entry. Prerequisites are installed automatically as needed.
 
 Non-interactive (CI or agent driving stdin):
 

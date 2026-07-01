@@ -31,18 +31,14 @@ deepseek-v3.2
 
 ## Quick Start
 
-Two ways to install:
-
 ### 👤 Human — run it yourself
 
 ```bash
-git clone https://github.com/wallacelw/oh-my-coding-maas-gateway /home/oh-my-coding-maas-gateway
-cd /home/oh-my-coding-maas-gateway
-./scripts/bootstrap.sh
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
 ```
 
-You'll get a menu to choose what to install. Enter your MaaS API key when
-prompted. Prerequisites are installed automatically. That's it.
+That's it. Bootstrap clones itself, shows a menu to choose what to install,
+and prompts for your MaaS API key. Prerequisites are installed automatically.
 
 ```bash
 opencode          # or: codex  or:  claude --bare
