@@ -12,14 +12,24 @@ and config reference, see [REFERENCE.md](./REFERENCE.md).
 
 ## Quick Start
 
+**From a clone:**
+
 ```bash
 git clone https://github.com/wallacelw/oh-my-coding-maas-gateway ~/oh-my-coding-maas-gateway
 cd ~/oh-my-coding-maas-gateway
 ./scripts/bootstrap.sh
 ```
 
-Bootstrap shows a menu to choose what to install and prompts for your Huawei
-MaaS API key. That's it. Prerequisites are installed automatically as needed.
+**Standalone (no clone needed):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
+```
+
+Bootstrap prompts for an install directory (default: `/home`), clones if
+needed, shows a colored menu to choose what to install, and prompts for your
+Huawei MaaS API key. For each secret, it offers an auto-generated value or
+custom entry. Prerequisites are installed automatically as needed.
 
 Non-interactive (CI or agent driving stdin):
 
@@ -57,9 +67,9 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 
 | File | Used by | Provides |
 |------|---------|----------|
-| `prereqs.sh` | all steps | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. |
+| `prereqs.sh` | all steps | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install labeled with `[LOG_TAG]`. |
 | `keys.sh` | 03/04/05 | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
-| `common.sh` | 03/04/05/06/bootstrap | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`. |
+| `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, logging (`log_step`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`, `log_action`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering). |
 
 ---
 
@@ -67,20 +77,23 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 
 ### `bootstrap.sh`
 
-The only script a human runs. Parses `--tool=`, `--virtual-key=`, `--dry-run`.
-Ensures core prerequisites (git, python3, curl, jq). Shows an interactive
-tool-selection menu if `--tool=` is not given. Prints a selection-driven
-prerequisite summary. Dispatches steps 01–06. Prints a summary with service
-URLs, masked virtual keys, a security warning, and advice to restart the
-shell.
+The only script a human runs. Prompts for an install directory (default:
+current parent, or `/home` if standalone). If running standalone (no repo
+detected), clones the repo to the target location and re-execs. Parses
+`--tool=`, `--virtual-key=`, `--dry-run`. Ensures core prerequisites (git,
+python3, curl, jq). Shows a colored tool-selection menu if `--tool=` is not
+given. Prints a prerequisite→tools mapping for customer validation. Dispatches
+steps 01–06. Prints a colored summary with service URLs, config file paths,
+masked virtual keys, a security warning, and advice to restart the shell.
 
 ### `01_env.sh`
 
-Owns `.env`. Auto-generates and preserves immutable secrets
-(`LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, `DB_PASSWORD`,
-`GRAFANA_ADMIN_PASSWORD`) — idempotent on re-run. Collects the Huawei MaaS API
-key from the `HUAWEI_MAAS_API_KEY` environment variable or an interactive
-prompt. Collects extra keys for load balancing from
+Owns `.env`. For each secret (`LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`,
+`DB_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, `PROMETHEUS_RETENTION`), prompts to
+use an auto-generated value or enter a custom one (non-interactive defaults to
+auto-generated). On re-run, preserves existing secrets (idempotent).
+Collects the Huawei MaaS API key from the `HUAWEI_MAAS_API_KEY` environment
+variable or an interactive prompt. Collects extra keys for load balancing from
 `HUAWEI_MAAS_API_KEY_1..N` / `HUAWEI_MAAS_API_KEY_COUNT` env vars or a prompt.
 Configures git hooks to block committing secrets. `--force` regenerates all
 secrets (for key rotation).
@@ -95,8 +108,9 @@ per format (dual OpenAI + Anthropic), 12N total. Checks ports 4000/5432/9090/
 
 ### `03_opencode.sh`
 
-Installs the opencode binary (via curl), the oh-my-opencode-slim plugin
-(v2.0.5, via bunx — 4 presets, 7 agents), mints a virtual key (alias
+Installs the opencode binary (via curl, output filtered with `run_filtered`),
+the oh-my-opencode-slim plugin (v2.0.5, via bunx — 4 presets, 7 agents, output
+filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.
 
@@ -175,6 +189,35 @@ All other secrets (`LITELLM_SALT_KEY`, `DB_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`,
 
 ---
 
+## Colored Output & Action Labels
+
+All scripts use a shared logging system from `helpers/common.sh`:
+
+- **Colors** auto-enable on TTY, disable on piped/CI output.
+- `log_step` — bold cyan section headers (`━━━ Step 01 — ... ━━━`)
+- `log_ok` / `log_info` / `log_warn` / `log_error` — green ✓ / blue → / yellow ⚠ / red ✗
+- `log_dim` — dim secondary text
+- `log_action "who" "msg"` — dim `[tag]` prefix showing who's acting
+
+Each script sets a `LOG_TAG` (e.g. `bootstrap`, `env`, `litellm`, `opencode`,
+`codex`, `claude`, `validate`). Prerequisite installs are labeled:
+`→ [opencode] Installing curl (curl)...`.
+
+Third-party subprocess output is filtered via `run_filtered` — suppresses
+GitHub star prompts, npm warnings, and deprecation notices, showing remaining
+lines with a dim `[tag]` prefix.
+
+### Interactive Prompts
+
+- `prompt_yesno "question" [y|n]` — colored `? Question [Y/n]`, auto-defaults on non-TTY
+- `prompt_input "question" [default]` — colored input with default hint
+- `prompt_password "label" "auto_value"` — shows masked auto-generated preview, offers custom entry
+
+In `01_env.sh`, each secret prompts: "Use auto-generated value? [Y/n]" or
+enter custom. Non-interactive defaults to auto-generated.
+
+---
+
 ## Prerequisites
 
 **OS:** Linux (Debian/Ubuntu with systemd recommended).
@@ -194,8 +237,12 @@ ensures only its own prerequisites; skipped steps install nothing. A
 | `06_validate.sh` | curl, jq |
 
 Interactive mode prompts before each installation. Non-interactive shells
-(piped stdin, CI) auto-confirm. **Non-Debian systems** (RHEL, Alpine, Arch):
-install equivalent packages manually — Docker daemon start requires systemd.
+(piped stdin, CI) auto-confirm. Each install is labeled with `[LOG_TAG]`
+showing which script triggered it. Bootstrap prints a **prereq→tools mapping**
+at the start for customer validation (e.g. `curl — bootstrap, litellm,
+validate, opencode, codex, claude`). **Non-Debian systems** (RHEL, Alpine,
+Arch): install equivalent packages manually — Docker daemon start requires
+systemd.
 
 ---
 

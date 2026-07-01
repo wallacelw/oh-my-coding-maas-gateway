@@ -3,354 +3,80 @@ name: oh-my-coding-maas-gateway
 description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + Codex CLI + Claude Code CLI with virtual keys and 4 presets.
 ---
 
-# oh-my-coding-maas-gateway — Deterministic Install Procedure
+# oh-my-coding-maas-gateway — Agent Install Procedure
 
-Deploy LiteLLM proxy → bootstrap opencode + Codex CLI + Claude Code CLI → mint virtual keys → configure. **Idempotent.**
+**Idempotent.** For full details, see **[INSTALLATION.md](./INSTALLATION.md)**.
+For architecture and config, see **[REFERENCE.md](./REFERENCE.md)**.
 
-For full install process details and per-script reference, see **[INSTALLATION.md](./INSTALLATION.md)**. For reference documentation (architecture, env vars, presets, models, repair),
-see **[REFERENCE.md](./REFERENCE.md)**.
-
----
-
-## Bootstrap Flags
+## Flags
 
 | Flag | Effect |
 |------|--------|
-| `--tool=VAL` | `all` (default), `litellm`, `opencode`, `codex`, `claude`, or comma combo (e.g. `opencode,codex`). Skips the menu. |
-| `--virtual-key=sk-...` | Use existing opencode virtual key, skip minting |
-| `--dry-run` | Preview actions without modifying anything |
+| `--tool=VAL` | `all` (default), `litellm`, `opencode`, `codex`, `claude`, or comma combo. Skips menu. |
+| `--virtual-key=sk-...` | Reuse existing opencode virtual key, skip minting. |
+| `--dry-run` | Preview without changes. |
 
-Environment variable overrides: set `HUAWEI_MAAS_API_KEY` (and `HUAWEI_MAAS_API_KEY_1..N` / `HUAWEI_MAAS_API_KEY_COUNT` for load balancing) before running bootstrap to skip prompts. See [INSTALLATION.md](./INSTALLATION.md) for full details.
+Env var overrides: `HUAWEI_MAAS_API_KEY`, `HUAWEI_MAAS_API_KEY_COUNT`,
+`HUAWEI_MAAS_API_KEY_1..N` — skip prompts when set.
 
----
-
-## Idempotency & Re-run Contract
-
-- If any step's precondition is already met, skip and verify postcondition.
-- Safe to re-run from any step. Never destroys data or regenerates immutable
-  secrets (`LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, `DB_PASSWORD`).
-- Only `01_env.sh --force` regenerates secrets (for key rotation).
-
----
-
-## Installation Procedure
-
-8 steps in 4 phases. For each step: check **precondition** → run **action** →
-verify **postcondition**. If a step fails, run the documented recovery. If
-recovery also fails, escalate.
-
-### Phase 1: Pre-flight
-
-#### Step 1: Verify Environment
-
-**Precondition:** Agent has filesystem and shell access on a Linux machine.
-
-**Action:**
+## Install
 
 ```bash
-uname -s   # must print "Linux"
+# Standalone (no clone needed):
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
+
+# Or from a clone:
+./scripts/bootstrap.sh --tool=all
 ```
 
-Set `PROJECT_DIR` (default: `/home/oh-my-coding-maas-gateway`). If the
-directory doesn't exist and creation fails with permission denied:
+Bootstrap handles everything: install directory prompt (default `/home`),
+prereq→tools summary, `.env` generation (prompts for each secret: auto or
+custom), Docker stack, tool installs, virtual key minting, validation.
 
-```bash
-sudo mkdir -p "$PROJECT_DIR" && sudo chown "$USER" "$PROJECT_DIR"
-```
+**You will need to ask the user for:**
+- Install mode (default: all) — or pass `--tool=`
+- Huawei MaaS API key (region ap-southeast-1) — or set `HUAWEI_MAAS_API_KEY`
+- Number of extra MaaS keys for load balancing (default: 0)
+- Sudo password if prompted
 
-**Postcondition:** `uname -s` prints `Linux` AND `$PROJECT_DIR` is writable.
+**Complete when `06_validate.sh` exits 0.** Do NOT launch opencode.
 
-**On failure:** Non-Linux: stop. Dir creation fails even with sudo: escalate.
-
----
-
-#### Step 2: Ensure Prerequisites
-
-**Precondition:** Step 1 passed.
-
-**Action:**
-
-Bootstrap ensures its own prerequisites via `scripts/helpers/prereqs.sh`:
-
-```bash
-prereq_ensure_apt "git"     git     git
-prereq_ensure_apt "python3" python3 python3
-prereq_ensure_apt "curl"    curl    curl
-prereq_ensure_apt "jq"      jq      jq
-```
-
-If any are missing, they are installed automatically (`apt-get install -y`).
-Interactive mode prompts before installing; non-interactive shells auto-confirm.
-
-**Distributed prerequisites** — each script ensures only what it needs:
-
-| Script | Ensures |
-|--------|---------|
-| `bootstrap.sh` | git, python3, curl, jq |
-| `01_env.sh` | python3, git |
-| `02_litellm.sh` | curl, docker + compose + daemon |
-| `03_opencode.sh` | curl, jq, bun |
-| `04_codex.sh` | curl, npm/node, jq, bubblewrap |
-| `05_claude_code.sh` | curl, npm/node, jq |
-| `06_validate.sh` | curl, jq |
-
-Scripts are independently runnable. Repeated installs are harmless (apt is
-idempotent; the helper library tracks what's been ensured per process).
-
-**Non-Debian systems:** The helper library uses `apt-get`. For other distros,
-install the equivalent packages manually before running bootstrap:
-
-| Package | Debian/Ubuntu | RHEL/Fedora | Alpine | Arch |
-|---------|--------------|-------------|--------|------|
-| git | `git` | `git` | `git` | `git` |
-| python3 | `python3` | `python3` | `python3` | `python` |
-| curl | `curl` | `curl` | `curl` | `curl` |
-| jq | `jq` | `jq` | `jq` | `jq` |
-| docker | `docker.io` | `docker` | `docker` | `docker` |
-| node/npm | `nodejs npm` | `nodejs npm` | `nodejs npm` | `nodejs npm` |
-| bubblewrap | `bubblewrap` | `bubblewrap` | `bubblewrap` | `bubblewrap` |
-
-Docker daemon start uses `systemctl` (systemd required). On non-systemd
-systems, start the Docker daemon manually before running bootstrap.
-
-> **Note:** opencode is NOT a prerequisite — it's installed by Step 5.
-
-**Postcondition:** `git`, `python3`, `curl`, `jq` are on PATH.
-
-**On failure:** Report which tool failed to install. Escalate.
-
----
-
-#### Step 3: Collect & Validate MaaS Keys
-
-**Precondition:** Step 2 passed.
-
-**Action:**
-
-`01_env.sh` collects the Huawei ModelArts MaaS API key (region: ap-southeast-1)
-from the `HUAWEI_MAAS_API_KEY` environment variable or interactive prompt.
-Validate non-empty and not a placeholder:
-
-```bash
-[ -n "$MAAS_KEY" ] \
-  && [[ "$MAAS_KEY" != *"change-me"* ]] \
-  && [[ "$MAAS_KEY" != *"xxx"* ]]
-```
-
-If invalid: re-prompt.
-
-Optionally collect N additional keys for load balancing (from env vars or
-prompt). Validate each the same way. Export:
-
-```bash
-export HUAWEI_MAAS_API_KEY="$MAAS_KEY"
-export HUAWEI_MAAS_API_KEY_COUNT="$((1 + NUM_EXTRA_KEYS))"
-export HUAWEI_MAAS_API_KEY_1="$EXTRA_KEY_1"   # if NUM_EXTRA_KEYS >= 1
-# ... (do NOT export HUAWEI_MAAS_API_KEY_0 — 01_env.sh sets it automatically from the main key)
-```
-
-**Postcondition:** `MAAS_KEY` is non-empty and not a placeholder.
-`NUM_EXTRA_KEYS` set.
-
-**On failure:** If key is empty or placeholder after 3 re-prompts: escalate.
-
----
-
-### Phase 2: Execute
-
-#### Step 4: Select Install Scope
-
-**Precondition:** Step 3 passed.
-
-**Action:**
-
-Interactive mode shows a numbered menu:
-
-```
-Select installation scope:
-  1) Default — LiteLLM + opencode + Codex + Claude Code  [default]
-  2) LiteLLM only
-  3) LiteLLM + opencode
-  4) LiteLLM + Codex
-  5) LiteLLM + Claude Code
-  6) Custom — toggle each component
-```
-
-Pass `--tool=VAL` where VAL is `all` (default), `litellm`,
-`opencode`, `codex`, `claude`, or a comma combo (e.g. `opencode,codex`).
-
-**Postcondition:** `$INSTALL_TOOL` is set.
-
----
-
-#### Step 5: Run Bootstrap
-
-**Precondition:** Steps 1–4 passed.
-
-**Action:**
+## Upgrade
 
 ```bash
 cd "$PROJECT_DIR"
-./scripts/bootstrap.sh --tool="$INSTALL_TOOL"
+git pull --ff-only
+./scripts/bootstrap.sh    # idempotent — preserves all secrets and data
 ```
 
-Bootstrap is idempotent and handles internally:
-- Docker engine + compose + daemon startup (via `prereq_ensure_docker`)
-- Port conflict check (exits if ports 4000/5432/9090/3000 in use)
-- `.env` generation (preserving existing immutable secrets)
-- `configs/litellm/config.yaml` generation
-- Docker Compose stack start (LiteLLM + PostgreSQL + Prometheus + Grafana)
-- Tool installs + virtual key minting + config writing (per selected scope)
-- Internal validation (`06_validate.sh`)
+Read the MaaS key from `.env` — do NOT ask the user. If `git pull` fails, ask:
+"Reset to origin/main? (y/n)". Complete when `06_validate.sh` exits 0.
 
-**What bootstrap does by mode:**
+Post-upgrade: restart opencode if running (`/exit`, start fresh — plugin
+changes are not hot-reloaded).
 
-| Mode | Actions |
-|------|---------|
-| `all` (default) | Deploy + install opencode + Codex + Claude Code + validate |
-| `litellm` | Deploy + validate |
-| `opencode` | Deploy + install opencode + validate |
-| `codex` | Deploy + install Codex + validate |
-| `claude` | Deploy + install Claude Code + validate |
+## Recovery
 
-**Notes:**
-- Docker image pull: 4 images (~1 GB total). On slow connections, wait for
-  `docker compose up -d` to complete — do not timeout.
-- npm registry (tool installs): If unreachable, tool installs fail with
-  network error.
-- Git hooks: Bootstrap configures `.githooks/pre-commit` to block committing
-  `.env` and secrets.
-
-**Postcondition:** `bootstrap.sh` exits 0.
-
-**On failure:** `docker compose logs litellm --tail 50`. Escalate with logs.
-
----
-
-### Phase 3: Verify
-
-#### Step 6: Verify LiteLLM Healthy
-
-**Precondition:** Step 5 passed.
-
-**Action:**
-
-```bash
-for i in $(seq 1 18); do
-  curl -sf -m 15 "http://127.0.0.1:4000/health/liveliness" >/dev/null 2>&1 && break
-  sleep 5
-done
-```
-
-**Postcondition:** `curl -sf http://127.0.0.1:4000/health/liveliness` returns 200.
-
-**On failure:** `docker compose logs litellm --tail 50`. Escalate with logs.
-
----
-
-#### Step 7: Run Validation
-
-**Precondition:** Step 6 passed.
-
-**Action:**
-
-```bash
-cd "$PROJECT_DIR"
-./scripts/06_validate.sh    # add --litellm-only / --opencode-only / etc. for scoped checks
-```
-
-**Postcondition:** `06_validate.sh` exits 0.
-
-**On failure:** Parse FAIL lines, match on keywords, run recovery:
+If `06_validate.sh` fails, match the FAIL pattern and run the recovery:
 
 | FAIL pattern | Recovery |
 |--------------|----------|
-| `.env not found` / `placeholder value` | Re-run `01_env.sh` then bootstrap |
+| `.env not found` / `placeholder value` | Re-run `01_env.sh` |
 | `services running` + `expected 4` | `docker compose up -d`, wait 30s, retry |
 | `liveness probe returned` | `docker compose logs litellm --tail 50` |
 | `Inference smoke test` + `did not respond` | Re-validate MaaS key; check logs |
-| **opencode issues** (`opencode not found`, `opencode.json`, `oh-my-opencode-slim`, `No opencode config`, `No API key for model checks`, `Model catalog not reachable`) | Re-run `03_opencode.sh` (or `curl -fsSL https://opencode.ai/install \| bash` if binary missing) |
-| **Codex issues** (`codex not found`, `config.toml`, `No Codex config`, `base_url`, `env_key`, `wire_api`, `default model`) | Re-run `04_codex.sh` (or `npm install -g @openai/codex` if binary missing) |
-| **Claude Code issues** (`claude not found`, `settings.json`, `No Claude Code config`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY`, `default model`) | Re-run `05_claude_code.sh` (or `npm install -g @anthropic-ai/claude-code` if binary missing) |
-| `Responses API smoke test` + `did not respond` | Check `~/.codex/.env` key; verify `/v1/responses` |
-| `Messages API smoke test` + `did not respond` | Check `~/.claude/settings.json` key |
+| opencode issues (`opencode not found`, config) | Re-run `03_opencode.sh` |
+| Codex issues (`codex not found`, config) | Re-run `04_codex.sh` |
+| Claude Code issues (`claude not found`, config) | Re-run `05_claude_code.sh` |
 | `Prometheus not reachable` | `docker compose up -d prometheus`, wait 10s |
 | `/metrics endpoint not responding` | `docker compose restart litellm`, wait 15s |
-| `Prometheus scraping` + `target is down` | Check LiteLLM `/metrics` responds |
 | `Grafana not reachable` | `docker compose up -d grafana`, wait 20s |
 
-> **Note:** WARN messages (e.g. `litellm_config.yaml not found`, `dashboard
-> not found`, `unhealthy_count > 0`, deployment drift) do NOT cause non-zero
-> exit — they are advisory. Monitor but proceed.
+WARN messages do NOT cause non-zero exit — they are advisory. After recovery,
+re-run `06_validate.sh` **once**. If it still fails, escalate with full output.
 
-After recovery, re-run `06_validate.sh` **once**. If it still fails: escalate
-with full output. Do not loop recovery more than once.
+## Rules
 
----
-
-### Phase 4: Confirm
-
-#### Step 8: Confirm Summary
-
-**Precondition:** Step 7 passed (validation exited 0).
-
-**Action:**
-
-Bootstrap prints a summary at the end of Step 5 containing:
-- What was installed (conditional on mode)
-- Service URLs: LiteLLM `:4000`, Grafana `:3000`, Prometheus `:9090`
-- Coding agent activation commands + config paths + masked virtual keys
-- Next steps
-
-A security warning is appended to the summary, plus advice to restart the
-shell to clear exported environment variables.
-
-```
-⚠️  Security: API keys were shared with the agent via command line
-   and environment variables. Rotate them to prevent unauthorized use.
-```
-
-Do NOT show this warning for interactive installs.
-
-**Postcondition:** Summary printed. Installation is complete.
-
-**On failure:** N/A — terminal step.
-
----
-
-**The install is complete when Step 7 (`06_validate.sh`) exits 0.** Step 8 is
-informational only. Do NOT launch `opencode` — that is the user's next action.
-
----
-
-## Upgrade Procedure
-
-When the project is already installed, follow the procedure above with these
-modifications:
-
-| Step | Fresh install | Upgrade |
-|------|--------------|---------|
-| 1 | Detect environment + prompt dir | Detect existing dir (look for `.git`) |
-| 2 | Ensure prerequisites | Quick verify (prereqs already installed) |
-| 3 | Prompt for MaaS key + validate | Read from `.env` — do NOT prompt |
-| 4 | Select scope | Same |
-| 5 | Run bootstrap | Same — idempotent, preserves all secrets |
-| 6–8 | Same | Same |
-
-**Key points:**
-
-- Bootstrap preserves `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, `DB_PASSWORD`,
-  `GRAFANA_ADMIN_PASSWORD`, `PROMETHEUS_RETENTION` from existing `.env`.
-- Config regenerated from templates — new options picked up automatically.
-- Docker Compose recreates containers; data volumes preserved.
-- If `git pull` fails: ask user `"Reset to origin/main? (y/n)"`.
-- **Grafana dashboard updates:** Hard-restart Grafana to pick up provisioning:
-  `docker compose restart grafana` (Grafana won't overwrite UI-modified
-  dashboards with provisioned ones on its own).
-
-**Upgrade is complete when `06_validate.sh` exits 0.**
-
-**Post-upgrade:** Restart opencode (exit with `/exit` or Ctrl+C, start fresh)
-to pick up new config. Plugin/preset changes are not hot-reloaded.
-
-**Grafana access:** `http://127.0.0.1:3000` (anonymous, no login).
+- Do not skip steps. Do not improvise. Do not launch opencode.
+- If an existing installation is found, ask: update in-place or fresh install.
+- After install: user will rotate MaaS keys (they were shared with you).
