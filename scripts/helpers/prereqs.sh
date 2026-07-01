@@ -89,7 +89,7 @@ prereq_ensure_apt() {
     return 0
   fi
 
-  echo "→ Installing $display_name ($pkg)..."
+  echo "→ [${LOG_TAG:-system}] Installing $display_name ($pkg)..."
   if ! _prereq_prompt "  Install $display_name?"; then
     _prereq_fail "$display_name"
   fi
@@ -101,7 +101,7 @@ prereq_ensure_apt() {
   if ! command -v "$cmd" &>/dev/null; then
     _prereq_fail "$display_name"
   fi
-  echo "  ✓ $display_name installed"
+  echo "  ✓ [${LOG_TAG:-system}] $display_name installed"
 }
 
 # Ensure bun is available (special: needs PATH sourcing after install)
@@ -110,7 +110,7 @@ prereq_ensure_bun() {
     return 0
   fi
 
-  echo "→ Installing bun..."
+  echo "→ [${LOG_TAG:-system}] Installing bun..."
   if ! _prereq_prompt "  Install bun?"; then
     _prereq_fail "bun"
   fi
@@ -122,7 +122,7 @@ prereq_ensure_bun() {
   if ! command -v bun &>/dev/null; then
     _prereq_fail "bun"
   fi
-  echo "  ✓ bun installed"
+  echo "  ✓ [${LOG_TAG:-system}] bun installed"
 }
 
 # Ensure node + npm are available
@@ -131,7 +131,7 @@ prereq_ensure_npm() {
     return 0
   fi
 
-  echo "→ Installing Node.js + npm..."
+  echo "→ [${LOG_TAG:-system}] Installing Node.js + npm..."
   if ! _prereq_prompt "  Install Node.js + npm?"; then
     _prereq_fail "npm/node"
   fi
@@ -142,14 +142,14 @@ prereq_ensure_npm() {
   if ! command -v npm &>/dev/null; then
     _prereq_fail "npm"
   fi
-  echo "  ✓ Node.js + npm installed"
+  echo "  ✓ [${LOG_TAG:-system}] Node.js + npm installed"
 }
 
 # Ensure docker + compose plugin + daemon are running
 prereq_ensure_docker() {
   # Install docker engine if missing
   if ! command -v docker &>/dev/null; then
-    echo "→ Installing Docker Engine..."
+    echo "→ [${LOG_TAG:-system}] Installing Docker Engine..."
     if ! _prereq_prompt "  Install Docker?"; then
       _prereq_fail "docker"
     fi
@@ -158,14 +158,14 @@ prereq_ensure_docker() {
 
   # Ensure compose plugin
   if ! docker compose version &>/dev/null; then
-    echo "→ Installing Docker Compose plugin..."
+    echo "→ [${LOG_TAG:-system}] Installing Docker Compose plugin..."
     _prereq_apt_update_once
     _prereq_sudo apt-get install -y -qq docker-compose-v2
   fi
 
   # Start daemon if not running
   if ! docker info &>/dev/null 2>&1; then
-    echo "→ Starting Docker daemon..."
+    echo "→ [${LOG_TAG:-system}] Starting Docker daemon..."
     _prereq_sudo systemctl start docker
     sleep 3
   fi
@@ -174,5 +174,5 @@ prereq_ensure_docker() {
   if ! docker info &>/dev/null 2>&1; then
     _prereq_fail "docker daemon"
   fi
-  echo "  ✓ Docker ready"
+  echo "  ✓ [${LOG_TAG:-system}] Docker ready"
 }
