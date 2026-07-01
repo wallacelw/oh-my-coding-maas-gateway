@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Install pipeline refactored to interactive-first thin-sequencer model.**
+  Bootstrap is now a thin orchestrator; installation is interactive by default
+  for both humans and agents (agent drives stdin). Non-interactive consumers
+  use env-var overrides (HUAWEI_MAAS_API_KEY) + --tool=.
+- Scripts renamed to numbered domain-owned names: `0_bootstrap.sh` →
+  `bootstrap.sh`, `1_init_env.sh` → `01_env.sh`, `2_deploy_litellm.sh` →
+  `02_litellm.sh`, `4a/4b/4c_install_*.sh` → `03/04/05_*.sh`,
+  `5_validate.sh` → `06_validate.sh`.
+- `scripts/lib/` → `scripts/helpers/` (prereqs.sh, keys.sh, common.sh).
+- Every step now self-sources `.env` and is independently runnable
+  (loose-coupling contract).
+- Prerequisites installed just-in-time, driven by selection — skipped steps
+  install nothing.
+- Bootstrap summary now advises restarting the shell to clear env vars.
+
+### Added
+
+- `INSTALLATION.md` — canonical install reference (pipeline, per-script
+  details, flags, env vars, prerequisites, recovery, upgrade).
+- `scripts/helpers/keys.sh` — `resolve_master_key` + `mint_or_reuse_key`
+  (replaces `3_mint_key.sh`).
+- `scripts/helpers/common.sh` — `source_env`, `retry_curl`, `strip_jsonc`,
+  `mask_key` (DRYs duplicated code).
+- Selection-driven prerequisite summary in bootstrap.
+
+### Removed
+
+- `--agent` flag and all fail-fast/non-interactive branches in bootstrap.
+- `--maas-key=` flag and legacy `--litellm-only`/`--opencode-only`/
+  `--codex-only`/`--claude-code-only` aliases on bootstrap.
+- `3_mint_key.sh` (folded into `helpers/keys.sh`).
+- `1_init_env.sh` `--auto` mode (interactive-first is now the default).
+
+### Changed
+
 - **Distributed prerequisite installation** — each script now installs its own
   prerequisites via shared `scripts/lib/prereqs.sh` library instead of
   centralized check in `0_bootstrap.sh`. Scripts are independently runnable.

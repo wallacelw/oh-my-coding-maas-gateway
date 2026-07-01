@@ -1,6 +1,6 @@
 # oh-my-coding-maas-gateway — Reference
 
-Reference documentation for both humans and agents. For the install procedure,
+Reference documentation for both humans and agents. For the install procedure and per-script details, see **[INSTALLATION.md](./INSTALLATION.md)**. For the deterministic install procedure,
 see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 **[README.md](./README.md)**.
 
@@ -12,26 +12,26 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 
 | Env var | Set by | Read by | Format | Immutable? |
 |---------|--------|---------|--------|------------|
-| `HUAWEI_MAAS_API_KEY` | User (prompted) | `1_init_env.sh`, `4a_install_opencode.sh` | Non-empty, no placeholders | No |
-| `HUAWEI_MAAS_API_KEY_COUNT` | Agent → recalculated by `0_bootstrap.sh` | `1_init_env.sh`, `2_deploy_litellm.sh` | Integer ≥ 1 | No |
-| `HUAWEI_MAAS_API_KEY_0` | `0_bootstrap.sh` (auto, = main key) | `1_init_env.sh`, `2_deploy_litellm.sh` | Non-empty | No |
-| `HUAWEI_MAAS_API_KEY_1..N` | User (prompted) → agent exports | `0_bootstrap.sh` → `1_init_env.sh` | Non-empty | No |
-| `LITELLM_MASTER_KEY` | `1_init_env.sh` (auto-generated) | `0_bootstrap.sh`, `4a/4b/4c` | Must start with `sk-` | **Yes** — changing invalidates all virtual keys |
-| `LITELLM_SALT_KEY` | `1_init_env.sh` (auto-generated) | LiteLLM container | Random string | **Yes** — changing invalidates all virtual keys |
-| `DB_PASSWORD` | `1_init_env.sh` (auto-generated) | docker-compose, postgres | Random string | **Yes** — changing breaks DB auth |
-| `GRAFANA_ADMIN_PASSWORD` | `1_init_env.sh` (auto-generated) | docker-compose, `5_validate.sh` | Random string | No — rotating changes dashboard login only |
-| `PROMETHEUS_RETENTION` | `1_init_env.sh` (default `30d`) | docker-compose | Prometheus duration (`Nd`/`Nh`/`Nw`) | No |
-| `CODEX_VIRTUAL_KEY` | `4b_install_codex.sh` (minted) | `~/.codex/.env` as `LITELLM_CODEX_API_KEY` | Virtual key starting with `sk-` | No — tied to `LITELLM_MASTER_KEY` |
-| `HUAWEI_MAAS_ANTHROPIC_API_BASE` | `1_init_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/anthropic`) | `2_deploy_litellm.sh` | URL | No |
-| `HUAWEI_MAAS_API_BASE` | `1_init_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai`) | `2_deploy_litellm.sh` | URL | No |
-| `CLAUDE_CODE_VIRTUAL_KEY` | `4c_install_claude_code.sh` (minted) | `~/.claude/settings.json` env block as `ANTHROPIC_API_KEY` | Virtual key starting with `sk-` | No — tied to `LITELLM_MASTER_KEY` |
+| `HUAWEI_MAAS_API_KEY` | User (env var or prompt) | `01_env.sh`, `03_opencode.sh` | Non-empty, no placeholders | No |
+| `HUAWEI_MAAS_API_KEY_COUNT` | `01_env.sh` (from env vars or prompt) | `01_env.sh`, `02_litellm.sh` | Integer ≥ 1 | No |
+| `HUAWEI_MAAS_API_KEY_0` | `01_env.sh` (auto, = main key) | `01_env.sh`, `02_litellm.sh` | Non-empty | No |
+| `HUAWEI_MAAS_API_KEY_1..N` | User (env var or prompt) | `bootstrap.sh` → `01_env.sh` | Non-empty | No |
+| `LITELLM_MASTER_KEY` | `01_env.sh` (auto-generated) | `bootstrap.sh`, `03/04/05` | Must start with `sk-` | **Yes** — changing invalidates all virtual keys |
+| `LITELLM_SALT_KEY` | `01_env.sh` (auto-generated) | LiteLLM container | Random string | **Yes** — changing invalidates all virtual keys |
+| `DB_PASSWORD` | `01_env.sh` (auto-generated) | docker-compose, postgres | Random string | **Yes** — changing breaks DB auth |
+| `GRAFANA_ADMIN_PASSWORD` | `01_env.sh` (auto-generated) | docker-compose, `06_validate.sh` | Random string | No — rotating changes dashboard login only |
+| `PROMETHEUS_RETENTION` | `01_env.sh` (default `30d`) | docker-compose | Prometheus duration (`Nd`/`Nh`/`Nw`) | No |
+| `CODEX_VIRTUAL_KEY` | `04_codex.sh` (minted) | `~/.codex/.env` as `LITELLM_CODEX_API_KEY` | Virtual key starting with `sk-` | No — tied to `LITELLM_MASTER_KEY` |
+| `HUAWEI_MAAS_ANTHROPIC_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/anthropic`) | `02_litellm.sh` | URL | No |
+| `HUAWEI_MAAS_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai`) | `02_litellm.sh` | URL | No |
+| `CLAUDE_CODE_VIRTUAL_KEY` | `05_claude_code.sh` (minted) | `~/.claude/settings.json` env block as `ANTHROPIC_API_KEY` | Virtual key starting with `sk-` | No — tied to `LITELLM_MASTER_KEY` |
 
 **Rules:**
 
-- Agent must NOT set `HUAWEI_MAAS_API_KEY_0` — bootstrap sets it from the main
+- User/agent must NOT set `HUAWEI_MAAS_API_KEY_0` — bootstrap sets it from the main
   key automatically.
-- Agent must export `HUAWEI_MAAS_API_KEY_COUNT` = 1 + number of extra keys.
-- Agent must export `HUAWEI_MAAS_API_KEY_1` through `HUAWEI_MAAS_API_KEY_N` for
+- User/agent must export `HUAWEI_MAAS_API_KEY_COUNT` = 1 + number of extra keys.
+- User/agent must export `HUAWEI_MAAS_API_KEY_1` through `HUAWEI_MAAS_API_KEY_N` for
   extra keys only.
 
 ### Architecture
@@ -97,15 +97,16 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 
 | # | Script | Purpose |
 |---|--------|---------|
-| 0 | `0_bootstrap.sh` | End-to-end orchestrator: prereqs → deploy → install → validate. Shows tool selection menu, or use --tool=all|litellm|opencode|codex|claude (comma-separated for combos) |
-| 1 | `1_init_env.sh` | Generate `.env` with secrets + MaaS keys |
-| 2 | `2_deploy_litellm.sh` | Generate `configs/litellm/config.yaml` from `.env` + deploy Docker Compose |
-| 3 | `3_mint_key.sh` | Mint a scoped virtual key (standalone or called by 4a/4b/4c) |
-| 4a | `4a_install_opencode.sh` | Install opencode + plugin + mint key + write config |
-| 4b | `4b_install_codex.sh` | Install Codex CLI + mint key + write `~/.codex/config.toml` + `model_catalog.json` + `.env` |
-| 4c | `4c_install_claude_code.sh` | Install Claude Code CLI + mint key + write `~/.claude/settings.json` + disable VSCode extension |
-| 5 | `5_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code for partial runs) |
-| — | `lib/prereqs.sh` | Shared prerequisite installation helpers (sourced by all scripts). Provides `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Mode controlled by `$PREREQ_MODE` (auto/prompt). |
+| — | `bootstrap.sh` | End-to-end orchestrator: selection → core prereqs → dispatch steps → summary. Use --tool=all\|litellm\|opencode\|codex\|claude (comma-separated for combos) |
+| 01 | `01_env.sh` | Generate `.env` with secrets + MaaS keys; configure git hooks |
+| 02 | `02_litellm.sh` | Generate `configs/litellm/config.yaml` from `.env` + deploy Docker Compose |
+| 03 | `03_opencode.sh` | Install opencode + plugin + mint key + write config |
+| 04 | `04_codex.sh` | Install Codex CLI + mint key + write config + model catalog |
+| 05 | `05_claude_code.sh` | Install Claude Code CLI + mint key + write settings + disable VSCode ext |
+| 06 | `06_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code for partial runs) |
+| — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
+| — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
+| — | `helpers/common.sh` | Shared utilities (source_env, retry_curl, strip_jsonc, mask_key) |
 
 ### Models
 
@@ -123,7 +124,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 - Never commit `.env` or real keys
 - Never change `LITELLM_SALT_KEY` after virtual keys exist
 - Model names are case-sensitive — must match MaaS console exactly
-- Config is generated by `2_deploy_litellm.sh` — never edit `configs/litellm/config.yaml` directly
+- Config is generated by `02_litellm.sh` — never edit `configs/litellm/config.yaml` directly
 - Master key is admin-only — opencode, Codex CLI, and Claude Code CLI use separate virtual keys
 - LiteLLM baseURL: `http://127.0.0.1:4000` (no `/v1`)
 - MaaS region-locked to `ap-southeast-1`
@@ -132,8 +133,8 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 
 ## LiteLLM
 
-`configs/litellm/config.yaml` is generated by `2_deploy_litellm.sh` from `.env`.
-Never edit it directly — change `.env` and re-run `2_deploy_litellm.sh`.
+`configs/litellm/config.yaml` is generated by `02_litellm.sh` from `.env`.
+Never edit it directly — change `.env` and re-run `02_litellm.sh`.
 
 ### config.yaml Structure
 
@@ -247,18 +248,19 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 
 ### Virtual Keys
 
-Three virtual keys, all minted by `3_mint_key.sh` and tied to
+Three virtual keys, all minted via `helpers/keys.sh` and tied to
 `LITELLM_MASTER_KEY`. Changing the master key invalidates all virtual keys.
 
 | Alias | Minted by | Stored in | Budget | Scope |
 |-------|-----------|-----------|--------|-------|
-| `opencode` | `4a_install_opencode.sh` | `~/.config/opencode/opencode.json` (provider apiKey) | Unlimited | All models |
-| `codex` | `4b_install_codex.sh` | `~/.codex/.env` (`LITELLM_CODEX_API_KEY`) | Unlimited | All models |
-| `claude-code` | `4c_install_claude_code.sh` | `~/.claude/settings.json` (env.ANTHROPIC_API_KEY) | Unlimited | All models |
+| `opencode` | `03_opencode.sh` | `~/.config/opencode/opencode.json` (provider apiKey) | Unlimited | All models |
+| `codex` | `04_codex.sh` | `~/.codex/.env` (`LITELLM_CODEX_API_KEY`) | Unlimited | All models |
+| `claude-code` | `05_claude_code.sh` | `~/.claude/settings.json` (env.ANTHROPIC_API_KEY) | Unlimited | All models |
 
 Each installer checks its own config file for an existing valid key first
-(tool-specific path), then calls `3_mint_key.sh` which does alias lookup via
-`/key/list` + `/key/info` and mints a new key only if no valid key is found.
+(tool-specific path), then calls `mint_or_reuse_key` from `helpers/keys.sh`
+which does alias lookup via `/key/list` + `/key/info` and mints a new key only
+if no valid key is found.
 
 ### Observability
 
@@ -510,7 +512,7 @@ claude --bare --model claude-deepseek-v3.2      # fast
 | `unhealthy_count > 0` | Check MaaS key/model/region — may be transient |
 | Virtual key 403 | Check with `/key/info` — may be expired |
 | Port conflict | `ss -tlnp \| grep -E ':(4000\|5432\|9090\|3000) '` |
-| Validation fails | `./scripts/5_validate.sh` — see recovery table in [SKILL.md](./SKILL.md) Step 7 |
+| Validation fails | `./scripts/06_validate.sh` — see recovery table in [SKILL.md](./SKILL.md) Step 7 |
 | Prometheus not scraping | Check `docker compose logs prometheus --tail 20`; verify `litellm:4000` reachable from Prometheus container |
 | Grafana dashboard blank | Check datasource UID: `curl http://127.0.0.1:3000/api/datasources/name/Prometheus \| jq .uid` — must be `prometheus` |
 | Grafana not loading | `docker compose restart grafana` |

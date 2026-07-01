@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── Unified Validation: LiteLLM proxy + opencode + Codex CLI + Claude Code CLI ───
+# ─── 06_validate.sh — Validation (pipeline step 06, core) ─────────────────────
 #
-# Run after bootstrap.sh to verify everything works end-to-end.
-# Combines LiteLLM E2E validation and opencode configuration checks.
+# Domain:        End-to-end validation
+# Order:         06 (last — checks everything installed)
+# Optional:      no (core, always runs; scoped via --skip-*)
+# Description:   Validate all installed components: .env completeness, Docker
+#                services, LiteLLM health + config, observability (Prometheus +
+#                Grafana), and each coding tool (opencode, Codex, Claude Code).
+#                Sections are skipped via --skip-* or selected via --xxx-only.
+# Inputs:        .env, running Docker Compose stack, tool config files
+# Outputs:       pass/fail/warn counts to stdout; exit 0 on pass, 1 on fail
+# Standalone:    yes — ./scripts/06_validate.sh
 #
 # Usage:
-#   ./validate.sh          # full validation including network checks
-#   ./validate.sh --dry-run  # syntax and structure checks only (no network)
-#   ./validate.sh --litellm-only  # only LiteLLM proxy checks
-#   ./validate.sh --opencode-only  # only opencode config checks
-#   ./validate.sh --codex-only  # only Codex CLI config checks
-#   ./validate.sh --claude-code-only  # only Claude Code CLI config checks
-#   ./validate.sh --skip-opencode --skip-codex  # LiteLLM + Claude Code only
+#   ./06_validate.sh                       # full validation
+#   ./06_validate.sh --dry-run             # structure checks only (no network)
+#   ./06_validate.sh --litellm-only        # only LiteLLM proxy checks
+#   ./06_validate.sh --skip-opencode       # LiteLLM + Codex + Claude Code
+# ──────────────────────────────────────────────────────────────────────────────
 
 PASS=0
 FAIL=0
@@ -28,7 +34,11 @@ SKIP_CODEX=false
 SKIP_CLAUDE_CODE=false
 LITELLM_URL="http://127.0.0.1:4000"
 
-source "$(dirname "${BASH_SOURCE[0]}")/lib/prereqs.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+source "$SCRIPT_DIR/helpers/prereqs.sh"
+source "$SCRIPT_DIR/helpers/common.sh"
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_apt "jq"   jq   jq
 
@@ -52,12 +62,11 @@ MODE_COUNT=0
 [ "$CODEX_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
 [ "$CLAUDE_CODE_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
 if [ "$MODE_COUNT" -gt 1 ]; then
-  echo "ERROR: --litellm-only, --opencode-only, --codex-only, and --claude-code-only are mutually exclusive."
+  echo "ERROR: --litellm-only, --opencode-only, --codex-only, and --claude-code-only are mutually exclusive." >&2
   exit 1
 fi
 
 # ── Derive which sections to run ──
-# Default (no flags): run all sections
 RUN_LITELLM=true
 RUN_OPENCODE=true
 RUN_CODEX=true
@@ -72,7 +81,6 @@ elif [ "$CODEX_ONLY" = true ]; then
 elif [ "$CLAUDE_CODE_ONLY" = true ]; then
   RUN_OPENCODE=false; RUN_CODEX=false
 fi
-# Apply --skip-* flags (additive, can combine with --xxx-only)
 [ "$SKIP_OPENCODE" = true ] && RUN_OPENCODE=false
 [ "$SKIP_CODEX" = true ] && RUN_CODEX=false
 [ "$SKIP_CLAUDE_CODE" = true ] && RUN_CLAUDE_CODE=false
@@ -85,75 +93,14 @@ fail() { FAIL=$((FAIL + 1)); printf '%b' "${RED}❌ FAIL${NC} — $1\n"; }
 warn() { WARN=$((WARN + 1)); printf '%b' "${YELLOW}⚠️  WARN${NC} — $1\n"; }
 skip() { printf '%b' "  ○ $1 (skipped)\n"; }
 
-# ── Helper: pipe JSON into jq as a single command ──
-jqc() {
-  printf '%s' "$1" | jq -e "$2" 2>/dev/null
-}
-
-# ── Helper: strip JSONC comments for jq ──
-# Only removes // comments outside of quoted strings
-strip_jsonc() {
-  python3 -c "
-import sys
-text = sys.stdin.read()
-result = []
-in_string = False
-escape = False
-i = 0
-while i < len(text):
-    c = text[i]
-    if escape:
-        result.append(c)
-        escape = False
-        i += 1
-        continue
-    if in_string:
-        result.append(c)
-        if c == '\\\\':
-            escape = True
-        elif c == '\"':
-            in_string = False
-        i += 1
-        continue
-    if c == '\"':
-        in_string = True
-        result.append(c)
-        i += 1
-        continue
-    if c == '/' and i + 1 < len(text):
-        if text[i+1] == '/':
-            # Skip until end of line
-            while i < len(text) and text[i] != '\\n':
-                i += 1
-            continue
-        elif text[i+1] == '*':
-            # Skip until */
-            i += 2
-            while i + 1 < len(text) and not (text[i] == '*' and text[i+1] == '/'):
-                i += 1
-            if i + 1 >= len(text):
-                break
-            i += 2
-            continue
-    result.append(c)
-    i += 1
-sys.stdout.write(''.join(result))
-" < "$1" 2>/dev/null || cat "$1"
-}
-
-# ── Resolve project dir ──
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+jqc() { printf '%s' "$1" | jq -e "$2" 2>/dev/null; }
 
 # ── Load .env if present ──
-if [ -f "$PROJECT_DIR/.env" ]; then
-  set -a; source "$PROJECT_DIR/.env"; set +a
-fi
-
+source_env "$PROJECT_DIR"
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
 
 printf '%b' "${YELLOW}╔══════════════════════════════════════════════════════╗\n"
-printf '%b' "║  oh-my-coding-maas-gateway — Unified Validation          ║\n"
+printf '%b' "║  oh-my-coding-maas-gateway — Validation                ║\n"
 printf '%b' "╚══════════════════════════════════════════════════════╝${NC}\n"
 if [ "$DRY_RUN" = true ]; then
   echo "   (DRY RUN — network checks skipped)"
@@ -166,7 +113,6 @@ echo ""
 if [ "$RUN_LITELLM" = true ]; then
   echo "━━━ A. LiteLLM Proxy ━━━"
 
-  # A1. .env check
   echo ""
   echo "A1. .env completeness and permissions"
   if [ -f "$PROJECT_DIR/.env" ]; then
@@ -194,7 +140,6 @@ if [ "$RUN_LITELLM" = true ]; then
     fail ".env not found"
   fi
 
-  # A2. Docker services
   echo ""
   echo "A2. Docker services"
   if [ "$DRY_RUN" = true ]; then
@@ -208,7 +153,6 @@ if [ "$RUN_LITELLM" = true ]; then
     fi
   fi
 
-  # A3. LiteLLM health
   echo ""
   echo "A3. LiteLLM health"
   if [ "$DRY_RUN" = true ]; then
@@ -255,7 +199,6 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
     fi
   fi
 
-  # A4. Config deployment count
   echo ""
   echo "A4. Config validation"
   CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
@@ -269,31 +212,26 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
     else
       warn "Deployment count: $DEPLOYMENT_COUNT (expected $EXPECTED_DEPLOYMENTS = 6 models × $KEY_COUNT keys × 2 formats)"
     fi
-    # Check for model catalog drift between template and generated config
     if [ -f "$TEMPLATE_FILE" ]; then
       TEMPLATE_MODELS=$(grep -c '^\s*- model_name:' "$TEMPLATE_FILE" 2>/dev/null || echo "0")
       GENERATED_MODELS=$(grep -c '^\s*- model_name:' "$CONFIG_FILE" 2>/dev/null || echo "0")
-      # Template has 1 OpenAI deployment per model; generated has KEY_COUNT × 2
-      # per model (OpenAI + Anthropic dual-format deployments)
       EXPECTED_FROM_TEMPLATE=$((TEMPLATE_MODELS * KEY_COUNT * 2))
       if [ "$GENERATED_MODELS" = "$EXPECTED_FROM_TEMPLATE" ]; then
         pass "Model catalog: template and generated config are in sync ($GENERATED_MODELS = $TEMPLATE_MODELS × $KEY_COUNT keys × 2 formats)"
       else
-        warn "Model catalog drift: template has $TEMPLATE_MODELS entries, generated has $GENERATED_MODELS (expected $EXPECTED_FROM_TEMPLATE = $TEMPLATE_MODELS × $KEY_COUNT keys × 2 formats)"
+        warn "Model catalog drift: template has $TEMPLATE_MODELS entries, generated has $GENERATED_MODELS (expected $EXPECTED_FROM_TEMPLATE)"
       fi
     fi
   else
-    warn "litellm_config.yaml not found — run scripts/2_deploy_litellm.sh"
+    warn "litellm_config.yaml not found — run scripts/02_litellm.sh"
   fi
 
-  # A5. Inference smoke test (runs in --litellm-only mode where Section B is skipped)
-  # Uses LITELLM_MASTER_KEY since no virtual key is minted in LiteLLM-only mode.
   echo ""
   echo "A5. Inference smoke test"
   if [ "$DRY_RUN" = true ]; then
     skip "Inference smoke test"
   elif [ "$LITELLM_ONLY" = true ] && [ -n "${LITELLM_MASTER_KEY:-}" ]; then
-    SMOKE_MODEL="deepseek-v3.2"  # cheapest (700 RPM)
+    SMOKE_MODEL="deepseek-v3.2"
     if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
         -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
         -H "Content-Type: application/json" \
@@ -319,11 +257,8 @@ if [ "$RUN_OPENCODE" = true ]; then
 
   OPENCODE_DIR="$HOME/.config/opencode"
   CONFIG_FILE=""
-  if [ -f "$OPENCODE_DIR/opencode.json" ]; then
-    CONFIG_FILE="$OPENCODE_DIR/opencode.json"
-  fi
+  [ -f "$OPENCODE_DIR/opencode.json" ] && CONFIG_FILE="$OPENCODE_DIR/opencode.json"
 
-  # B1. opencode binary
   echo ""
   echo "B1. opencode binary"
   if command -v opencode &>/dev/null; then
@@ -332,7 +267,6 @@ if [ "$RUN_OPENCODE" = true ]; then
     fail "opencode not found — run: curl -fsSL https://opencode.ai/install | bash"
   fi
 
-  # B2. Config files
   echo ""
   echo "B2. Config files"
   if [ -n "$CONFIG_FILE" ]; then
@@ -349,7 +283,6 @@ if [ "$RUN_OPENCODE" = true ]; then
     fail "oh-my-opencode-slim.json not found in $OPENCODE_DIR"
   fi
 
-  # B3. Provider configuration
   echo ""
   echo "B3. Provider configuration"
   if [ -n "$CONFIG_FILE" ]; then
@@ -384,7 +317,6 @@ if [ "$RUN_OPENCODE" = true ]; then
     FAIL=$((FAIL + 11))
   fi
 
-  # B4. oh-my-opencode-slim preset
   echo ""
   echo "B4. oh-my-opencode-slim preset"
   SLIM_CONFIG=""
@@ -437,7 +369,6 @@ if [ "$RUN_OPENCODE" = true ]; then
     FAIL=$((FAIL + 22))
   fi
 
-  # B5. Model availability (via proxy)
   echo ""
   echo "B5. Model availability (via proxy)"
   if [ "$DRY_RUN" = true ]; then
@@ -464,8 +395,7 @@ if [ "$RUN_OPENCODE" = true ]; then
         MODEL_LIST=$(printf '%s' "$MODELS_JSON" | jq -r '.data[].id' 2>/dev/null)
         echo "  ℹ Discovered $MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
 
-        # Smoke test: one model responding proves the proxy works
-        SMOKE_MODEL="deepseek-v3.2"  # cheapest (700 RPM)
+        SMOKE_MODEL="deepseek-v3.2"
         if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
             -H "Authorization: Bearer $VIRTUAL_KEY" \
             -H "Content-Type: application/json" \
@@ -488,7 +418,6 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
   echo ""
   echo "━━━ C. Observability ━━━"
 
-  # C1. Prometheus reachable
   echo ""
   echo "C1. Prometheus"
   if [ "$DRY_RUN" = true ]; then
@@ -499,7 +428,6 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     fail "Prometheus not reachable at :9090"
   fi
 
-  # C2. LiteLLM /metrics endpoint
   echo ""
   echo "C2. LiteLLM metrics endpoint"
   if [ "$DRY_RUN" = true ]; then
@@ -515,7 +443,6 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     fail "LiteLLM /metrics endpoint not responding"
   fi
 
-  # C3. Prometheus scraping LiteLLM
   echo ""
   echo "C3. Prometheus scraping LiteLLM"
   if [ "$DRY_RUN" = true ]; then
@@ -531,7 +458,6 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     fi
   fi
 
-  # C4. Grafana reachable
   echo ""
   echo "C4. Grafana"
   if [ "$DRY_RUN" = true ]; then
@@ -540,7 +466,6 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     GRAFANA_DB_COUNT=$(curl -sf -m 5 -u "admin:${GRAFANA_ADMIN_PASSWORD:-admin}" "http://127.0.0.1:3000/api/search?query=oh-my-coding" 2>/dev/null | jq 'length' 2>/dev/null || echo 0)
     if [ "$GRAFANA_DB_COUNT" -gt 0 ]; then
       pass "Grafana reachable with dashboard provisioned"
-      # Check datasource is connected to Prometheus
       DS_NAME=$(curl -sf -m 5 -u "admin:${GRAFANA_ADMIN_PASSWORD:-admin}" "http://127.0.0.1:3000/api/datasources/name/Prometheus" 2>/dev/null | jq -r '.name // empty' 2>/dev/null || true)
       if [ "$DS_NAME" = "Prometheus" ]; then
         pass "Grafana Prometheus datasource configured"
@@ -567,7 +492,6 @@ if [ "$RUN_CODEX" = true ]; then
   CODEX_DIR="$HOME/.codex"
   CODEX_CONFIG="$CODEX_DIR/config.toml"
 
-  # D1. Codex CLI binary
   echo ""
   echo "D1. Codex CLI binary"
   if command -v codex &>/dev/null; then
@@ -576,7 +500,6 @@ if [ "$RUN_CODEX" = true ]; then
     fail "codex not found — run: npm install -g @openai/codex"
   fi
 
-  # D2. Config file
   echo ""
   echo "D2. Config file"
   if [ -f "$CODEX_CONFIG" ]; then
@@ -585,7 +508,6 @@ if [ "$RUN_CODEX" = true ]; then
     fail "config.toml not found in $CODEX_DIR"
   fi
 
-  # D3. Provider configuration
   echo ""
   echo "D3. Provider configuration"
   if [ -f "$CODEX_CONFIG" ]; then
@@ -594,26 +516,22 @@ if [ "$RUN_CODEX" = true ]; then
     else
       fail "model provider base_url not pointing to LiteLLM proxy"
     fi
-
     if grep -qP 'env_key\s*=\s*"LITELLM_CODEX_API_KEY"' "$CODEX_CONFIG"; then
       pass "env_key set to LITELLM_CODEX_API_KEY"
     else
       fail "env_key not set to LITELLM_CODEX_API_KEY"
     fi
-
     if grep -qP 'wire_api\s*=\s*"responses"' "$CODEX_CONFIG"; then
       pass "wire_api set to responses (HTTP SSE)"
     else
       fail "wire_api not set to responses"
     fi
-
     if grep -qP '^model\s*=\s*"\S+"' "$CODEX_CONFIG"; then
       CODEX_MODEL=$(grep -oP '^model\s*=\s*"\K[^"]+' "$CODEX_CONFIG" 2>/dev/null || true)
       pass "default model set: $CODEX_MODEL"
     else
       fail "default model not set"
     fi
-
     PERMS=$(stat -c '%a' "$CODEX_CONFIG" 2>/dev/null || stat -f '%Lp' "$CODEX_CONFIG" 2>/dev/null)
     if [ "$PERMS" = "600" ]; then
       pass "Config file permissions 600"
@@ -625,7 +543,6 @@ if [ "$RUN_CODEX" = true ]; then
     FAIL=$((FAIL + 5))
   fi
 
-  # D4. Responses API smoke test
   echo ""
   echo "D4. Responses API smoke test"
   CODEX_VK=""
@@ -648,7 +565,7 @@ if [ "$RUN_CODEX" = true ]; then
       fail "Responses API smoke test: $SMOKE_MODEL did not respond"
     fi
   else
-    skip "Responses API smoke test (no API key found in ~/.codex/.env or env)"
+    skip "Responses API smoke test (no API key found)"
   fi
 
   echo ""
@@ -664,7 +581,6 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
   CLAUDE_CONFIG_DIR="$HOME/.claude"
   CLAUDE_SETTINGS="$CLAUDE_CONFIG_DIR/settings.json"
 
-  # E1. Claude Code CLI binary
   echo ""
   echo "E1. Claude Code CLI binary"
   if command -v claude &>/dev/null; then
@@ -673,7 +589,6 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
     fail "claude not found — run: npm install -g @anthropic-ai/claude-code"
   fi
 
-  # E2. Config file (settings.json)
   echo ""
   echo "E2. Config file"
   if [ -f "$CLAUDE_SETTINGS" ]; then
@@ -682,7 +597,6 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
     fail "settings.json not found in $CLAUDE_CONFIG_DIR"
   fi
 
-  # E3. Provider configuration
   echo ""
   echo "E3. Provider configuration"
   if [ -f "$CLAUDE_SETTINGS" ]; then
@@ -692,21 +606,18 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
     else
       fail "ANTHROPIC_BASE_URL not pointing to LiteLLM proxy (got: $CLAUDE_BASE_URL)"
     fi
-
     CLAUDE_VK=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
     if [[ "$CLAUDE_VK" == sk-* ]]; then
       pass "ANTHROPIC_API_KEY set (starts with sk-)"
     else
       fail "ANTHROPIC_API_KEY not set or invalid"
     fi
-
     CLAUDE_MODEL=$(jq -r '.env.ANTHROPIC_MODEL // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
     if [ -n "$CLAUDE_MODEL" ]; then
       pass "default model set: $CLAUDE_MODEL"
     else
       fail "default model not set"
     fi
-
     PERMS=$(stat -c '%a' "$CLAUDE_SETTINGS" 2>/dev/null || stat -f '%Lp' "$CLAUDE_SETTINGS" 2>/dev/null)
     if [ "$PERMS" = "600" ]; then
       pass "Config file permissions 600"
@@ -719,7 +630,6 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
     CLAUDE_VK=""
   fi
 
-  # E4. Messages API smoke test
   echo ""
   echo "E4. Messages API smoke test"
   if [ "$DRY_RUN" = true ]; then
@@ -736,7 +646,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
       fail "Messages API smoke test: $SMOKE_MODEL did not respond"
     fi
   else
-    skip "Messages API smoke test (no API key found in ~/.claude/settings.json)"
+    skip "Messages API smoke test (no API key found)"
   fi
 
   echo ""
