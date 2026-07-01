@@ -21,14 +21,16 @@ Before committing, validate the change from **all** relevant perspectives:
 
 2. **Cross-file consistency:** If you changed one file, check every file
    that references it:
-   - Changed a script? Check SKILL.md steps, REFERENCE.md script table.
+   - Changed a script? Check INSTALLATION.md pipeline/per-script tables,
+     SKILL.md steps, REFERENCE.md script table.
    - Changed a config template? Check the generated config, validation
      checks, and CHANGELOG.
    - Changed presets? Check REFERENCE.md agent→model table, CHANGELOG.
-   - Changed ports/services? Check docker-compose.yml, SKILL.md Steps 6-7,
-     REFERENCE.md endpoints, .githooks/pre-commit.
-   - Changed env vars? Check .env.template, 01_env.sh, bootstrap.sh,
-     docker-compose.yml, SKILL.md Key Contract table.
+   - Changed ports/services? Check docker-compose.yml, INSTALLATION.md
+     per-script details, REFERENCE.md endpoints, .githooks/pre-commit.
+   - Changed env vars? Check configs/.env.template, 01_env.sh, bootstrap.sh,
+     docker-compose.yml, REFERENCE.md Key Contract table,
+     INSTALLATION.md env-var table.
 
 3. **Documentation accuracy:** Read the affected documentation sections
    and verify they match the actual code output. Summaries, tables, and
@@ -107,7 +109,7 @@ configs/grafana/   — Grafana dashboards and provisioning
 configs/opencode/  — opencode + slim plugin templates
 configs/codex/     — Codex CLI config template + model catalog
 configs/claude-code/ — Claude Code CLI config template
-root              — SKILL.md, REFERENCE.md, README.md, CHANGELOG.md, AGENTS.md
+root              — INSTALLATION.md, SKILL.md, REFERENCE.md, README.md, CHANGELOG.md, AGENTS.md
 ```
 
 ## When Unsure

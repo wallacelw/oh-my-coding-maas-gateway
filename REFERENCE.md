@@ -15,8 +15,8 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | `HUAWEI_MAAS_API_KEY` | User (env var or prompt) | `01_env.sh`, `03_opencode.sh` | Non-empty, no placeholders | No |
 | `HUAWEI_MAAS_API_KEY_COUNT` | `01_env.sh` (from env vars or prompt) | `01_env.sh`, `02_litellm.sh` | Integer ≥ 1 | No |
 | `HUAWEI_MAAS_API_KEY_0` | `01_env.sh` (auto, = main key) | `01_env.sh`, `02_litellm.sh` | Non-empty | No |
-| `HUAWEI_MAAS_API_KEY_1..N` | User (env var or prompt) | `bootstrap.sh` → `01_env.sh` | Non-empty | No |
-| `LITELLM_MASTER_KEY` | `01_env.sh` (auto-generated) | `bootstrap.sh`, `03/04/05` | Must start with `sk-` | **Yes** — changing invalidates all virtual keys |
+| `HUAWEI_MAAS_API_KEY_1..N` | User (env var or prompt) | `01_env.sh`, `02_litellm.sh` | Non-empty | No |
+| `LITELLM_MASTER_KEY` | `01_env.sh` (auto-generated) | `03/04/05` via `helpers/keys.sh` | Must start with `sk-` | **Yes** — changing invalidates all virtual keys |
 | `LITELLM_SALT_KEY` | `01_env.sh` (auto-generated) | LiteLLM container | Random string | **Yes** — changing invalidates all virtual keys |
 | `DB_PASSWORD` | `01_env.sh` (auto-generated) | docker-compose, postgres | Random string | **Yes** — changing breaks DB auth |
 | `GRAFANA_ADMIN_PASSWORD` | `01_env.sh` (auto-generated) | docker-compose, `06_validate.sh` | Random string | No — rotating changes dashboard login only |
@@ -28,8 +28,8 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 
 **Rules:**
 
-- User/agent must NOT set `HUAWEI_MAAS_API_KEY_0` — bootstrap sets it from the main
-  key automatically.
+- User/agent must NOT set `HUAWEI_MAAS_API_KEY_0` — `01_env.sh` sets it from the
+  main key automatically.
 - User/agent must export `HUAWEI_MAAS_API_KEY_COUNT` = 1 + number of extra keys.
 - User/agent must export `HUAWEI_MAAS_API_KEY_1` through `HUAWEI_MAAS_API_KEY_N` for
   extra keys only.

@@ -42,12 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `3_mint_key.sh` (folded into `helpers/keys.sh`).
 - `1_init_env.sh` `--auto` mode (interactive-first is now the default).
 
+## [0.4.0] - 2026-06-29
+
 ### Changed
 
 - **Distributed prerequisite installation** — each script now installs its own
   prerequisites via shared `scripts/lib/prereqs.sh` library instead of
   centralized check in `0_bootstrap.sh`. Scripts are independently runnable.
-  `PREREQ_MODE=auto` (agent) installs without prompting; `prompt` asks first.
+  `PREREQ_MODE=auto` installs without prompting (CI / non-interactive); `prompt` asks first.
 - `2_deploy_litellm.sh` now ensures Docker engine + compose plugin + daemon
   are running via `prereq_ensure_docker` (previously assumed pre-installed).
 - Port check in `0_bootstrap.sh` now exits with error in `--agent` mode
