@@ -55,7 +55,8 @@ prereq_ensure_bun
 if curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"
 else
-  log_warn "LiteLLM proxy not reachable at http://127.0.0.1:4000. Start it first."
+  log_error "LiteLLM proxy not reachable at http://127.0.0.1:4000. Start it first."
+  exit 1
 fi
 
 # ── 2. Install opencode ──

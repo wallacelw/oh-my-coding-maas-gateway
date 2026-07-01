@@ -24,6 +24,7 @@ CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
 
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
+source "$SCRIPT_DIR/helpers/models.sh"
 LOG_TAG="litellm"
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_docker
@@ -87,16 +88,7 @@ for i in $(seq 0 $((KEY_COUNT - 1))); do
 done
 
 # ── Model catalog ──
-# Format: model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
-MODELS=(
-  "glm-5.2:198000:100:198000:192000:128000:0.0000014:0.0000044"
-  "glm-5.1:500000:30:198000:192000:128000:0.000001078:0.000003774"
-  "glm-5:500000:30:198000:192000:64000:0.000000809:0.000002965"
-  "deepseek-v4-pro:30000:3:1000000:1000000:128000:0.000001617:0.000003235"
-  "deepseek-v4-flash:30000:3:1000000:1000000:128000:0.000000135:0.00000027"
-  "deepseek-v3.2:500000:700:160000:128000:32000:0.00000027:0.000000404"
-)
-
+# (Sourced from helpers/models.sh)
 MODEL_COUNT=${#MODELS[@]}
 TOTAL_DEPLOYMENTS=$((KEY_COUNT * MODEL_COUNT * 2))
 
@@ -214,6 +206,18 @@ if [ "$KEY_COUNT" -gt 1 ]; then
   done
 fi
 
+# ── Pre-flight MaaS key validation ──
+log_info "Validating MaaS API key..."
+MAAS_BASE="${HUAWEI_MAAS_API_BASE:-https://api-ap-southeast-1.modelarts-maas.com/openai/v1}"
+MAAS_KEY_0="${HUAWEI_MAAS_API_KEY_0:-${HUAWEI_MAAS_API_KEY:-}}"
+if [ -n "$MAAS_KEY_0" ] && [ "$DRY_RUN" != true ]; then
+  if ! curl -sf -m 10 "$MAAS_BASE/models" -H "Authorization: Bearer $MAAS_KEY_0" &>/dev/null; then
+    log_warn "MaaS API key validation failed — endpoint may be unreachable or key invalid. Continuing anyway (LiteLLM will retry)."
+  else
+    log_ok "MaaS API key valid"
+  fi
+fi
+
 # ── Deploy Docker Compose ──
 echo ""
 if [ "$DRY_RUN" = true ]; then
@@ -223,6 +227,12 @@ fi
 
 log_info "Starting Docker Compose (idempotent — no-op if already running)..."
 run_filtered "docker" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d
+
+# Restart LiteLLM if config changed (bind mount — compose won't auto-restart)
+if [ -n "${BACKUP:-}" ] && [ -f "$BACKUP" ] && ! diff -q "$BACKUP" "$CONFIG_FILE" &>/dev/null; then
+  log_info "Config changed — restarting LiteLLM to load new config..."
+  run_filtered "docker" docker compose -f "$PROJECT_DIR/docker-compose.yml" restart litellm
+fi
 
 # Wait for LiteLLM to become healthy
 LITELLM_URL="http://127.0.0.1:4000"
