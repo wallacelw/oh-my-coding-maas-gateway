@@ -55,11 +55,11 @@ Install oh-my-coding-maas-gateway on this machine by following SKILL.md.
 
 1. Fetch SKILL.md from:
    https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
-2. Follow the procedure — execute every step in order. For each step:
-   check precondition, run action, verify postcondition. If a step fails,
-   run the documented recovery. If recovery also fails, stop and report.
-3. The install is complete when scripts/06_validate.sh exits 0 (Step 7).
-4. Do NOT launch opencode. Report the summary from Step 8 and stop.
+2. Follow the procedure — run bootstrap, handle prompts, verify postconditions.
+   If a step fails, run the documented recovery. If recovery also fails, stop
+   and report.
+3. The install is complete when scripts/06_validate.sh exits 0.
+4. Do NOT launch opencode. Report the summary and stop.
 
 You will need to ask me for:
 - Install mode: all, litellm, opencode, codex, or claude (default: all)
@@ -80,7 +80,7 @@ Rules:
 ### 🤖 Agent Upgrade (paste this prompt)
 
 ```
-Upgrade oh-my-coding-maas-gateway by following the Upgrade Procedure in SKILL.md.
+Upgrade oh-my-coding-maas-gateway by following the Upgrade section in SKILL.md.
 
 1. Fetch SKILL.md from:
    https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
@@ -96,7 +96,7 @@ Upgrade oh-my-coding-maas-gateway by following the Upgrade Procedure in SKILL.md
 
 Rules:
 - Do not skip steps. Do not improvise. Do not launch opencode.
-- If validation fails, follow the recovery table in SKILL.md Step 7.
+- If validation fails, follow the recovery table in SKILL.md.
 - After upgrade: I will rotate my MaaS keys if they were shared with you.
 ```
 
