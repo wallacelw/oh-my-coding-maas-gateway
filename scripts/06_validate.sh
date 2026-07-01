@@ -39,6 +39,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
+source "$SCRIPT_DIR/helpers/models.sh"
 LOG_TAG="validate"
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_apt "jq"   jq   jq
@@ -202,11 +203,11 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
   if [ -f "$CONFIG_FILE" ]; then
     pass "litellm_config.yaml exists (generated)"
     DEPLOYMENT_COUNT=$(grep -c '^\s*- model_name:' "$CONFIG_FILE" 2>/dev/null || echo "0")
-    EXPECTED_DEPLOYMENTS=$((KEY_COUNT * 12))
+    EXPECTED_DEPLOYMENTS=$((KEY_COUNT * MODEL_COUNT * 2))
     if [ "$DEPLOYMENT_COUNT" = "$EXPECTED_DEPLOYMENTS" ]; then
-      pass "Deployment count: $DEPLOYMENT_COUNT (6 models × $KEY_COUNT keys × 2 formats)"
+      pass "Deployment count: $DEPLOYMENT_COUNT ($MODEL_COUNT models × $KEY_COUNT keys × 2 formats)"
     else
-      warn "Deployment count: $DEPLOYMENT_COUNT (expected $EXPECTED_DEPLOYMENTS = 6 models × $KEY_COUNT keys × 2 formats)"
+      warn "Deployment count: $DEPLOYMENT_COUNT (expected $EXPECTED_DEPLOYMENTS = $MODEL_COUNT models × $KEY_COUNT keys × 2 formats)"
     fi
     if [ -f "$TEMPLATE_FILE" ]; then
       TEMPLATE_MODELS=$(grep -c '^\s*- model_name:' "$TEMPLATE_FILE" 2>/dev/null || echo "0")

@@ -60,6 +60,9 @@ EXISTING_GRAFANA_PASSWORD=""
 EXISTING_PROM_RETENTION=""
 EXISTING_MAAS_BASE=""
 EXISTING_MAAS_ANTHROPIC_BASE=""
+EXISTING_MAAS_KEY=""
+EXISTING_KEY_COUNT=""
+EXISTING_EXTRA_KEYS=()
 if [ -f "$ENV_FILE" ]; then
   EXISTING_MASTER_KEY="$(grep -oP '^LITELLM_MASTER_KEY="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_SALT_KEY="$(grep -oP '^LITELLM_SALT_KEY="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
@@ -68,6 +71,16 @@ if [ -f "$ENV_FILE" ]; then
   EXISTING_PROM_RETENTION="$(grep -oP '^PROMETHEUS_RETENTION="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_MAAS_BASE="$(grep -oP '^HUAWEI_MAAS_API_BASE="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_MAAS_ANTHROPIC_BASE="$(grep -oP '^HUAWEI_MAAS_ANTHROPIC_API_BASE="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_MAAS_KEY="$(grep -oP '^HUAWEI_MAAS_API_KEY="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_KEY_COUNT="$(grep -oP '^HUAWEI_MAAS_API_KEY_COUNT="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
+  # Read existing extra keys
+  if [ -n "$EXISTING_KEY_COUNT" ] && [ "$EXISTING_KEY_COUNT" -gt 1 ]; then
+    for i in $(seq 1 $((EXISTING_KEY_COUNT - 1))); do
+      VAR="HUAWEI_MAAS_API_KEY_$i"
+      VAL="$(grep -oP "^${VAR}=\"?\K[^\"]+" "$ENV_FILE" 2>/dev/null || true)"
+      [ -n "$VAL" ] && EXISTING_EXTRA_KEYS+=("$VAL")
+    done
+  fi
 fi
 
 # ── Generate / preserve secrets ──
@@ -88,16 +101,22 @@ MAAS_API_BASE="https://api-ap-southeast-1.modelarts-maas.com/openai/v1"
 MAAS_ANTHROPIC_BASE="https://api-ap-southeast-1.modelarts-maas.com/anthropic"
 
 if [ "$IS_FRESH" = false ]; then
-  # Preserve existing secrets (idempotent)
-  MASTER_KEY="$EXISTING_MASTER_KEY"
-  SALT_KEY="$EXISTING_SALT_KEY"
-  DB_PASSWORD="$EXISTING_DB_PASSWORD"
-  GRAFANA_PASSWORD="$EXISTING_GRAFANA_PASSWORD"
-  PROM_RETENTION="$EXISTING_PROM_RETENTION"
-  [ -n "$EXISTING_MAAS_BASE" ]         && MAAS_API_BASE="$EXISTING_MAAS_BASE"
+  # Validate existing secrets are non-empty before preserving
+  [ -n "$EXISTING_MASTER_KEY" ]       && MASTER_KEY="$EXISTING_MASTER_KEY"       || IS_FRESH=true
+  [ -n "$EXISTING_SALT_KEY" ]         && SALT_KEY="$EXISTING_SALT_KEY"           || IS_FRESH=true
+  [ -n "$EXISTING_DB_PASSWORD" ]      && DB_PASSWORD="$EXISTING_DB_PASSWORD"     || IS_FRESH=true
+  [ -n "$EXISTING_GRAFANA_PASSWORD" ] && GRAFANA_PASSWORD="$EXISTING_GRAFANA_PASSWORD" || IS_FRESH=true
+  [ -n "$EXISTING_PROM_RETENTION" ]   && PROM_RETENTION="$EXISTING_PROM_RETENTION" || IS_FRESH=true
+  [ -n "$EXISTING_MAAS_BASE" ]        && MAAS_API_BASE="$EXISTING_MAAS_BASE"
   [ -n "$EXISTING_MAAS_ANTHROPIC_BASE" ] && MAAS_ANTHROPIC_BASE="$EXISTING_MAAS_ANTHROPIC_BASE"
-  log_ok "Preserving existing secrets (idempotent). Use --force to regenerate."
-else
+  if [ "$IS_FRESH" = false ]; then
+    log_ok "Preserving existing secrets (idempotent). Use --force to regenerate."
+  else
+    log_warn "Some existing secrets are empty or missing — regenerating."
+  fi
+fi
+
+if [ "$IS_FRESH" = true ]; then
   # Fresh install or --force — prompt for each secret
   if [ "$FORCE" = true ] && [ -f "$ENV_FILE" ]; then
     log_warn "Regenerating all secrets (--force). Existing virtual keys will be invalidated."
@@ -119,6 +138,10 @@ fi
 # ── Collect MaaS API key (env var or prompt) ──
 log_step "Huawei MaaS API key"
 MAAS_API_KEY="${HUAWEI_MAAS_API_KEY:-}"
+if [ -z "$MAAS_API_KEY" ] && [ -n "$EXISTING_MAAS_KEY" ]; then
+  MAAS_API_KEY="$EXISTING_MAAS_KEY"
+  log_ok "HUAWEI_MAAS_API_KEY preserved from existing .env"
+fi
 if [ -n "$MAAS_API_KEY" ]; then
   log_ok "HUAWEI_MAAS_API_KEY set from environment"
 elif [ -t 0 ]; then
@@ -138,6 +161,9 @@ if [ -n "${HUAWEI_MAAS_API_KEY_COUNT:-}" ] && [ "${HUAWEI_MAAS_API_KEY_COUNT:-1}
     [ -n "$VAL" ] && EXTRA_KEYS+=("$VAL")
   done
   [ ${#EXTRA_KEYS[@]} -gt 0 ] && log_ok "${#EXTRA_KEYS[@]} extra MaaS key(s) from environment"
+elif [ ${#EXISTING_EXTRA_KEYS[@]} -gt 0 ]; then
+  EXTRA_KEYS=("${EXISTING_EXTRA_KEYS[@]}")
+  log_ok "${#EXTRA_KEYS[@]} extra MaaS key(s) preserved from existing .env"
 elif [ -t 0 ]; then
   echo ""
   log_dim "Additional MaaS API keys for load balancing."
@@ -190,7 +216,7 @@ if [ "$ERRORS" -gt 0 ]; then
 fi
 
 # ── Write .env ──
-cat > "$ENV_FILE" <<EOF
+cat > "$ENV_FILE.tmp" <<EOF
 # ── Proxy Auth ───────────────────────────────────
 LITELLM_MASTER_KEY="${MASTER_KEY}"
 LITELLM_SALT_KEY="${SALT_KEY}"
@@ -210,9 +236,9 @@ HUAWEI_MAAS_API_KEY_COUNT=${KEY_COUNT}
 HUAWEI_MAAS_API_KEY_0="${MAAS_API_KEY}"
 EOF
 for i in "${!EXTRA_KEYS[@]}"; do
-  echo "HUAWEI_MAAS_API_KEY_$((i + 1))=\"${EXTRA_KEYS[$i]}\"" >> "$ENV_FILE"
+  echo "HUAWEI_MAAS_API_KEY_$((i + 1))=\"${EXTRA_KEYS[$i]}\"" >> "$ENV_FILE.tmp"
 done
-cat >> "$ENV_FILE" <<EOF
+cat >> "$ENV_FILE.tmp" <<EOF
 
 # ── MaaS Endpoint ──────────────────────────────────
 HUAWEI_MAAS_API_BASE="${MAAS_API_BASE}"
@@ -220,6 +246,7 @@ HUAWEI_MAAS_API_BASE="${MAAS_API_BASE}"
 # ── MaaS Anthropic Endpoint ───────────────────────
 HUAWEI_MAAS_ANTHROPIC_API_BASE="${MAAS_ANTHROPIC_BASE}"
 EOF
+mv "$ENV_FILE.tmp" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
 # ── Configure git hooks (prevent committing secrets) ──

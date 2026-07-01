@@ -264,8 +264,10 @@ VALIDATE_ARGS=()
 [ "$INSTALL_OPENCODE" = false ] && VALIDATE_ARGS+=("--skip-opencode")
 [ "$INSTALL_CODEX" = false ] && VALIDATE_ARGS+=("--skip-codex")
 [ "$INSTALL_CLAUDE_CODE" = false ] && VALIDATE_ARGS+=("--skip-claude-code")
+set +e
 run_step "Step 06: Validate" "$SCRIPT_DIR/06_validate.sh" "${VALIDATE_ARGS[@]}"
 VALIDATE_RC=$?
+set -e
 
 # ── Summary ──
 echo ""
