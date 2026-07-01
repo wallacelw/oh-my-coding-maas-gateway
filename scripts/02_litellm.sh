@@ -1,31 +1,33 @@
 #!/usr/bin/env bash
-# 2_deploy_litellm.sh — Generate litellm_config.yaml from .env + deploy Docker Compose
-#
-# Creates N deployments per model where N = HUAWEI_MAAS_API_KEY_COUNT.
-# Each deployment uses a different API key (HUAWEI_MAAS_API_KEY_0 .. _N-1).
-# LiteLLM load-balances across deployments with the same model_name.
-#
-# Usage:
-#   ./scripts/2_deploy_litellm.sh                                    # default: simple-shuffle
-
-#   ./scripts/2_deploy_litellm.sh --routing-strategy=least-busy      # alternative strategy
-
-#   ./scripts/2_deploy_litellm.sh --routing-strategy=latency-based-routing
-
 set -euo pipefail
 
-# ── Resolve project root ──────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ENV_FILE="$PROJECT_ROOT/.env"
-CONFIG_FILE="$PROJECT_ROOT/configs/litellm/config.yaml"
+# ─── 02_litellm.sh — LiteLLM proxy + observability (pipeline step 02, core) ──
+#
+# Domain:        LiteLLM proxy + observability (Prometheus + Grafana)
+# Order:         02 (after .env — tools need the proxy live)
+# Optional:      no (core, always runs)
+# Description:   Generate configs/litellm/config.yaml from .env (N deployments
+#                per model per format, dual OpenAI + Anthropic), check required
+#                ports are free, and deploy the Docker Compose stack
+#                (LiteLLM + PostgreSQL + Prometheus + Grafana). Waits for
+#                LiteLLM to become healthy.
+# Inputs:        .env (HUAWEI_MAAS_API_KEY_0..N, HUAWEI_MAAS_API_KEY_COUNT,
+#                HUAWEI_MAAS_API_BASE, HUAWEI_MAAS_ANTHROPIC_API_BASE)
+# Outputs:       configs/litellm/config.yaml, running Docker Compose stack
+# Standalone:    yes — ./scripts/02_litellm.sh
+# ──────────────────────────────────────────────────────────────────────────────
 
-# ── Ensure prerequisites ──────────────────────────────────────────
-source "$(dirname "${BASH_SOURCE[0]}")/lib/prereqs.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+ENV_FILE="$PROJECT_DIR/.env"
+CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
+
+source "$SCRIPT_DIR/helpers/prereqs.sh"
+source "$SCRIPT_DIR/helpers/common.sh"
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_docker
 
-# ── Parse args ────────────────────────────────────────────────────
+# ── Parse args ──
 ROUTING_STRATEGY="simple-shuffle"
 DRY_RUN=false
 for arg in "$@"; do
@@ -40,22 +42,39 @@ for arg in "$@"; do
   esac
 done
 
-# ── Load .env ─────────────────────────────────────────────────────
+echo "══════════════════════════════════════════════════════"
+echo "  Step 02 — LiteLLM proxy + observability"
+echo "══════════════════════════════════════════════════════"
+echo ""
+
+# ── Port conflict check ──
+for port in 4000 5432 9090 3000; do
+  port_in_use=false
+  if command -v ss &>/dev/null && ss -tlnp 2>/dev/null | grep -q ":${port} "; then
+    port_in_use=true
+  elif command -v netstat &>/dev/null && netstat -tlnp 2>/dev/null | grep -q ":${port} "; then
+    port_in_use=true
+  fi
+  if [ "$port_in_use" = true ]; then
+    echo "WARNING: Port $port is already in use. Docker Compose may fail."
+  fi
+done
+
+# ── Load .env ──
 if [ ! -f "$ENV_FILE" ]; then
-  echo "ERROR: .env not found. Run scripts/1_init_env.sh first." >&2
+  echo "ERROR: .env not found. Run scripts/01_env.sh first." >&2
   exit 1
 fi
-# shellcheck source=/dev/null
-set -a; source "$ENV_FILE"; set +a
+source_env "$PROJECT_DIR"
 
-# ── Determine key count ──────────────────────────────────────────
+# ── Determine key count ──
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
 if [ "$KEY_COUNT" -lt 1 ]; then
   echo "ERROR: HUAWEI_MAAS_API_KEY_COUNT must be >= 1. Got: $KEY_COUNT" >&2
   exit 1
 fi
 
-# ── Validate all keys exist ──────────────────────────────────────
+# ── Validate all keys exist ──
 for i in $(seq 0 $((KEY_COUNT - 1))); do
   VAR="HUAWEI_MAAS_API_KEY_$i"
   VAL="${!VAR:-}"
@@ -69,7 +88,7 @@ for i in $(seq 0 $((KEY_COUNT - 1))); do
   fi
 done
 
-# ── Model catalog ────────────────────────────────────────────────
+# ── Model catalog ──
 # Format: model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
 MODELS=(
   "glm-5.2:198000:100:198000:192000:128000:0.0000014:0.0000044"
@@ -83,14 +102,14 @@ MODELS=(
 MODEL_COUNT=${#MODELS[@]}
 TOTAL_DEPLOYMENTS=$((KEY_COUNT * MODEL_COUNT * 2))
 
-# ── Backup existing config ───────────────────────────────────────
+# ── Backup existing config ──
 if [ -f "$CONFIG_FILE" ]; then
   BACKUP="${CONFIG_FILE}.bak.$(date +%Y%m%d%H%M%S)"
   cp "$CONFIG_FILE" "$BACKUP"
   echo "Backed up existing config to $(basename "$BACKUP")"
 fi
 
-# ── Generate config ──────────────────────────────────────────────
+# ── Generate config ──
 {
   echo "model_list:"
   echo ""
@@ -183,11 +202,8 @@ fi
 
 } > "$CONFIG_FILE"
 
-# ── Summary ──────────────────────────────────────────────────────
-echo ""
-echo "══════════════════════════════════════════════════════"
 echo "  Generated: $CONFIG_FILE"
-  echo "  Deployments: ${TOTAL_DEPLOYMENTS} total (${KEY_COUNT} per model × ${MODEL_COUNT} models × 2 formats)"
+echo "  Deployments: ${TOTAL_DEPLOYMENTS} total (${KEY_COUNT} per model × ${MODEL_COUNT} models × 2 formats)"
 echo "  Routing strategy: $ROUTING_STRATEGY"
 if [ "$KEY_COUNT" -gt 1 ]; then
   echo ""
@@ -199,35 +215,36 @@ if [ "$KEY_COUNT" -gt 1 ]; then
     echo "    $model_name: $total_rpm RPM, $total_tpm TPM ($KEY_COUNT × $rpm RPM, $KEY_COUNT × $tpm TPM)"
   done
 fi
-echo "══════════════════════════════════════════════════════"
 
 # ── Deploy Docker Compose ──
 echo ""
-echo "Starting Docker Compose (idempotent — no-op if already running)..."
-if [ "${DRY_RUN:-false}" = true ]; then
+if [ "$DRY_RUN" = true ]; then
   echo "  Would run: docker compose up -d"
+  exit 0
+fi
+
+echo "Starting Docker Compose (idempotent — no-op if already running)..."
+docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d
+
+# Wait for LiteLLM to become healthy
+LITELLM_URL="http://127.0.0.1:4000"
+if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
+  echo "  ✓ LiteLLM already healthy."
 else
-  docker compose -f "$PROJECT_ROOT/docker-compose.yml" up -d
-  # Wait for LiteLLM to become healthy
-  LITELLM_URL="http://127.0.0.1:4000"
-  if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
-    echo "  ✓ LiteLLM already healthy."
-  else
-    echo "  Waiting for LiteLLM to become healthy (up to 90s)..."
-    local_waited=0
-    while [ $local_waited -lt 90 ]; do
-      if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
-        echo "  ✓ LiteLLM healthy after ~${local_waited}s."
-        break
-      fi
-      printf "  ."
-      sleep 5
-      local_waited=$((local_waited + 5))
-    done
-    if [ $local_waited -ge 90 ]; then
-      echo ""
-      echo "ERROR: LiteLLM did not become healthy within 90s. Check: docker compose logs"
-      exit 1
+  echo "  Waiting for LiteLLM to become healthy (up to 90s)..."
+  local_waited=0
+  while [ $local_waited -lt 90 ]; do
+    if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
+      echo "  ✓ LiteLLM healthy after ~${local_waited}s."
+      break
     fi
+    printf "  ."
+    sleep 5
+    local_waited=$((local_waited + 5))
+  done
+  if [ $local_waited -ge 90 ]; then
+    echo ""
+    echo "ERROR: LiteLLM did not become healthy within 90s. Check: docker compose logs" >&2
+    exit 1
   fi
 fi

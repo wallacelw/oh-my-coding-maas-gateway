@@ -15,7 +15,7 @@ multiple unrelated changes in one commit. Do not leave uncommitted changes.
 
 Before committing, validate the change from **all** relevant perspectives:
 
-1. **Script validation:** Run `./scripts/5_validate.sh` (or
+1. **Script validation:** Run `./scripts/06_validate.sh` (or
    `--litellm-only` / `--opencode-only` / `--skip-*` as appropriate).
    Must pass (or fail only on expected checks like placeholder MaaS key).
 
@@ -27,7 +27,7 @@ Before committing, validate the change from **all** relevant perspectives:
    - Changed presets? Check REFERENCE.md agent→model table, CHANGELOG.
    - Changed ports/services? Check docker-compose.yml, SKILL.md Steps 6-7,
      REFERENCE.md endpoints, .githooks/pre-commit.
-   - Changed env vars? Check .env.template, 1_init_env.sh, 0_bootstrap.sh,
+   - Changed env vars? Check .env.template, 01_env.sh, bootstrap.sh,
      docker-compose.yml, SKILL.md Key Contract table.
 
 3. **Documentation accuracy:** Read the affected documentation sections
@@ -35,9 +35,9 @@ Before committing, validate the change from **all** relevant perspectives:
    examples should reflect current behavior — not stale descriptions.
 
 4. **Edge cases:** Consider:
-   - `--agent` mode vs interactive mode
+   - Interactive mode vs env-var override (HUAWEI_MAAS_API_KEY + --tool=)
    - `--tool=` mode variants (litellm, opencode, codex, claude, custom combos)
-   - `--litellm-only` vs full mode
+   - `--litellm-only` vs full mode (on 06_validate.sh)
    - `--dry-run` mode
    - Idempotent re-run (existing .env, running containers)
    - Upgrade path (existing installation, missing vars)
@@ -66,13 +66,13 @@ then body with `-` bullets for details:
 ```
 Fix bugs found in end-to-end review
 
-- 0_bootstrap.sh: duplicate key count message in agent mode
-- 5_validate.sh: --litellm-only --opencode-only silent no-op
-- 3_mint_key.sh: empty duration display
+- bootstrap.sh: duplicate key count message in agent mode
+- 06_validate.sh: --litellm-only --opencode-only silent no-op
+- helpers/keys.sh: empty duration display
 ```
 
-Note: `5_validate.sh` uses `--xxx-only` flags (still valid). `0_bootstrap.sh`
-uses `--tool=` flags (new syntax).
+Note: `06_validate.sh` uses `--xxx-only` flags (still valid). `bootstrap.sh`
+uses `--tool=` flags.
 
 ## Never Commit
 
@@ -98,7 +98,8 @@ uses `--tool=` flags (new syntax).
 ## Project Structure
 
 ```
-scripts/          — install + validate scripts (numbered 0-5)
+scripts/          — install pipeline (bootstrap + numbered steps 01-06)
+scripts/helpers/   — shared helper libraries (prereqs, keys, common)
 configs/          — component configs grouped by service
 configs/litellm/   — LiteLLM config, entrypoint, template
 configs/prometheus/ — Prometheus config

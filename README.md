@@ -38,7 +38,7 @@ Two ways to install:
 ```bash
 git clone https://github.com/wallacelw/oh-my-coding-maas-gateway ~/oh-my-coding-maas-gateway
 cd ~/oh-my-coding-maas-gateway
-./scripts/0_bootstrap.sh
+./scripts/bootstrap.sh
 ```
 
 You'll get a menu to choose what to install. Enter your MaaS API key when
@@ -58,13 +58,15 @@ Install oh-my-coding-maas-gateway on this machine by following SKILL.md.
 2. Follow the procedure — execute every step in order. For each step:
    check precondition, run action, verify postcondition. If a step fails,
    run the documented recovery. If recovery also fails, stop and report.
-3. The install is complete when scripts/5_validate.sh exits 0 (Step 7).
+3. The install is complete when scripts/06_validate.sh exits 0 (Step 7).
 4. Do NOT launch opencode. Report the summary from Step 8 and stop.
 
 You will need to ask me for:
 - Install mode: all, litellm, opencode, codex, or claude (default: all)
+  (or pass --tool=opencode, --tool=codex, etc. to skip the menu)
 - Install directory (default: /home/oh-my-coding-maas-gateway)
 - My Huawei MaaS API key (region: ap-southeast-1)
+  (or set HUAWEI_MAAS_API_KEY env var before running bootstrap)
 - How many extra MaaS keys for load balancing (default: 0)
 - My sudo password if the system prompts for it
 
@@ -87,9 +89,9 @@ Upgrade oh-my-coding-maas-gateway by following the Upgrade Procedure in SKILL.md
    If .env is missing, stop and report.
 4. Run: git -C "$PROJECT_DIR" pull --ff-only
    If pull fails, ask me: "Reset to origin/main? (y/n)"
-5. Run: ./scripts/0_bootstrap.sh --agent --maas-key="$MAAS_KEY"
+5. Run: ./scripts/bootstrap.sh
    (add --tool=... if the existing install used a specific mode)
-6. The upgrade is complete when scripts/5_validate.sh exits 0.
+6. The upgrade is complete when scripts/06_validate.sh exits 0.
 7. Do NOT launch opencode. Report the summary and stop.
 
 Rules:
@@ -146,12 +148,14 @@ Interactive menu appears when you run bootstrap. Or use `--tool=` flag:
 **Auto-installed** by the scripts as needed (no manual setup required):
 git, python3, curl, jq, docker + compose, bun, npm/node, bubblewrap.
 
-In interactive mode, you'll be prompted before each installation. In agent
-mode (`--agent`), everything installs automatically.
+In interactive mode, you'll be prompted before each installation. Non-interactive
+shells (piped stdin, CI) auto-confirm.
 
 **Non-Debian systems** (RHEL, Alpine, Arch): Install the equivalent packages
 manually — see the package mapping table in [SKILL.md](./SKILL.md) Step 2.
 Docker daemon start requires systemd.
+
+See [INSTALLATION.md](./INSTALLATION.md) for the per-script prerequisite table.
 
 ---
 
@@ -201,7 +205,7 @@ claude --bare --model claude-deepseek-v4-pro    # deep reasoning
 ```bash
 cd ~/oh-my-coding-maas-gateway
 git pull
-./scripts/0_bootstrap.sh    # idempotent — preserves all secrets and data
+./scripts/bootstrap.sh    # idempotent — preserves all secrets and data
 ```
 
 After upgrade, restart opencode if it's running (exit and start fresh —
@@ -215,6 +219,7 @@ If Grafana dashboard looks stale after upgrade: `docker compose restart grafana`
 
 | File | For | Description |
 |------|-----|-------------|
+| **[INSTALLATION.md](./INSTALLATION.md)** | Everyone | Install process, pipeline, per-script details, flags, env vars, prerequisites, recovery, upgrade |
 | **[SKILL.md](./SKILL.md)** | Agents | Deterministic install procedure (8 steps, agent-first) |
 | **[REFERENCE.md](./REFERENCE.md)** | Everyone | Architecture, config, env vars, tool integration, repair guide, lifecycle |
 | **[CHANGELOG.md](./CHANGELOG.md)** | Everyone | Version history |

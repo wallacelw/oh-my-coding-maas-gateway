@@ -7,7 +7,7 @@ description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) ro
 
 Deploy LiteLLM proxy → bootstrap opencode + Codex CLI + Claude Code CLI → mint virtual keys → configure. **Idempotent.**
 
-For reference documentation (architecture, env vars, presets, models, repair),
+For full install process details and per-script reference, see **[INSTALLATION.md](./INSTALLATION.md)**. For reference documentation (architecture, env vars, presets, models, repair),
 see **[REFERENCE.md](./REFERENCE.md)**.
 
 ---
@@ -16,14 +16,11 @@ see **[REFERENCE.md](./REFERENCE.md)**.
 
 | Flag | Effect |
 |------|--------|
-| `--maas-key=KEY` | Non-interactive MaaS key (skips prompt) |
-| `--agent` | Agent mode: fail-fast, no prompts, auto-install prereqs |
-| `--tool=VAL` | `all` (default), `litellm`, `opencode`, `codex`, `claude`, or comma combo (e.g. `opencode,codex`) |
-| `--virtual-key=sk-...` | Use existing virtual key, skip minting |
+| `--tool=VAL` | `all` (default), `litellm`, `opencode`, `codex`, `claude`, or comma combo (e.g. `opencode,codex`). Skips the menu. |
+| `--virtual-key=sk-...` | Use existing opencode virtual key, skip minting |
 | `--dry-run` | Preview actions without modifying anything |
 
-Legacy aliases: `--litellm-only`, `--opencode-only`, `--codex-only`,
-`--claude-code-only` (map to `--tool=litellm|opencode|codex|claude`).
+Environment variable overrides: set `HUAWEI_MAAS_API_KEY` (and `HUAWEI_MAAS_API_KEY_1..N` / `HUAWEI_MAAS_API_KEY_COUNT` for load balancing) before running bootstrap to skip prompts. See [INSTALLATION.md](./INSTALLATION.md) for full details.
 
 ---
 
@@ -32,7 +29,7 @@ Legacy aliases: `--litellm-only`, `--opencode-only`, `--codex-only`,
 - If any step's precondition is already met, skip and verify postcondition.
 - Safe to re-run from any step. Never destroys data or regenerates immutable
   secrets (`LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, `DB_PASSWORD`).
-- Only `1_init_env.sh --auto --force` regenerates secrets (for key rotation).
+- Only `01_env.sh --force` regenerates secrets (for key rotation).
 
 ---
 
@@ -73,7 +70,7 @@ sudo mkdir -p "$PROJECT_DIR" && sudo chown "$USER" "$PROJECT_DIR"
 
 **Action:**
 
-Bootstrap ensures its own prerequisites via `scripts/lib/prereqs.sh`:
+Bootstrap ensures its own prerequisites via `scripts/helpers/prereqs.sh`:
 
 ```bash
 prereq_ensure_apt "git"     git     git
@@ -83,21 +80,19 @@ prereq_ensure_apt "jq"      jq      jq
 ```
 
 If any are missing, they are installed automatically (`apt-get install -y`).
-Interactive mode prompts before installing; agent mode (`--agent`) installs
-without prompting.
+Interactive mode prompts before installing; non-interactive shells auto-confirm.
 
 **Distributed prerequisites** — each script ensures only what it needs:
 
 | Script | Ensures |
 |--------|---------|
-| `0_bootstrap.sh` | git, python3, curl, jq |
-| `1_init_env.sh` | python3 |
-| `2_deploy_litellm.sh` | curl, docker + compose + daemon |
-| `3_mint_key.sh` | curl, jq |
-| `4a_install_opencode.sh` | curl, jq, bun |
-| `4b_install_codex.sh` | curl, npm/node, jq, bubblewrap |
-| `4c_install_claude_code.sh` | curl, npm/node, jq |
-| `5_validate.sh` | curl, jq |
+| `bootstrap.sh` | git, python3, curl, jq |
+| `01_env.sh` | python3 |
+| `02_litellm.sh` | curl, docker + compose + daemon |
+| `03_opencode.sh` | curl, jq, bun |
+| `04_codex.sh` | curl, npm/node, jq, bubblewrap |
+| `05_claude_code.sh` | curl, npm/node, jq |
+| `06_validate.sh` | curl, jq |
 
 Scripts are independently runnable. Repeated installs are harmless (apt is
 idempotent; the helper library tracks what's been ensured per process).
@@ -132,8 +127,9 @@ systems, start the Docker daemon manually before running bootstrap.
 
 **Action:**
 
-Prompt for Huawei ModelArts MaaS API key (region: ap-southeast-1). Validate
-non-empty and not a placeholder:
+`01_env.sh` collects the Huawei ModelArts MaaS API key (region: ap-southeast-1)
+from the `HUAWEI_MAAS_API_KEY` environment variable or interactive prompt.
+Validate non-empty and not a placeholder:
 
 ```bash
 [ -n "$MAAS_KEY" ] \
@@ -143,8 +139,8 @@ non-empty and not a placeholder:
 
 If invalid: re-prompt.
 
-Optionally collect N additional keys for load balancing. Validate each the
-same way. Export:
+Optionally collect N additional keys for load balancing (from env vars or
+prompt). Validate each the same way. Export:
 
 ```bash
 export HUAWEI_MAAS_API_KEY="$MAAS_KEY"
@@ -180,7 +176,7 @@ Select installation scope:
   6) Custom — toggle each component
 ```
 
-Agent mode: pass `--tool=VAL` where VAL is `all` (default), `litellm`,
+Pass `--tool=VAL` where VAL is `all` (default), `litellm`,
 `opencode`, `codex`, `claude`, or a comma combo (e.g. `opencode,codex`).
 
 **Postcondition:** `$INSTALL_TOOL` is set.
@@ -195,17 +191,17 @@ Agent mode: pass `--tool=VAL` where VAL is `all` (default), `litellm`,
 
 ```bash
 cd "$PROJECT_DIR"
-./scripts/0_bootstrap.sh --agent --tool="$INSTALL_TOOL" --maas-key="$MAAS_KEY"
+./scripts/bootstrap.sh --tool="$INSTALL_TOOL"
 ```
 
 Bootstrap is idempotent and handles internally:
 - Docker engine + compose + daemon startup (via `prereq_ensure_docker`)
-- Port conflict check (exits in agent mode if ports 4000/5432/9090/3000 in use)
+- Port conflict check (exits if ports 4000/5432/9090/3000 in use)
 - `.env` generation (preserving existing immutable secrets)
 - `configs/litellm/config.yaml` generation
 - Docker Compose stack start (LiteLLM + PostgreSQL + Prometheus + Grafana)
 - Tool installs + virtual key minting + config writing (per selected scope)
-- Internal validation (`5_validate.sh`)
+- Internal validation (`06_validate.sh`)
 
 **What bootstrap does by mode:**
 
@@ -225,7 +221,7 @@ Bootstrap is idempotent and handles internally:
 - Git hooks: Bootstrap configures `.githooks/pre-commit` to block committing
   `.env` and secrets.
 
-**Postcondition:** `0_bootstrap.sh` exits 0.
+**Postcondition:** `bootstrap.sh` exits 0.
 
 **On failure:** `docker compose logs litellm --tail 50`. Escalate with logs.
 
@@ -260,22 +256,22 @@ done
 
 ```bash
 cd "$PROJECT_DIR"
-./scripts/5_validate.sh    # add --litellm-only / --opencode-only / etc. for scoped checks
+./scripts/06_validate.sh    # add --litellm-only / --opencode-only / etc. for scoped checks
 ```
 
-**Postcondition:** `5_validate.sh` exits 0.
+**Postcondition:** `06_validate.sh` exits 0.
 
 **On failure:** Parse FAIL lines, match on keywords, run recovery:
 
 | FAIL pattern | Recovery |
 |--------------|----------|
-| `.env not found` / `placeholder value` | Re-run `1_init_env.sh --auto` then bootstrap |
+| `.env not found` / `placeholder value` | Re-run `01_env.sh` then bootstrap |
 | `services running` + `expected 4` | `docker compose up -d`, wait 30s, retry |
 | `liveness probe returned` | `docker compose logs litellm --tail 50` |
 | `Inference smoke test` + `did not respond` | Re-validate MaaS key; check logs |
-| **opencode issues** (`opencode not found`, `opencode.json`, `oh-my-opencode-slim`, `No opencode config`, `No API key for model checks`, `Model catalog not reachable`) | Re-run `4a_install_opencode.sh` (or `curl -fsSL https://opencode.ai/install \| bash` if binary missing) |
-| **Codex issues** (`codex not found`, `config.toml`, `No Codex config`, `base_url`, `env_key`, `wire_api`, `default model`) | Re-run `4b_install_codex.sh` (or `npm install -g @openai/codex` if binary missing) |
-| **Claude Code issues** (`claude not found`, `settings.json`, `No Claude Code config`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY`, `default model`) | Re-run `4c_install_claude_code.sh` (or `npm install -g @anthropic-ai/claude-code` if binary missing) |
+| **opencode issues** (`opencode not found`, `opencode.json`, `oh-my-opencode-slim`, `No opencode config`, `No API key for model checks`, `Model catalog not reachable`) | Re-run `03_opencode.sh` (or `curl -fsSL https://opencode.ai/install \| bash` if binary missing) |
+| **Codex issues** (`codex not found`, `config.toml`, `No Codex config`, `base_url`, `env_key`, `wire_api`, `default model`) | Re-run `04_codex.sh` (or `npm install -g @openai/codex` if binary missing) |
+| **Claude Code issues** (`claude not found`, `settings.json`, `No Claude Code config`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY`, `default model`) | Re-run `05_claude_code.sh` (or `npm install -g @anthropic-ai/claude-code` if binary missing) |
 | `Responses API smoke test` + `did not respond` | Check `~/.codex/.env` key; verify `/v1/responses` |
 | `Messages API smoke test` + `did not respond` | Check `~/.claude/settings.json` key |
 | `Prometheus not reachable` | `docker compose up -d prometheus`, wait 10s |
@@ -287,7 +283,7 @@ cd "$PROJECT_DIR"
 > not found`, `unhealthy_count > 0`, deployment drift) do NOT cause non-zero
 > exit — they are advisory. Monitor but proceed.
 
-After recovery, re-run `5_validate.sh` **once**. If it still fails: escalate
+After recovery, re-run `06_validate.sh` **once**. If it still fails: escalate
 with full output. Do not loop recovery more than once.
 
 ---
@@ -306,7 +302,8 @@ Bootstrap prints a summary at the end of Step 5 containing:
 - Coding agent activation commands + config paths + masked virtual keys
 - Next steps
 
-In agent mode (`--agent`), a security warning is appended:
+A security warning is appended to the summary, plus advice to restart the
+shell to clear exported environment variables.
 
 ```
 ⚠️  Security: API keys were shared with the agent via command line
@@ -321,7 +318,7 @@ Do NOT show this warning for interactive installs.
 
 ---
 
-**The install is complete when Step 7 (`5_validate.sh`) exits 0.** Step 8 is
+**The install is complete when Step 7 (`06_validate.sh`) exits 0.** Step 8 is
 informational only. Do NOT launch `opencode` — that is the user's next action.
 
 ---
@@ -351,7 +348,7 @@ modifications:
   `docker compose restart grafana` (Grafana won't overwrite UI-modified
   dashboards with provisioned ones on its own).
 
-**Upgrade is complete when `5_validate.sh` exits 0.**
+**Upgrade is complete when `06_validate.sh` exits 0.**
 
 **Post-upgrade:** Restart opencode (exit with `/exit` or Ctrl+C, start fresh)
 to pick up new config. Plugin/preset changes are not hot-reloaded.

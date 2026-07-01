@@ -2,11 +2,14 @@
 # prereqs.sh — Shared prerequisite installation helpers
 #
 # Source from any script:
-#   source "$(dirname "${BASH_SOURCE[0]}")/lib/prereqs.sh"
+#   source "$(dirname "${BASH_SOURCE[0]}")/helpers/prereqs.sh"
 #
 # Mode is controlled by $PREREQ_MODE:
-#   auto   — install without prompting (agent/CI mode)
-#   prompt — ask y/n before installing (interactive, default when tty)
+#   prompt — ask y/n before installing (default; interactive)
+#   auto   — install without prompting (CI / explicit override)
+#
+# When stdin is not a TTY (e.g. agent piping answers, CI), prompts are
+# auto-confirmed so installation proceeds without blocking.
 #
 # All functions are idempotent: safe to call multiple times.
 
@@ -50,10 +53,11 @@ _prereq_fail() {
   exit 1
 }
 
-# Prompt user y/n (only in prompt mode); returns 0 for yes, 1 for no
+# Prompt user y/n (only in prompt mode); returns 0 for yes, 1 for no.
+# Non-interactive shells (piped stdin / CI) auto-confirm.
 _prereq_prompt() {
   local question="$1"
-  if [ "${PREREQ_MODE:-auto}" = "auto" ]; then
+  if [ "${PREREQ_MODE:-prompt}" = "auto" ]; then
     return 0
   fi
   # Non-interactive shell → auto-install
