@@ -30,12 +30,6 @@ cd /home/oh-my-coding-maas-gateway
 ./scripts/bootstrap.sh
 ```
 
-Non-interactive (CI or agent driving stdin):
-
-```bash
-HUAWEI_MAAS_API_KEY=$KEY ./scripts/bootstrap.sh --tool=opencode
-```
-
 ---
 
 ## Pipeline
