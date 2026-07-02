@@ -45,7 +45,7 @@ Bootstrap clones itself, shows a menu to choose what to install, and prompts
 for your MaaS API key. Prerequisites are installed automatically.
 
 ```bash
-opencode          # or: codex  or:  claude --bare
+opencode          # or: codex  or:  claude --bare  or:  pi
 ```
 
 After upgrade, restart opencode if it's running (exit and start fresh —
@@ -84,6 +84,7 @@ prompt to me with context. After completion, give me next steps.
 | opencode | `opencode` | OpenAI Chat Completions | `~/.config/opencode/opencode.json` |
 | Codex CLI | `codex` | OpenAI Responses (bridged) | `~/.codex/config.toml` |
 | Claude Code CLI | `claude --bare` | Anthropic Messages | `~/.claude/settings.json` |
+| Pi agent | `pi` | OpenAI Chat Completions | `~/.pi/agent/models.json` |
 
 Each tool gets its own virtual key with unlimited budget and access to all
 models. opencode also gets 4 presets and 7 agents via the
@@ -97,12 +98,13 @@ Interactive menu appears when you run bootstrap. Or use `--tool=` flag:
 
 | Choice | Flag | What gets installed |
 |--------|------|-------------------|
-| 1 (default) | `--tool=all` | LiteLLM + opencode + Codex + Claude Code |
+| 1 (default) | `--tool=all` | LiteLLM + all coding tools |
 | 2 | `--tool=litellm` | LiteLLM proxy only |
 | 3 | `--tool=opencode` | LiteLLM + opencode |
 | 4 | `--tool=codex` | LiteLLM + Codex CLI |
 | 5 | `--tool=claude` | LiteLLM + Claude Code CLI |
-| 6 | `--tool=opencode,codex` | Custom combo (comma-separated) |
+| 6 | `--tool=pi` | LiteLLM + Pi agent |
+| 7 | `--tool=opencode,codex` | Custom combo (comma-separated) |
 
 ---
 

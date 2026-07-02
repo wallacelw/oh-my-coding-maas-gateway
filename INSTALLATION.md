@@ -43,15 +43,16 @@ domain and is independently runnable.
 | — | `bootstrap.sh` | Orchestration | — | Entry point. Selection → core prereqs → dispatch steps → summary. |
 | 01 | `01_env.sh` | Environment & secrets | no | Generate/update `.env` (immutable secrets, MaaS keys, endpoints); configure git hooks. |
 | 02 | `02_litellm.sh` | LiteLLM proxy + observability | no | Generate `config.yaml`; port check; Docker Compose up (LiteLLM + PostgreSQL + Prometheus + Grafana); wait for health. |
-| 03 | `03_opencode.sh` | opencode | yes | Install opencode + oh-my-opencode-slim plugin; mint virtual key; write config. |
-| 04 | `04_codex.sh` | Codex CLI | yes | Install Codex CLI; mint virtual key; write config + model catalog. |
-| 05 | `05_claude_code.sh` | Claude Code CLI | yes | Install Claude Code CLI; mint virtual key; write settings; disable VSCode extension. |
-| 06 | `06_validate.sh` | Validation | no | End-to-end validation of all installed components. |
+| 03a | `03a_opencode.sh` | opencode | yes | Install opencode + oh-my-opencode-slim plugin; mint virtual key; write config. |
+| 03b | `03b_codex.sh` | Codex CLI | yes | Install Codex CLI; mint virtual key; write config + model catalog. |
+| 03c | `03c_claude_code.sh` | Claude Code CLI | yes | Install Claude Code CLI; mint virtual key; write settings; disable VSCode extension. |
+| 03d | `03d_pi.sh` | Pi agent | yes | Install Pi agent; mint virtual key; write `~/.pi/agent/models.json`. |
+| 04 | `04_validate.sh` | Validation | no | End-to-end validation of all installed components. |
 
 ### Ordering
 
 `01 env` (everything needs `.env`) → `02 litellm` (tools need the proxy live)
-→ `03/04/05` tools (independent, optional, any relative order) → `06 validate`
+→ `03a/03b/03c/03d` tools (independent, optional, any relative order) → `04 validate`
 (last, checks everything).
 
 ### Helpers (`scripts/helpers/`)
@@ -100,7 +101,7 @@ per format (dual OpenAI + Anthropic), 12N total. Checks ports 4000/5432/9090/
 + Grafana). Waits up to 90s for LiteLLM to become healthy. Supports
 `--routing-strategy=` and `--dry-run`.
 
-### `03_opencode.sh`
+### `03a_opencode.sh`
 
 Installs the opencode binary (via curl, output filtered with `run_filtered`),
 the oh-my-opencode-slim plugin (v2.0.5, via bunx — 4 presets, 7 agents, output
@@ -108,27 +109,33 @@ filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.
 
-### `04_codex.sh`
+### `03b_codex.sh`
 
 Installs the OpenAI Codex CLI (via npm), mints a virtual key (alias "codex"),
 and writes `~/.codex/config.toml` (custom `litellm_proxy` provider,
 `wire_api=responses`), `model_catalog.json`, and `.env` with the API key.
 Supports `--dry-run`.
 
-### `05_claude_code.sh`
+### `03c_claude_code.sh`
 
 Installs the Claude Code CLI (via npm), mints a virtual key (alias
 "claude-code"), writes `~/.claude/settings.json` (env block pointing to the
 LiteLLM proxy via the Anthropic Messages API), and disables the VSCode
 extension auto-install. Supports `--dry-run`.
 
-### `06_validate.sh`
+### `03d_pi.sh`
 
-Validates all installed components in sections A–E + observability:
+Installs the Pi coding agent (via `curl | sh` from pi.dev), mints a virtual
+key (alias "pi"), and writes `~/.pi/agent/models.json` (LiteLLM provider
+pointing to the proxy via OpenAI Chat Completions API). Supports `--dry-run`.
+
+### `04_validate.sh`
+
+Validates all installed components in sections A–F + observability:
 `.env` completeness, Docker services, LiteLLM health + config, Prometheus +
 Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
-`--litellm-only`/`--opencode-only`/`--codex-only`/`--claude-code-only`
-(scoped), and `--skip-opencode`/`--skip-codex`/`--skip-claude-code` (additive).
+`--litellm-only`/`--opencode-only`/`--codex-only`/`--claude-code-only`/`--pi-only`
+(scoped), and `--skip-opencode`/`--skip-codex`/`--skip-claude-code`/`--skip-pi` (additive).
 
 ---
 
@@ -148,7 +155,7 @@ Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
 |------|--------|
 | `--force` | Regenerate all immutable secrets (for key rotation). Invalidates existing virtual keys. |
 
-### `06_validate.sh`
+### `04_validate.sh`
 
 | Flag | Effect |
 |------|--------|
@@ -173,7 +180,7 @@ absent, the scripts prompt interactively (or error in non-interactive mode).
 
 | Variable | Purpose | Read by |
 |----------|---------|---------|
-| `HUAWEI_MAAS_API_KEY` | Main Huawei MaaS API key (region ap-southeast-1). | `01_env.sh`, `03_opencode.sh` |
+| `HUAWEI_MAAS_API_KEY` | Main Huawei MaaS API key (region ap-southeast-1). | `01_env.sh`, `03a_opencode.sh` |
 | `HUAWEI_MAAS_API_KEY_COUNT` | Total number of MaaS keys (1 + extras). | `01_env.sh`, `02_litellm.sh` |
 | `HUAWEI_MAAS_API_KEY_1..N` | Extra MaaS keys for load balancing. | `01_env.sh`, `02_litellm.sh` |
 | `LITELLM_MASTER_KEY` | LiteLLM master key (resolved from env or `.env`). | `03/04/05` via `helpers/keys.sh` |
@@ -225,10 +232,11 @@ ensures only its own prerequisites; skipped steps install nothing. A
 | `bootstrap.sh` | git, python3, curl, jq |
 | `01_env.sh` | python3, git |
 | `02_litellm.sh` | curl, docker + compose + daemon |
-| `03_opencode.sh` | curl, jq, bun |
-| `04_codex.sh` | curl, npm/node, jq, bubblewrap |
-| `05_claude_code.sh` | curl, npm/node, jq |
-| `06_validate.sh` | curl, jq |
+| `03a_opencode.sh` | curl, jq, bun |
+| `03b_codex.sh` | curl, npm/node, jq, bubblewrap |
+| `03c_claude_code.sh` | curl, npm/node, jq |
+| `03d_pi.sh` | curl, npm/node, jq |
+| `04_validate.sh` | curl, jq |
 
 Interactive mode prompts before each installation. Non-interactive shells
 (piped stdin, CI) auto-confirm. Each install is labeled with `[LOG_TAG]`
@@ -244,11 +252,11 @@ systemd.
 
 - Every step **self-sources `.env`** via `helpers/common.sh:source_env`. No
   script depends on another script's exports.
-- Every step is **independently runnable** — e.g. `./scripts/03_opencode.sh`
+- Every step is **independently runnable** — e.g. `./scripts/03a_opencode.sh`
   works standalone (sources `.env`, resolves the master key, mints, writes
   config).
 - **Optional steps (03/04/05)** are skipped per `--tool=`; skipping never
-  breaks later steps. `06_validate.sh` receives `--skip-*` for skipped tools.
+  breaks later steps. `04_validate.sh` receives `--skip-*` for skipped tools.
 - Idempotent — safe to re-run. Immutable secrets are preserved; existing
   containers, configs, and valid virtual keys are reused.
 
@@ -272,9 +280,10 @@ systemd.
 | `services running` + `expected 4` | `docker compose up -d`, wait 30s, retry |
 | `liveness probe returned` | `docker compose logs litellm --tail 50` |
 | `Inference smoke test` + `did not respond` | Re-validate MaaS key; check logs |
-| opencode issues (`opencode not found`, config) | Re-run `03_opencode.sh` |
-| Codex issues (`codex not found`, config) | Re-run `04_codex.sh` |
-| Claude Code issues (`claude not found`, config) | Re-run `05_claude_code.sh` |
+| opencode issues (`opencode not found`, config) | Re-run `03a_opencode.sh` |
+| Codex issues (`codex not found`, config) | Re-run `03b_codex.sh` |
+| Claude Code issues (`claude not found`, config) | Re-run `03c_claude_code.sh` |
+| Pi issues (`pi not found`, config) | Re-run `03d_pi.sh` |
 | `Prometheus not reachable` | `docker compose up -d prometheus`, wait 10s |
 | `/metrics endpoint not responding` | `docker compose restart litellm`, wait 15s |
 | `Grafana not reachable` | `docker compose up -d grafana`, wait 20s |
@@ -282,7 +291,7 @@ systemd.
 WARN messages (e.g. `litellm_config.yaml not found`, `unhealthy_count > 0`,
 deployment drift) do NOT cause non-zero exit — they are advisory.
 
-After recovery, re-run `06_validate.sh` **once**. If it still fails, escalate
+After recovery, re-run `04_validate.sh` **once**. If it still fails, escalate
 with full output.
 
 ---
@@ -313,7 +322,7 @@ git pull
 After upgrade, restart opencode if it's running (exit with `/exit` or Ctrl+C,
 start fresh — plugin/preset changes are not hot-reloaded).
 
-**Upgrade is complete when `06_validate.sh` exits 0.**
+**Upgrade is complete when `04_validate.sh` exits 0.**
 
 ---
 

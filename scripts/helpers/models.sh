@@ -2,7 +2,7 @@
 # models.sh — Shared model catalog
 #
 # Single source of truth for the Huawei MaaS model list. Sourced by
-# 02_litellm.sh (config generation) and 06_validate.sh (validation).
+# 02_litellm.sh (config generation) and 04_validate.sh (validation).
 #
 # To add/remove a model: edit this file only.
 #

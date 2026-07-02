@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── 03_opencode.sh — opencode tool (pipeline step 03, optional) ──────────────
+# ─── 03a_opencode.sh — opencode tool (pipeline step 03a, optional) ──────────────
 #
 # Domain:        opencode + oh-my-opencode-slim plugin
-# Order:         03 (after LiteLLM proxy is live)
+# Order:         03a (after LiteLLM proxy is live)
 # Optional:      yes (runs only if opencode is in the selection)
 # Description:   Install the opencode binary, the oh-my-opencode-slim plugin
 #                (4 presets, 7 agents), mint a LiteLLM virtual key (alias
@@ -14,7 +14,7 @@ set -euo pipefail
 #                --dry-run
 # Outputs:       ~/.config/opencode/opencode.json,
 #                ~/.config/opencode/oh-my-opencode-slim.json
-# Standalone:    yes — ./scripts/03_opencode.sh
+# Standalone:    yes — ./scripts/03a_opencode.sh
 # ──────────────────────────────────────────────────────────────────────────────
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -46,7 +46,7 @@ for arg in "$@"; do
   esac
 done
 
-log_step "Step 03 — opencode + oh-my-opencode-slim"
+log_step "Step 03a — opencode + oh-my-opencode-slim"
 [ "$DRY_RUN" = true ] && log_warn "DRY RUN — no changes will be made"
 
 # ── 1. Check prerequisites ──

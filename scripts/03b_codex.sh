@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── 04_codex.sh — Codex CLI tool (pipeline step 04, optional) ────────────────
+# ─── 03b_codex.sh — Codex CLI tool (pipeline step 03b, optional) ────────────────
 #
 # Domain:        Codex CLI
-# Order:         04 (after LiteLLM proxy is live)
+# Order:         03b (after LiteLLM proxy is live)
 # Optional:      yes (runs only if codex is in the selection)
 # Description:   Install the OpenAI Codex CLI, mint a LiteLLM virtual key
 #                (alias "codex"), and write ~/.codex/config.toml (custom
@@ -13,7 +13,7 @@ set -euo pipefail
 #                to Chat Completions by LiteLLM.
 # Inputs:        .env (LITELLM_MASTER_KEY), --virtual-key, --dry-run
 # Outputs:       ~/.codex/config.toml, ~/.codex/model_catalog.json, ~/.codex/.env
-# Standalone:    yes — ./scripts/04_codex.sh
+# Standalone:    yes — ./scripts/03b_codex.sh
 # ──────────────────────────────────────────────────────────────────────────────
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,7 +40,7 @@ for arg in "$@"; do
   esac
 done
 
-log_step "Step 04 — Codex CLI"
+log_step "Step 03b — Codex CLI"
 [ "$DRY_RUN" = true ] && log_dim "(DRY RUN — no changes will be made)"
 
 # ── 1. Check prerequisites ──

@@ -1,0 +1,47 @@
+{
+  "providers": {
+    "LiteLLM": {
+      "baseUrl": "http://127.0.0.1:4000/v1",
+      "api": "openai-completions",
+      "apiKey": "<VIRTUAL_KEY>",
+      "models": [
+        {
+          "id": "glm-5.2",
+          "name": "GLM 5.2",
+          "contextWindow": 192000,
+          "maxTokens": 128000
+        },
+        {
+          "id": "glm-5.1",
+          "name": "GLM 5.1",
+          "contextWindow": 192000,
+          "maxTokens": 128000
+        },
+        {
+          "id": "glm-5",
+          "name": "GLM 5",
+          "contextWindow": 192000,
+          "maxTokens": 64000
+        },
+        {
+          "id": "deepseek-v4-pro",
+          "name": "DeepSeek V4 Pro",
+          "contextWindow": 1000000,
+          "maxTokens": 128000
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "contextWindow": 1000000,
+          "maxTokens": 128000
+        },
+        {
+          "id": "deepseek-v3.2",
+          "name": "DeepSeek V3.2",
+          "contextWindow": 128000,
+          "maxTokens": 32000
+        }
+      ]
+    }
+  }
+}

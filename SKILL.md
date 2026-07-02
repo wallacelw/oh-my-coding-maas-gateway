@@ -60,7 +60,7 @@ If sudo prompts for a password, ask the user.
 
 ## 4. Verify
 
-Bootstrap runs `06_validate.sh` automatically. Check its exit code:
+Bootstrap runs `04_validate.sh` automatically. Check its exit code:
 
 - **Exit 0** — proceed to final summary.
 - **Exit non-zero** — match the FAIL pattern in the recovery table below,
@@ -75,7 +75,7 @@ Take bootstrap's output and complement it with:
   `http://127.0.0.1:4000/ui`, Grafana `http://127.0.0.1:3000`,
   Prometheus `http://127.0.0.1:9090`.
 - **How to launch tools** — `opencode`, `codex`, `claude --bare`.
-- **Health check** — `./scripts/06_validate.sh` (re-run anytime).
+- **Health check** — `./scripts/04_validate.sh` (re-run anytime).
 - **Key rotation** — remind the user to rotate their MaaS keys if shared
   with you during the process.
 - **Upgrade note** — if this was an upgrade, remind them to restart
@@ -89,9 +89,10 @@ Take bootstrap's output and complement it with:
 | `services running` + `expected 4` | `docker compose up -d`, wait 30s, retry |
 | `liveness probe returned` | `docker compose logs litellm --tail 50` |
 | `Inference smoke test` + `did not respond` | Re-validate MaaS key; check logs |
-| opencode issues (`opencode not found`, config) | Re-run `03_opencode.sh` |
-| Codex issues (`codex not found`, config) | Re-run `04_codex.sh` |
-| Claude Code issues (`claude not found`, config) | Re-run `05_claude_code.sh` |
+| opencode issues (`opencode not found`, config) | Re-run `03a_opencode.sh` |
+| Codex issues (`codex not found`, config) | Re-run `03b_codex.sh` |
+| Claude Code issues (`claude not found`, config) | Re-run `03c_claude_code.sh` |
+| Pi issues (`pi not found`, config) | Re-run `03d_pi.sh` |
 | `Prometheus not reachable` | `docker compose up -d prometheus`, wait 10s |
 | `/metrics endpoint not responding` | `docker compose restart litellm`, wait 15s |
 | `Grafana not reachable` | `docker compose up -d grafana`, wait 20s |

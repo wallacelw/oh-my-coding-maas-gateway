@@ -15,7 +15,7 @@ multiple unrelated changes in one commit. Do not leave uncommitted changes.
 
 Before committing, validate the change from **all** relevant perspectives:
 
-1. **Script validation:** Run `./scripts/06_validate.sh` (or
+1. **Script validation:** Run `./scripts/04_validate.sh` (or
    `--litellm-only` / `--opencode-only` / `--skip-*` as appropriate).
    Must pass (or fail only on expected checks like placeholder MaaS key).
 
@@ -39,7 +39,7 @@ Before committing, validate the change from **all** relevant perspectives:
 4. **Edge cases:** Consider:
    - Interactive mode vs env-var override (HUAWEI_MAAS_API_KEY + --tool=)
    - `--tool=` mode variants (litellm, opencode, codex, claude, custom combos)
-   - `--litellm-only` vs full mode (on 06_validate.sh)
+   - `--litellm-only` vs full mode (on 04_validate.sh)
    - `--dry-run` mode
    - Idempotent re-run (existing .env, running containers)
    - Upgrade path (existing installation, missing vars)
@@ -69,11 +69,11 @@ then body with `-` bullets for details:
 Fix bugs found in end-to-end review
 
 - bootstrap.sh: duplicate key count message in agent mode
-- 06_validate.sh: --litellm-only --opencode-only silent no-op
+- 04_validate.sh: --litellm-only --opencode-only silent no-op
 - helpers/keys.sh: empty duration display
 ```
 
-Note: `06_validate.sh` uses `--xxx-only` flags (still valid). `bootstrap.sh`
+Note: `04_validate.sh` uses `--xxx-only` flags (still valid). `bootstrap.sh`
 uses `--tool=` flags.
 
 ## Never Commit
@@ -109,6 +109,7 @@ configs/grafana/   — Grafana dashboards and provisioning
 configs/opencode/  — opencode + slim plugin templates
 configs/codex/     — Codex CLI config template + model catalog
 configs/claude-code/ — Claude Code CLI config template
+configs/pi/        — Pi agent models.json template
 root              — INSTALLATION.md, SKILL.md, REFERENCE.md, README.md, CHANGELOG.md, AGENTS.md
 ```
 
