@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-02
+
 ### Changed
 
 - **Install pipeline refactored to interactive-first thin-sequencer model.**
@@ -17,12 +19,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `bootstrap.sh`, `1_init_env.sh` → `01_env.sh`, `2_deploy_litellm.sh` →
   `02_litellm.sh`, `4a/4b/4c_install_*.sh` → `03/04/05_*.sh`,
   `5_validate.sh` → `06_validate.sh`.
-- `scripts/lib/` → `scripts/helpers/` (prereqs.sh, keys.sh, common.sh).
+- `scripts/lib/` → `scripts/helpers/` (prereqs.sh, keys.sh, common.sh, models.sh).
 - Every step now self-sources `.env` and is independently runnable
   (loose-coupling contract).
 - Prerequisites installed just-in-time, driven by selection — skipped steps
   install nothing.
 - Bootstrap summary now advises restarting the shell to clear env vars.
+- **curl|bash is now the default install and upgrade method.** Bootstrap
+  detects existing repo and pulls updates, or clones fresh if not found.
+  No manual clone needed.
+- **SKILL.md rewritten as agent supervisor+wrapper procedure** (105 lines).
+  Agent reads project docs, presents summary, asks install or upgrade,
+  relays every bootstrap prompt with context, delivers final summary.
+- **README.md merged install and upgrade into one section** with single
+  agent prompt pointing to SKILL.md.
+- `05_claude_code.sh` now merges existing `~/.claude/settings.json` instead
+  of destructively overwriting (preserves user settings).
+- `03_opencode.sh` omits `Huawei-MaaS` direct provider when no MaaS key
+  available (no more silent placeholder writes).
+- `helpers/keys.sh` uses free `/v1/models` probe instead of paid inference
+  call for virtual key validation.
+- `01_env.sh` preserves MaaS base URLs unconditionally (outside IS_FRESH
+  guard) — no longer resets custom region endpoints when secrets are empty.
+- `01_env.sh` sets `chmod 600` on `.env.tmp` before `mv` (no permissions race).
+- `configs/litellm/entrypoint.sh` detects Python version dynamically instead
+  of hardcoding `python3.13`.
+- `03_opencode.sh` substitutes slim schema version dynamically from
+  `SLIM_VERSION` (no manual sync with template).
+- REFERENCE.md Key Contract table: virtual keys relabeled as config values
+  (not env vars); "Immutable?" column renamed to "Rotate risk".
+- REFERENCE.md: Grafana description corrected (28 panels, 1h default time
+  window), `HUAWEI_MAAS_API_BASE` default fixed (`/openai/v1`).
+- `02_litellm.sh` port check uses word-boundary grep pattern (more robust).
 
 ### Added
 
@@ -31,8 +59,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/helpers/keys.sh` — `resolve_master_key` + `mint_or_reuse_key`
   (replaces `3_mint_key.sh`).
 - `scripts/helpers/common.sh` — `source_env`, `retry_curl`, `strip_jsonc`,
-  `mask_key` (DRYs duplicated code).
+  `mask_key`, logging, prompts, `run_filtered` (DRYs duplicated code).
+- `scripts/helpers/models.sh` — `MODELS` array, single source of truth for
+  model catalog (sourced by `02_litellm.sh` + `06_validate.sh`).
 - Selection-driven prerequisite summary in bootstrap.
+- Standalone clone-and-re-exec support in bootstrap (curl|bash works for
+  both fresh install and upgrade).
+- `06_validate.sh` runs inference smoke test regardless of opencode install
+  (previously skipped when `--skip-opencode`).
+- `06_validate.sh` disables observability checks for `--xxx-only` modes.
+- `06_validate.sh` warns if Claude model doesn't start with `claude-`.
+- `01_env.sh` validates `HUAWEI_MAAS_API_KEY_COUNT` is numeric.
+- `01_env.sh` warns on declared count vs actual extra-keys mismatch.
+- `01_env.sh` trap cleans up `.env.tmp` on interruption.
+- `.gitignore` adds `*.tmp` pattern.
+- All scripts reject unknown flags with error (no silent swallowing).
+
+### Fixed
+
+- `bootstrap.sh`: `git pull --ff-only` failure in standalone mode now prompts
+  "Reset to origin/main?" instead of dying under `set -e`.
+- `bootstrap.sh`: double install-dir prompt in standalone mode eliminated.
+- `bootstrap.sh`: "Bootstrap complete" banner now shows failure message when
+  validation fails.
+- `bootstrap.sh`: `&&...||` antipattern in menu replaced with `if/else`.
+- `05_claude_code.sh`: cleans up `.claude.json.tmp` on write failure.
+- `helpers/keys.sh`: warns when key lookup hits 50-key cap.
+- `helpers/common.sh`: `retry_curl` no longer retries on empty 200 responses.
+- `02_litellm.sh`: warns if LiteLLM restart fails (health check still verifies).
+- Stale script names fixed in `configs/.env.template` and
+  `configs/litellm/config.yaml.template`.
+- `06_validate.sh`: `MODEL_COUNT` variable shadowing fixed (renamed to
+  `LITELLM_MODEL_COUNT` in Section B5).
+- CHANGELOG duplicate `### Added` section under `[0.4.0]` merged.
 
 ### Removed
 
