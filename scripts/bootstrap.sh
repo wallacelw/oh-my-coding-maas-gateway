@@ -232,7 +232,6 @@ JQ_TOOLS="bootstrap, validate"
 NPM_TOOLS=""
 [ "$INSTALL_CODEX" = true ]       && NPM_TOOLS="codex"
 [ "$INSTALL_CLAUDE_CODE" = true ] && NPM_TOOLS="${NPM_TOOLS:+$NPM_TOOLS, }claude"
-[ "$INSTALL_PI" = true ]          && NPM_TOOLS="${NPM_TOOLS:+$NPM_TOOLS, }pi"
 
 printf "    ${C_DIM}%-14s %s${C_RESET}\n" "git"          "— bootstrap, env"
 printf "    ${C_DIM}%-14s %s${C_RESET}\n" "python3"      "— bootstrap, env"

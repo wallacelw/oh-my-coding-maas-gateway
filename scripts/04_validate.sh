@@ -4,7 +4,7 @@ set -euo pipefail
 # ─── 04_validate.sh — Validation (pipeline step 04, core) ─────────────────────
 #
 # Domain:        End-to-end validation
-# Order:         06 (last — checks everything installed)
+# Order:         04 (last — checks everything installed)
 # Optional:      no (core, always runs; scoped via --skip-*)
 # Description:   Validate all installed components: .env completeness, Docker
 #                services, LiteLLM health + config, observability (Prometheus +
@@ -679,7 +679,7 @@ if [ "$RUN_PI" = true ]; then
   if command -v pi &>/dev/null; then
     pass "pi installed: $(pi --version 2>/dev/null || echo 'unknown')"
   else
-    fail "pi not found — run: pip install pi-agent"
+    fail "pi not found — run: ./scripts/03d_pi.sh or curl -fsSL https://pi.dev/install.sh | sh"
   fi
 
   echo ""
