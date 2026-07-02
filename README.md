@@ -157,6 +157,13 @@ claude --bare
 claude --bare --model claude-deepseek-v4-pro    # deep reasoning
 ```
 
+### Using Pi agent
+
+```bash
+pi
+# Switch model at runtime via Pi's model selection UI
+```
+
 ### Monitoring
 
 - **Grafana:** `http://127.0.0.1:3000` — 28-panel dashboard (anonymous, no

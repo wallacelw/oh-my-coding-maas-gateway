@@ -164,9 +164,11 @@ Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
 | `--opencode-only` | Only opencode config checks. |
 | `--codex-only` | Only Codex CLI config checks. |
 | `--claude-code-only` | Only Claude Code CLI config checks. |
+| `--pi-only` | Only Pi agent config checks. |
 | `--skip-opencode` | Skip opencode checks (additive). |
 | `--skip-codex` | Skip Codex checks (additive). |
 | `--skip-claude-code` | Skip Claude Code checks (additive). |
+| `--skip-pi` | Skip Pi agent checks (additive). |
 
 The `--xxx-only` flags are mutually exclusive. The `--skip-*` flags combine
 with anything.
