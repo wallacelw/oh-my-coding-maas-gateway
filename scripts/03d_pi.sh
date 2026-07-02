@@ -6,7 +6,7 @@ set -euo pipefail
 # Domain:        @earendil-works/pi-coding-agent
 # Order:         03d (after LiteLLM proxy is live)
 # Optional:      yes (runs only if pi is in the selection)
-# Description:   Install the pi binary via npm, mint a LiteLLM virtual key
+# Description:   Install the pi binary via curl|sh from pi.dev, mint a LiteLLM virtual key
 #                (alias "pi"), and write models.json pointing to the LiteLLM
 #                proxy with all available models.
 # Inputs:        .env (LITELLM_MASTER_KEY, HUAWEI_MAAS_API_KEY), --dry-run
@@ -123,11 +123,11 @@ MODELS_JSON="[]"
 for model_entry in "${MODELS[@]}"; do
   IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost <<< "$model_entry"
   
-  # Use max_input as contextWindow, max_tokens as maxTokens
+  # Use max_tokens as contextWindow (total context), max_output as maxTokens (output limit)
   MODELS_JSON=$(echo "$MODELS_JSON" | jq --arg id "$model_name" \
                                     --arg name "$model_name" \
-                                    --argjson cw "$max_input" \
-                                    --argjson mt "$max_tokens" \
+                                    --argjson cw "$max_tokens" \
+                                    --argjson mt "$max_output" \
     '. + [{"id": $id, "name": $name, "contextWindow": $cw, "maxTokens": $mt}]')
 done
 
