@@ -235,7 +235,7 @@ ensures only its own prerequisites; skipped steps install nothing. A
 | `03a_opencode.sh` | curl, jq, bun |
 | `03b_codex.sh` | curl, npm/node, jq, bubblewrap |
 | `03c_claude_code.sh` | curl, npm/node, jq |
-| `03d_pi.sh` | curl, npm/node, jq |
+| `03d_pi.sh` | curl, jq |
 | `04_validate.sh` | curl, jq |
 
 Interactive mode prompts before each installation. Non-interactive shells

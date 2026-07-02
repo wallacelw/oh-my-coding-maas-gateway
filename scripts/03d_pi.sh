@@ -46,7 +46,6 @@ log_step "Step 03d — Pi coding agent"
 log_info "Checking prerequisites..."
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_apt "jq"   jq   jq
-prereq_ensure_npm "pi" npm
 
 if curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"
