@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── 06_validate.sh — Validation (pipeline step 06, core) ─────────────────────
+# ─── 04_validate.sh — Validation (pipeline step 04, core) ─────────────────────
 #
 # Domain:        End-to-end validation
 # Order:         06 (last — checks everything installed)
@@ -12,13 +12,13 @@ set -euo pipefail
 #                Sections are skipped via --skip-* or selected via --xxx-only.
 # Inputs:        .env, running Docker Compose stack, tool config files
 # Outputs:       pass/fail/warn counts to stdout; exit 0 on pass, 1 on fail
-# Standalone:    yes — ./scripts/06_validate.sh
+# Standalone:    yes — ./scripts/04_validate.sh
 #
 # Usage:
-#   ./06_validate.sh                       # full validation
-#   ./06_validate.sh --dry-run             # structure checks only (no network)
-#   ./06_validate.sh --litellm-only        # only LiteLLM proxy checks
-#   ./06_validate.sh --skip-opencode       # LiteLLM + Codex + Claude Code
+#   ./04_validate.sh                       # full validation
+#   ./04_validate.sh --dry-run             # structure checks only (no network)
+#   ./04_validate.sh --litellm-only        # only LiteLLM proxy checks
+#   ./04_validate.sh --skip-opencode       # LiteLLM + Codex + Claude Code
 # ──────────────────────────────────────────────────────────────────────────────
 
 PASS=0
@@ -29,9 +29,11 @@ LITELLM_ONLY=false
 OPENCODE_ONLY=false
 CODEX_ONLY=false
 CLAUDE_CODE_ONLY=false
+PI_ONLY=false
 SKIP_OPENCODE=false
 SKIP_CODEX=false
 SKIP_CLAUDE_CODE=false
+SKIP_PI=false
 LITELLM_URL="http://127.0.0.1:4000"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -54,6 +56,8 @@ for arg in "$@"; do
     --skip-opencode)    SKIP_OPENCODE=true ;;
     --skip-codex)       SKIP_CODEX=true ;;
     --skip-claude-code) SKIP_CLAUDE_CODE=true ;;
+    --skip-pi)          SKIP_PI=true ;;
+    --pi-only)          PI_ONLY=true ;;
     *)                  log_error "Unknown flag: $arg"; exit 1 ;;
   esac
 done
@@ -64,8 +68,9 @@ MODE_COUNT=0
 [ "$OPENCODE_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
 [ "$CODEX_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
 [ "$CLAUDE_CODE_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
+[ "$PI_ONLY" = true ] && MODE_COUNT=$((MODE_COUNT + 1))
 if [ "$MODE_COUNT" -gt 1 ]; then
-  echo "ERROR: --litellm-only, --opencode-only, --codex-only, and --claude-code-only are mutually exclusive." >&2
+  echo "ERROR: --litellm-only, --opencode-only, --codex-only, --claude-code-only, and --pi-only are mutually exclusive." >&2
   exit 1
 fi
 
@@ -74,19 +79,23 @@ RUN_LITELLM=true
 RUN_OPENCODE=true
 RUN_CODEX=true
 RUN_CLAUDE_CODE=true
+RUN_PI=true
 RUN_OBSERVABILITY=true
 if [ "$LITELLM_ONLY" = true ]; then
-  RUN_OPENCODE=false; RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_OBSERVABILITY=false
+  RUN_OPENCODE=false; RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false
 elif [ "$OPENCODE_ONLY" = true ]; then
-  RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_OBSERVABILITY=false
+  RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false
 elif [ "$CODEX_ONLY" = true ]; then
-  RUN_OPENCODE=false; RUN_CLAUDE_CODE=false; RUN_OBSERVABILITY=false
+  RUN_OPENCODE=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false
 elif [ "$CLAUDE_CODE_ONLY" = true ]; then
-  RUN_OPENCODE=false; RUN_CODEX=false; RUN_OBSERVABILITY=false
+  RUN_OPENCODE=false; RUN_CODEX=false; RUN_PI=false; RUN_OBSERVABILITY=false
+elif [ "$PI_ONLY" = true ]; then
+  RUN_OPENCODE=false; RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_OBSERVABILITY=false
 fi
 [ "$SKIP_OPENCODE" = true ] && RUN_OPENCODE=false
 [ "$SKIP_CODEX" = true ] && RUN_CODEX=false
 [ "$SKIP_CLAUDE_CODE" = true ] && RUN_CLAUDE_CODE=false
+[ "$SKIP_PI" = true ] && RUN_PI=false
 
 # ── Validation output helpers ──
 pass() { PASS=$((PASS + 1)); log_ok "$1"; }
@@ -650,6 +659,97 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
     fi
   else
     skip "Messages API smoke test (no API key found)"
+  fi
+
+  echo ""
+fi
+
+# ════════════════════════════════════════════════════════════════════════════
+# SECTION F: Pi Agent Configuration Validation
+# ════════════════════════════════════════════════════════════════════════════
+if [ "$RUN_PI" = true ]; then
+  echo ""
+  log_step "F. Pi Agent Configuration"
+
+  PI_DIR="$HOME/.pi/agent"
+  PI_CONFIG="$PI_DIR/models.json"
+
+  echo ""
+  log_info "F1. Pi binary"
+  if command -v pi &>/dev/null; then
+    pass "pi installed: $(pi --version 2>/dev/null || echo 'unknown')"
+  else
+    fail "pi not found — run: pip install pi-agent"
+  fi
+
+  echo ""
+  log_info "F2. Config file"
+  if [ -f "$PI_CONFIG" ]; then
+    pass "models.json exists: $PI_CONFIG"
+    if jq -e . "$PI_CONFIG" >/dev/null 2>&1; then
+      pass "Config parses as valid JSON"
+    else
+      fail "Config is not valid JSON"
+    fi
+    PERMS=$(stat -c '%a' "$PI_CONFIG" 2>/dev/null || stat -f '%Lp' "$PI_CONFIG" 2>/dev/null)
+    if [ "$PERMS" = "600" ]; then
+      pass "Config file permissions 600"
+    else
+      warn "Config file permissions $PERMS (expected 600)"
+    fi
+  else
+    fail "models.json not found in $PI_DIR"
+  fi
+
+  echo ""
+  log_info "F3. Provider configuration"
+  if [ -f "$PI_CONFIG" ] && jq -e . "$PI_CONFIG" >/dev/null 2>&1; then
+    PI_BASE_URL=$(jq -r '.providers.LiteLLM.baseUrl // empty' "$PI_CONFIG" 2>/dev/null || true)
+    if [ "$PI_BASE_URL" = "http://127.0.0.1:4000/v1" ]; then
+      pass "providers.LiteLLM.baseUrl points to LiteLLM proxy"
+    else
+      fail "providers.LiteLLM.baseUrl not pointing to LiteLLM proxy (got: $PI_BASE_URL)"
+    fi
+    PI_API_KEY=$(jq -r '.providers.LiteLLM.apiKey // empty' "$PI_CONFIG" 2>/dev/null || true)
+    if [[ "$PI_API_KEY" == sk-* ]]; then
+      pass "providers.LiteLLM.apiKey set (starts with sk-)"
+    else
+      fail "providers.LiteLLM.apiKey not set or invalid"
+    fi
+    PI_API=$(jq -r '.providers.LiteLLM.api // empty' "$PI_CONFIG" 2>/dev/null || true)
+    if [ "$PI_API" = "openai-completions" ]; then
+      pass "providers.LiteLLM.api equals openai-completions"
+    else
+      fail "providers.LiteLLM.api not set to openai-completions (got: $PI_API)"
+    fi
+    PI_MODEL_COUNT=$(jq -r '.providers.LiteLLM.models | length' "$PI_CONFIG" 2>/dev/null || echo "0")
+    if [ "$PI_MODEL_COUNT" -ge 6 ]; then
+      pass "providers.LiteLLM.models has $PI_MODEL_COUNT models (>= 6)"
+    else
+      fail "providers.LiteLLM.models has only $PI_MODEL_COUNT models (expected >= 6)"
+    fi
+  else
+    fail "No Pi config file — skipping provider checks"
+    FAIL=$((FAIL + 4))
+    PI_API_KEY=""
+  fi
+
+  echo ""
+  log_info "F4. Inference smoke test"
+  if [ "$DRY_RUN" = true ]; then
+    skip "Inference smoke test"
+  elif [ -n "${PI_API_KEY:-}" ]; then
+    SMOKE_MODEL="deepseek-v3.2"
+    if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
+        -H "Authorization: Bearer $PI_API_KEY" \
+        -H "Content-Type: application/json" \
+        -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1; then
+      pass "Inference smoke test: $SMOKE_MODEL responded"
+    else
+      fail "Inference smoke test: $SMOKE_MODEL did not respond"
+    fi
+  else
+    skip "Inference smoke test (no API key found)"
   fi
 
   echo ""

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── 05_claude_code.sh — Claude Code CLI tool (pipeline step 05, optional) ────
+# ─── 03c_claude_code.sh — Claude Code CLI tool (pipeline step 03c, optional) ────
 #
 # Domain:        Claude Code CLI
-# Order:         05 (after LiteLLM proxy is live)
+# Order:         03c (after LiteLLM proxy is live)
 # Optional:      yes (runs only if claude is in the selection)
 # Description:   Install the Claude Code CLI, mint a LiteLLM virtual key
 #                (alias "claude-code"), and write ~/.claude/settings.json
@@ -12,7 +12,7 @@ set -euo pipefail
 #                Messages API). Disables the VSCode extension auto-install.
 # Inputs:        .env (LITELLM_MASTER_KEY), --virtual-key, --dry-run
 # Outputs:       ~/.claude/settings.json, ~/.claude.json
-# Standalone:    yes — ./scripts/05_claude_code.sh
+# Standalone:    yes — ./scripts/03c_claude_code.sh
 # ──────────────────────────────────────────────────────────────────────────────
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,7 +39,7 @@ for arg in "$@"; do
   esac
 done
 
-log_step "Step 05 — Claude Code CLI"
+log_step "Step 03c — Claude Code CLI"
 [ "$DRY_RUN" = true ] && log_dim "(DRY RUN — no changes will be made)"
 
 # ── 1. Check prerequisites ──

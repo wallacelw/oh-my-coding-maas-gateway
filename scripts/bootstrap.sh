@@ -7,7 +7,7 @@ set -euo pipefail
 # Description:   Thin sequencer. Prompts for install location (default /home),
 #                resolves the tool selection (interactive menu or --tool=),
 #                ensures core prerequisites, runs the numbered pipeline steps
-#                (01_env → 02_litellm → 03/04/05 tools → 06_validate), and
+#                (01_env → 02_litellm → 03a/03b/03c/03d tools → 04_validate), and
 #                prints a colored summary. This is the only script a human
 #                needs to run. Each step is independently runnable too.
 #
@@ -102,23 +102,26 @@ LOG_TAG="bootstrap"
 INSTALL_OPENCODE=true
 INSTALL_CODEX=true
 INSTALL_CLAUDE_CODE=true
+INSTALL_PI=true
 
 # ── Parse --tool= into INSTALL_* flags ──
 if [ "$TOOL_SPECIFIED" = true ]; then
   INSTALL_OPENCODE=false
   INSTALL_CODEX=false
   INSTALL_CLAUDE_CODE=false
+  INSTALL_PI=false
   IFS=',' read -ra TOOL_PARTS <<< "$TOOL_SELECTION"
   for part in "${TOOL_PARTS[@]}"; do
     case "$part" in
-      all)       INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true ;;
+      all)       INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true; INSTALL_PI=true ;;
       litellm)   ;;
       opencode)  INSTALL_OPENCODE=true ;;
       codex)     INSTALL_CODEX=true ;;
       claude)    INSTALL_CLAUDE_CODE=true ;;
+      pi)        INSTALL_PI=true ;;
       *)
         log_error "Unknown tool '$part' in --tool=$TOOL_SELECTION"
-        log_dim "Valid values: all, litellm, opencode, codex, claude (or comma-separated combo)"
+        log_dim "Valid values: all, litellm, opencode, codex, claude, pi (or comma-separated combo)"
         exit 1
         ;;
     esac
@@ -175,30 +178,33 @@ prereq_ensure_apt "jq"      jq     jq
 # ── Tool selection (menu if --tool= not given) ──
 if [ "$TOOL_SPECIFIED" = false ] && [ -t 0 ]; then
   log_step "Select installation scope"
-  echo -e "  ${C_BOLD}1)${C_RESET} Default — LiteLLM + opencode + Codex + Claude Code"
+  echo -e "  ${C_BOLD}1)${C_RESET} Default — LiteLLM + all coding tools"
   echo -e "  ${C_BOLD}2)${C_RESET} LiteLLM only"
   echo -e "  ${C_BOLD}3)${C_RESET} LiteLLM + opencode"
   echo -e "  ${C_BOLD}4)${C_RESET} LiteLLM + Codex"
   echo -e "  ${C_BOLD}5)${C_RESET} LiteLLM + Claude Code"
-  echo -e "  ${C_BOLD}6)${C_RESET} Custom — toggle each component"
+  echo -e "  ${C_BOLD}6)${C_RESET} LiteLLM + Pi"
+  echo -e "  ${C_BOLD}7)${C_RESET} Custom — toggle each component"
   echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[1]${C_RESET}: "
   choice=""
   read -r choice < /dev/tty || choice="1"
   case "${choice:-1}" in
-    1) INSTALL_OPENCODE=true;  INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=true ;;
-    2) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false ;;
-    3) INSTALL_OPENCODE=true;  INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false ;;
-    4) INSTALL_OPENCODE=false; INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=false ;;
-    5) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=true ;;
-    6)
+    1) INSTALL_OPENCODE=true;  INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=true;  INSTALL_PI=true ;;
+    2) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
+    3) INSTALL_OPENCODE=true;  INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
+    4) INSTALL_OPENCODE=false; INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
+    5) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=true;  INSTALL_PI=false ;;
+    6) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=true ;;
+    7)
       log_dim "Custom selection (LiteLLM is always installed):"
       if prompt_yesno "Install opencode?" n; then INSTALL_OPENCODE=true; else INSTALL_OPENCODE=false; fi
       if prompt_yesno "Install Codex?" n; then INSTALL_CODEX=true; else INSTALL_CODEX=false; fi
       if prompt_yesno "Install Claude Code?" n; then INSTALL_CLAUDE_CODE=true; else INSTALL_CLAUDE_CODE=false; fi
+      if prompt_yesno "Install Pi?" n; then INSTALL_PI=true; else INSTALL_PI=false; fi
       ;;
     *)
       log_warn "Invalid choice. Defaulting to all."
-      INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true
+      INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true; INSTALL_PI=true
       ;;
   esac
 fi
@@ -210,6 +216,7 @@ echo -e "    ${C_DIM}LiteLLM:${C_RESET}      yes (always)"
 echo -e "    ${C_DIM}opencode:${C_RESET}     $( [ "$INSTALL_OPENCODE" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
 echo -e "    ${C_DIM}Codex:${C_RESET}        $( [ "$INSTALL_CODEX" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
 echo -e "    ${C_DIM}Claude Code:${C_RESET}  $( [ "$INSTALL_CLAUDE_CODE" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
+echo -e "    ${C_DIM}Pi:${C_RESET}            $( [ "$INSTALL_PI" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
 
 # ── Selection-driven prerequisite summary (prereq → needed by) ──
 log_dim "Prerequisites to install (as needed):"
@@ -220,10 +227,12 @@ JQ_TOOLS="bootstrap, validate"
 [ "$INSTALL_OPENCODE" = true ]   && CURL_TOOLS+=", opencode"  && JQ_TOOLS+=", opencode"
 [ "$INSTALL_CODEX" = true ]      && CURL_TOOLS+=", codex"     && JQ_TOOLS+=", codex"
 [ "$INSTALL_CLAUDE_CODE" = true ] && CURL_TOOLS+=", claude"   && JQ_TOOLS+=", claude"
+[ "$INSTALL_PI" = true ]         && CURL_TOOLS+=", pi"        && JQ_TOOLS+=", pi"
 
 NPM_TOOLS=""
 [ "$INSTALL_CODEX" = true ]       && NPM_TOOLS="codex"
 [ "$INSTALL_CLAUDE_CODE" = true ] && NPM_TOOLS="${NPM_TOOLS:+$NPM_TOOLS, }claude"
+[ "$INSTALL_PI" = true ]          && NPM_TOOLS="${NPM_TOOLS:+$NPM_TOOLS, }pi"
 
 printf "    ${C_DIM}%-14s %s${C_RESET}\n" "git"          "— bootstrap, env"
 printf "    ${C_DIM}%-14s %s${C_RESET}\n" "python3"      "— bootstrap, env"
@@ -257,42 +266,52 @@ fi
 run_step "Step 02: LiteLLM proxy + observability" \
   "$SCRIPT_DIR/02_litellm.sh" $([ "$DRY_RUN" = true ] && echo "--dry-run")
 
-# ── Step 03: opencode (optional) ──
+# ── Step 03a: opencode (optional) ──
 if [ "$INSTALL_OPENCODE" = true ]; then
   OPENCODE_ARGS=()
   [ -n "$VIRTUAL_KEY" ] && OPENCODE_ARGS+=("--virtual-key=$VIRTUAL_KEY")
   [ "$DRY_RUN" = true ] && OPENCODE_ARGS+=("--dry-run")
-  run_step "Step 03: opencode" "$SCRIPT_DIR/03_opencode.sh" "${OPENCODE_ARGS[@]}"
+  run_step "Step 03a: opencode" "$SCRIPT_DIR/03a_opencode.sh" "${OPENCODE_ARGS[@]}"
 else
   log_dim "(skipping opencode)"
 fi
 
-# ── Step 04: Codex CLI (optional) ──
+# ── Step 03b: Codex CLI (optional) ──
 if [ "$INSTALL_CODEX" = true ]; then
   CODEX_ARGS=()
   [ "$DRY_RUN" = true ] && CODEX_ARGS+=("--dry-run")
-  run_step "Step 04: Codex CLI" "$SCRIPT_DIR/04_codex.sh" "${CODEX_ARGS[@]}"
+  run_step "Step 03b: Codex CLI" "$SCRIPT_DIR/03b_codex.sh" "${CODEX_ARGS[@]}"
 else
   log_dim "(skipping Codex CLI)"
 fi
 
-# ── Step 05: Claude Code CLI (optional) ──
+# ── Step 03c: Claude Code CLI (optional) ──
 if [ "$INSTALL_CLAUDE_CODE" = true ]; then
   CLAUDE_ARGS=()
   [ "$DRY_RUN" = true ] && CLAUDE_ARGS+=("--dry-run")
-  run_step "Step 05: Claude Code CLI" "$SCRIPT_DIR/05_claude_code.sh" "${CLAUDE_ARGS[@]}"
+  run_step "Step 03c: Claude Code CLI" "$SCRIPT_DIR/03c_claude_code.sh" "${CLAUDE_ARGS[@]}"
 else
   log_dim "(skipping Claude Code CLI)"
 fi
 
-# ── Step 06: Validate ──
+# ── Step 03d: Pi agent (optional) ──
+if [ "$INSTALL_PI" = true ]; then
+  PI_ARGS=()
+  [ "$DRY_RUN" = true ] && PI_ARGS+=("--dry-run")
+  run_step "Step 03d: Pi agent" "$SCRIPT_DIR/03d_pi.sh" "${PI_ARGS[@]}"
+else
+  log_dim "(skipping Pi agent)"
+fi
+
+# ── Step 04: Validate ──
 VALIDATE_ARGS=()
 [ "$DRY_RUN" = true ] && VALIDATE_ARGS+=("--dry-run")
 [ "$INSTALL_OPENCODE" = false ] && VALIDATE_ARGS+=("--skip-opencode")
 [ "$INSTALL_CODEX" = false ] && VALIDATE_ARGS+=("--skip-codex")
 [ "$INSTALL_CLAUDE_CODE" = false ] && VALIDATE_ARGS+=("--skip-claude-code")
+[ "$INSTALL_PI" = false ] && VALIDATE_ARGS+=("--skip-pi")
 set +e
-run_step "Step 06: Validate" "$SCRIPT_DIR/06_validate.sh" "${VALIDATE_ARGS[@]}"
+run_step "Step 04: Validate" "$SCRIPT_DIR/04_validate.sh" "${VALIDATE_ARGS[@]}"
 VALIDATE_RC=$?
 set -e
 
@@ -330,12 +349,18 @@ if [ "$INSTALL_CLAUDE_CODE" = true ] && [ -f "$HOME/.claude/settings.json" ]; th
   CLAUDE_VK=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$HOME/.claude/settings.json" 2>/dev/null || true)
   [ -n "$CLAUDE_VK" ] && echo -e "  ${C_DIM}Claude Code key:${C_RESET}    $(mask_key "$CLAUDE_VK")"
 fi
+if [ "$INSTALL_PI" = true ] && [ -f "$HOME/.pi/agent/models.json" ]; then
+  echo -e "  ${C_DIM}Pi config:${C_RESET}         ~/.pi/agent/models.json"
+  PI_VK=$(jq -r '.providers.LiteLLM.apiKey // empty' "$HOME/.pi/agent/models.json" 2>/dev/null || true)
+  [ -n "$PI_VK" ] && echo -e "  ${C_DIM}Pi key:${C_RESET}              $(mask_key "$PI_VK")"
+fi
 
 echo ""
 echo -e "  ${C_BOLD}Next steps:${C_RESET}"
 [ "$INSTALL_OPENCODE" = true ] && echo -e "    opencode:  exit any running session, then run: ${C_CYAN}opencode${C_RESET}"
 [ "$INSTALL_CODEX" = true ] && echo -e "    Codex:     ${C_CYAN}codex${C_RESET}"
 [ "$INSTALL_CLAUDE_CODE" = true ] && echo -e "    Claude:    ${C_CYAN}claude --bare${C_RESET}"
+[ "$INSTALL_PI" = true ] && echo -e "    Pi:        ${C_CYAN}pi${C_RESET}"
 echo ""
 echo -e "  ${C_YELLOW}⚠ Security:${C_RESET} API keys were shared via environment variables and command line."
 echo -e "    ${C_DIM}Rotate your MaaS keys to prevent unauthorized use:${C_RESET}"
@@ -343,7 +368,7 @@ echo -e "      ${C_DIM}1. Get new key(s) from https://console.huaweicloud.com/mo
 echo -e "      ${C_DIM}2. Edit .env: replace HUAWEI_MAAS_API_KEY and HUAWEI_MAAS_API_KEY_1..N${C_RESET}"
 echo -e "      ${C_DIM}3. Regenerate config: ./scripts/02_litellm.sh${C_RESET}"
 echo -e "      ${C_DIM}4. Restart LiteLLM:  docker compose restart litellm${C_RESET}"
-echo -e "      ${C_DIM}5. Re-validate:      ./scripts/06_validate.sh${C_RESET}"
+echo -e "      ${C_DIM}5. Re-validate:      ./scripts/04_validate.sh${C_RESET}"
 echo ""
 echo -e "  ${C_BOLD}Restart your shell${C_RESET} (or open a new terminal) to clear exported environment"
 echo -e "  variables and apply all changes:"
