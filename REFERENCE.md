@@ -514,6 +514,34 @@ claude --bare --model claude-deepseek-v3.2      # fast
 
 ---
 
+## Pi Agent
+
+**Connection:** Pi → `/v1/chat/completions` → `openai/` provider → `/openai/v1/chat/completions`
+
+Pi agent connects to LiteLLM via the OpenAI Chat Completions API. LiteLLM
+forwards to Huawei MaaS using the `openai/` provider prefix.
+
+### Config Files
+
+| File | Purpose |
+|------|---------|
+| `~/.pi/agent/models.json` | Provider config: LiteLLM baseUrl, apiKey, model list (chmod 600) |
+
+### Model Selection
+
+Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
+- `baseUrl`: `http://127.0.0.1:4000/v1`
+- `api`: `openai-completions`
+- `apiKey`: virtual key (minted by `03d_pi.sh`, alias "pi")
+- `models[]`: all models from `models.sh` with `contextWindow` and `maxTokens`
+
+### Prerequisites
+
+- `curl` — for downloading the pi installer
+- `jq` — for generating models.json from the model catalog
+
+---
+
 ## Repair
 
 | Symptom | Fix |

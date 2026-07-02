@@ -145,7 +145,7 @@ Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
 
 | Flag | Effect |
 |------|--------|
-| `--tool=VAL` | `all` (default), `litellm`, `opencode`, `codex`, `claude`, or comma combo (e.g. `opencode,codex`). Skips the menu. |
+| `--tool=VAL` | `all` (default), `litellm`, `opencode`, `codex`, `claude`, `pi`, or comma combo (e.g. `opencode,codex`). Skips the menu. |
 | `--virtual-key=sk-...` | Reuse an existing opencode virtual key, skip minting. |
 | `--dry-run` | Preview actions without modifying anything. |
 

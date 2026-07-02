@@ -9,7 +9,7 @@ set -euo pipefail
 # Description:   Install the pi binary via curl|sh from pi.dev, mint a LiteLLM virtual key
 #                (alias "pi"), and write models.json pointing to the LiteLLM
 #                proxy with all available models.
-# Inputs:        .env (LITELLM_MASTER_KEY, HUAWEI_MAAS_API_KEY), --dry-run
+# Inputs:        .env (LITELLM_MASTER_KEY, HUAWEI_MAAS_API_KEY), --virtual-key, --dry-run
 # Outputs:       ~/.pi/agent/models.json
 # Standalone:    yes — ./scripts/03d_pi.sh
 # ──────────────────────────────────────────────────────────────────────────────
@@ -32,9 +32,11 @@ LOG_TAG="pi"
 
 # ── Parse args ──
 DRY_RUN=false
+VIRTUAL_KEY=""
 for arg in "$@"; do
   case "$arg" in
     --dry-run)       DRY_RUN=true ;;
+    --virtual-key=*) VIRTUAL_KEY="${arg#--virtual-key=}" ;;
     *) log_error "Unknown flag: $arg"; exit 1 ;;
   esac
 done
@@ -70,10 +72,11 @@ fi
 # ── 3. Acquire virtual key (idempotent) ──
 log_info "Configuring LiteLLM virtual key..."
 
-VIRTUAL_KEY=""
-
+# If --virtual-key= was provided, use it directly
+if [ -n "$VIRTUAL_KEY" ]; then
+  log_ok "Using provided virtual key: $(mask_key "$VIRTUAL_KEY")"
 # Try to reuse existing key from current pi config (fast, local)
-if [ -f "$PI_CONFIG" ]; then
+elif [ -f "$PI_CONFIG" ]; then
   EXISTING_KEY=$(jq -r '.providers.LiteLLM.apiKey // empty' "$PI_CONFIG" 2>/dev/null || true)
   if [ -n "$EXISTING_KEY" ] && [[ "$EXISTING_KEY" == sk-* ]]; then
     if [ "$DRY_RUN" = true ]; then
