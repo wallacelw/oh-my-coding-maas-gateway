@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-02
+
+### Added
+
+- **Pi coding agent support** (`scripts/03d_pi.sh`). Install via
+  `curl -fsSL https://pi.dev/install.sh | sh`, mint a LiteLLM virtual key
+  (alias "pi", unlimited budget), and write `~/.pi/agent/models.json`
+  pointing to the LiteLLM proxy with all models from `models.sh`.
+- `configs/pi/models.json.template` — reference template for pi config.
+- Bootstrap menu option 6 (LiteLLM + Pi), `--tool=pi` flag.
+- Validation Section F: pi binary, config, provider, and smoke test checks.
+  `--skip-pi` and `--pi-only` flags in `04_validate.sh`.
+
+### Changed
+
+- **Tool scripts renumbered** to group under step 03 with letter suffixes:
+  `03_opencode.sh` → `03a_opencode.sh`,
+  `04_codex.sh` → `03b_codex.sh`,
+  `05_claude_code.sh` → `03c_claude_code.sh`,
+  `06_validate.sh` → `04_validate.sh`.
+  Adding a new tool is now `03e_*.sh` — no renumbering needed.
+- All doc references updated for new script names and pi entries
+  (INSTALLATION.md, REFERENCE.md, SKILL.md, README.md, AGENTS.md).
+
 ## [0.5.0] - 2026-07-02
 
 ### Changed
