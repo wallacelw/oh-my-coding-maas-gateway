@@ -40,7 +40,7 @@ for arg in "$@"; do
     --dry-run)       DRY_RUN=true ;;
     --tool=*)        TOOL_SPECIFIED=true; TOOL_SELECTION="${arg#--tool=}" ;;
     *)
-      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|opencode,codex,...] [--virtual-key=sk-...] [--dry-run]"
+      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--dry-run]"
       exit 1
       ;;
   esac
