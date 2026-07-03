@@ -1,8 +1,8 @@
 # oh-my-coding-maas-gateway
 
-LiteLLM proxy routing Huawei MaaS models to opencode, Codex CLI, and Claude
-Code CLI — with virtual keys, multi-key load balancing, dual-format endpoints,
-and Prometheus + Grafana observability.
+LiteLLM proxy routing Huawei MaaS models to opencode, Codex CLI, Claude
+Code CLI, and Pi agent — with virtual keys, multi-key load balancing,
+dual-format endpoints, and Prometheus + Grafana observability.
 
 ---
 
@@ -19,6 +19,7 @@ observability — all through a single local proxy.
   opencode ──→ /v1/chat/completions ──→ openai/ provider ──→ MaaS OpenAI endpoint
   Codex CLI ──→ /v1/responses ────────→ openai/ provider ──→ MaaS OpenAI endpoint
   Claude Code ─→ /v1/messages ────────→ anthropic/ provider ─→ MaaS Anthropic endpoint
+  Pi agent ───→ /v1/chat/completions ──→ openai/ provider ──→ MaaS OpenAI endpoint
 
   LiteLLM: load-balances across N MaaS keys · PostgreSQL (:5432)
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
