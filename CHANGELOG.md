@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bootstrap menu option 6 (LiteLLM + Pi), `--tool=pi` flag.
 - Validation Section F: pi binary, config, provider, and smoke test checks.
   `--skip-pi` and `--pi-only` flags in `04_validate.sh`.
+- **`BIND_ADDRESS` env var** for remote access to VM-deployed stacks.
+  Default `127.0.0.1` (localhost only, secure). Set `0.0.0.0` to expose
+  ports to all interfaces. Documented SSH port forwarding alternative.
+- `--virtual-key=` flag in `03d_pi.sh` for standalone key reuse (parity
+  with 03b/03c).
 
 ### Changed
 
@@ -30,6 +35,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Adding a new tool is now `03e_*.sh` — no renumbering needed.
 - All doc references updated for new script names and pi entries
   (INSTALLATION.md, REFERENCE.md, SKILL.md, README.md, AGENTS.md).
+- Architecture diagrams aligned (fixed-width columns for tool name,
+  endpoint, provider).
+- SKILL.md frontmatter clarified: 4 presets are opencode-only, not all tools.
+
+### Fixed
+
+- Pi model field mapping: `contextWindow` now uses `max_tokens` (was
+  `max_input`), `maxTokens` now uses `max_output` (was `max_tokens`).
+- Pi validation F1 error hint: `curl|sh` from pi.dev (was `pip install`).
+- Removed unnecessary npm prereq for pi (installs via curl|sh, not npm).
+- Stale `Order: 06` header in `04_validate.sh` → `Order: 04`.
+- Stale `03/04/05` references in INSTALLATION.md → `03a-03d`.
 
 ## [0.5.0] - 2026-07-02
 
