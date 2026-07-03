@@ -31,9 +31,8 @@ CURL_TIMEOUT=15
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
-source_env "$PROJECT_DIR"
-
 LOG_TAG="opencode"
+source_env "$PROJECT_DIR"
 
 # ── Parse args ──
 VIRTUAL_KEY=""
@@ -69,6 +68,7 @@ if ! command -v opencode &>/dev/null; then
     log_dim "Would run: curl -fsSL $OPENCODE_INSTALL_URL | bash"
   else
     TMPFILE=$(mktemp /tmp/opencode_install.XXXXXX.sh)
+    trap 'rm -f "$TMPFILE"' EXIT
     if curl -fsSL --max-time 30 "$OPENCODE_INSTALL_URL" -o "$TMPFILE"; then
       run_filtered "opencode:installer" bash "$TMPFILE"
       log_ok "Installed: $(opencode --version 2>/dev/null)"
@@ -77,6 +77,7 @@ if ! command -v opencode &>/dev/null; then
       rm -f "$TMPFILE"; exit 1
     fi
     rm -f "$TMPFILE"
+    trap - EXIT
   fi
 else
   log_ok "Already installed: $(opencode --version 2>/dev/null || echo 'unknown')"

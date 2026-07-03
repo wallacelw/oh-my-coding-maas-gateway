@@ -40,7 +40,7 @@ for arg in "$@"; do
 done
 
 log_step "Step 03c — Claude Code CLI"
-[ "$DRY_RUN" = true ] && log_dim "(DRY RUN — no changes will be made)"
+[ "$DRY_RUN" = true ] && log_warn "DRY RUN — no changes will be made"
 
 # ── 1. Check prerequisites ──
 log_info "1. Checking prerequisites..."

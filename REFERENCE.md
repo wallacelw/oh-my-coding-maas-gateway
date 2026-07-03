@@ -576,6 +576,39 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 | View logs | `docker compose logs <service> --tail 50 -f` |
 | Full reset | `docker compose down -v; rm -f .env` (destroys all data) |
 
+### Key Rotation (`--force`)
+
+Rotating immutable secrets invalidates all virtual keys — the tools will need
+re-configuration after rotation.
+
+```bash
+# 1. Regenerate all secrets (master key, salt, DB password, Grafana password)
+./scripts/01_env.sh --force
+
+# 2. Regenerate LiteLLM config with new master key
+./scripts/02_litellm.sh
+
+# 3. Re-mint virtual keys for each installed tool
+./scripts/03a_opencode.sh    # mints new key, updates opencode.json
+./scripts/03b_codex.sh       # mints new key, updates config.toml
+./scripts/03c_claude_code.sh # mints new key, updates settings.json
+./scripts/03d_pi.sh          # mints new key, updates models.json
+
+# 4. Verify
+./scripts/04_validate.sh
+```
+
+**What changes:**
+- `LITELLM_MASTER_KEY` — new value, all old virtual keys stop working
+- `LITELLM_SALT_KEY` — new value, LiteLLM internal encryption rotated
+- `DB_PASSWORD` — new value, PostgreSQL re-authenticated
+- `GRAFANA_ADMIN_PASSWORD` — new value, Grafana login changes
+
+**What's preserved:**
+- `HUAWEI_MAAS_API_KEY` and all extra keys
+- `PROMETHEUS_RETENTION`, `BIND_ADDRESS`, endpoint URLs
+- All Docker volumes (PostgreSQL data, Prometheus data, Grafana data)
+
 ---
 
 ## Remote Access

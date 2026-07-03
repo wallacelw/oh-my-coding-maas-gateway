@@ -164,7 +164,7 @@ prereq_ensure_docker() {
   fi
 
   # Start daemon if not running
-  if ! docker info &>/dev/null 2>&1; then
+  if ! docker info &>/dev/null; then
     echo "→ [${LOG_TAG:-system}] Starting Docker daemon..."
     if command -v systemctl &>/dev/null; then
       _prereq_sudo systemctl start docker
@@ -177,7 +177,7 @@ prereq_ensure_docker() {
   fi
 
   # Final check
-  if ! docker info &>/dev/null 2>&1; then
+  if ! docker info &>/dev/null; then
     _prereq_fail "docker daemon"
   fi
   echo "  ✓ [${LOG_TAG:-system}] Docker ready"

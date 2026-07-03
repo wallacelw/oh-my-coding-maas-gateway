@@ -51,20 +51,13 @@ source_env() {
 }
 
 # Retry curl with backoff (3 attempts, 2s/4s delays).
-# Usage: retry_curl [-o] curl_args...
-#   -o  capture and echo response body (otherwise just check exit code)
+# Usage: retry_curl curl_args...
 retry_curl() {
-  local capture=false
-  if [ "$1" = "-o" ]; then capture=true; shift; fi
-  local max_attempts=3 delay=2 attempt=1 response="" err=""
+  local max_attempts=3 delay=2 attempt=1 err=""
   while [ $attempt -le $max_attempts ]; do
-    if [ "$capture" = true ]; then
-      response=$(curl "$@" 2>/dev/null) && { echo "$response"; return 0; }
-    else
-      err=$(curl "$@" 2>&1) && return 0
-    fi
+    err=$(curl "$@" 2>&1) && return 0
     [ $attempt -lt $max_attempts ] && sleep $delay
-    ((attempt++))
+    attempt=$((attempt + 1))
   done
   [ -n "$err" ] && echo "  curl error: $err" >&2
   return 1

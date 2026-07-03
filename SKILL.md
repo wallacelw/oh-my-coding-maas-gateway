@@ -99,6 +99,19 @@ Take bootstrap's output and complement it with:
 
 WARN messages are advisory — they do not cause non-zero exit.
 
+### Common failures before validation
+
+These issues prevent bootstrap from completing — handle before running validate:
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `Docker daemon not running` | Docker not started | `systemctl start docker` (or start Docker Desktop) |
+| `Port 4000 already in use` | Another service on the port | `lsof -i :4000` to find it, stop it or change port in docker-compose.yml |
+| `Invalid MaaS API key` | Key expired or wrong region | Re-run `01_env.sh` with a valid `HUAWEI_MAAS_API_KEY` |
+| `bun not found` / `npm not found` | Prereq install failed | Install manually: `curl -fsSL https://bun.sh/install \| bash` or `apt install nodejs npm` |
+| `docker compose up` exits non-zero | Config error or resource limit | `docker compose config` to validate, `docker compose logs` for details |
+| `git pull` conflicts on upgrade | Local changes in repo | `git stash && git pull && git stash pop` or `git checkout . && git pull` |
+
 ## Rules
 
 - Do not skip steps. Do not improvise. Do not launch opencode.
