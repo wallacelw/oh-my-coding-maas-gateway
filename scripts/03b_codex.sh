@@ -44,7 +44,7 @@ log_step "Step 03b — Codex CLI"
 [ "$DRY_RUN" = true ] && log_warn "DRY RUN — no changes will be made"
 
 # ── 1. Check prerequisites ──
-log_info "1. Checking prerequisites..."
+log_info "Checking prerequisites..."
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_npm
 prereq_ensure_apt "jq" jq jq
@@ -58,7 +58,7 @@ else
 fi
 
 # ── 2. Install Codex CLI ──
-log_info "2. Installing Codex CLI..."
+log_info "Installing Codex CLI..."
 if ! command -v codex &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
     log_info "Would run: npm install -g @openai/codex"
@@ -71,7 +71,7 @@ else
 fi
 
 # ── 3. Acquire virtual key (idempotent) ──
-log_info "3. Configuring LiteLLM virtual key..."
+log_info "Configuring LiteLLM virtual key..."
 
 if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
   EXISTING_KEY=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$CODEX_DIR/.env" 2>/dev/null || true)
@@ -85,7 +85,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
-      log_info "Existing virtual key is invalid. Minting new key."
+      log_warn "Existing virtual key is invalid. Minting new key."
     fi
   fi
 fi
@@ -106,7 +106,7 @@ if [ -z "$VIRTUAL_KEY" ]; then
 fi
 
 # ── 4. Write config.toml + model_catalog ──
-log_info "4. Writing Codex CLI config..."
+log_info "Writing Codex CLI config..."
 if [ "$DRY_RUN" = true ]; then
   log_info "Would write: $CODEX_CONFIG, $CODEX_DIR/model_catalog.json, $CODEX_DIR/.env"
   echo ""
@@ -137,7 +137,7 @@ else
 fi
 
 # ── 5. Write API key to ~/.codex/.env ──
-log_info "5. Writing API key to $CODEX_DIR/.env..."
+log_info "Writing API key to $CODEX_DIR/.env..."
 ENV_FILE="$CODEX_DIR/.env"
 NEW_ENV="LITELLM_CODEX_API_KEY=$VIRTUAL_KEY"
 

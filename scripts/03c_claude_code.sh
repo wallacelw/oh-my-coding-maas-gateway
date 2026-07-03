@@ -43,7 +43,7 @@ log_step "Step 03c — Claude Code CLI"
 [ "$DRY_RUN" = true ] && log_warn "DRY RUN — no changes will be made"
 
 # ── 1. Check prerequisites ──
-log_info "1. Checking prerequisites..."
+log_info "Checking prerequisites..."
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_npm
 prereq_ensure_apt "jq" jq jq
@@ -56,7 +56,7 @@ else
 fi
 
 # ── 2. Install Claude Code CLI ──
-log_info "2. Installing Claude Code CLI..."
+log_info "Installing Claude Code CLI..."
 if ! command -v claude &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
     log_info "Would run: npm install -g @anthropic-ai/claude-code"
@@ -69,7 +69,7 @@ else
 fi
 
 # ── 3. Acquire virtual key (idempotent) ──
-log_info "3. Configuring LiteLLM virtual key..."
+log_info "Configuring LiteLLM virtual key..."
 
 if [ -z "$VIRTUAL_KEY" ] && [ -f "$CLAUDE_SETTINGS" ]; then
   EXISTING_KEY=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
@@ -84,7 +84,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CLAUDE_SETTINGS" ]; then
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
-      log_info "Existing virtual key is invalid. Minting new key."
+      log_warn "Existing virtual key is invalid. Minting new key."
     fi
   fi
 fi
@@ -105,7 +105,7 @@ if [ -z "$VIRTUAL_KEY" ]; then
 fi
 
 # ── 4. Write settings.json ──
-log_info "4. Writing Claude Code CLI config..."
+log_info "Writing Claude Code CLI config..."
 if [ "$DRY_RUN" = true ]; then
   log_info "Would write: $CLAUDE_SETTINGS, ~/.claude.json"
   echo ""
@@ -153,7 +153,7 @@ else
 fi
 
 # ── 5. Disable VSCode extension auto-install ──
-log_info "5. Disabling VSCode extension auto-install..."
+log_info "Disabling VSCode extension auto-install..."
 CLAUDE_JSON="$HOME/.claude.json"
 if [ -f "$CLAUDE_JSON" ]; then
   CURRENT=$(jq '.autoInstallIdeExtension // empty' "$CLAUDE_JSON" 2>/dev/null || true)
