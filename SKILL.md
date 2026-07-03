@@ -1,6 +1,6 @@
 ---
 name: oh-my-coding-maas-gateway
-description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + Codex CLI + Claude Code CLI + Pi agent with virtual keys and 4 presets.
+description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + Codex CLI + Claude Code CLI + Pi agent with virtual keys. opencode additionally gets 4 presets and 7 agents via the oh-my-opencode-slim plugin.
 ---
 
 # oh-my-coding-maas-gateway — Agent Procedure
