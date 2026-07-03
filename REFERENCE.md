@@ -25,6 +25,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | `PROMETHEUS_RETENTION` | `01_env.sh` (default `30d`) | docker-compose | Prometheus duration (`Nd`/`Nh`/`Nw`) | None — config value |
 | `HUAWEI_MAAS_ANTHROPIC_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/anthropic`) | `02_litellm.sh` | URL | None — config value |
 | `HUAWEI_MAAS_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`) | `02_litellm.sh` | URL | None — config value |
+| `BIND_ADDRESS` | `01_env.sh` (default `127.0.0.1`) | docker-compose | `127.0.0.1` or `0.0.0.0` | None — config value |
 
 **Virtual keys (stored in tool config files, not `.env`):**
 
@@ -574,3 +575,59 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 | Restart all | `docker compose restart` |
 | View logs | `docker compose logs <service> --tail 50 -f` |
 | Full reset | `docker compose down -v; rm -f .env` (destroys all data) |
+
+---
+
+## Remote Access
+
+All ports bind to `127.0.0.1` by default (localhost only). To access from
+another machine (e.g. your laptop when the stack runs on a VM):
+
+### Option A — SSH Port Forwarding (recommended)
+
+No config change needed. Forward remote ports to your local machine:
+
+```bash
+ssh -L 4000:127.0.0.1:4000 \
+    -L 3000:127.0.0.1:3000 \
+    -L 9090:127.0.0.1:9090 \
+    user@vm-host
+```
+
+| Local URL | Service |
+|-----------|---------|
+| `http://localhost:4000/ui` | LiteLLM Admin UI |
+| `http://localhost:4000/v1/chat/completions` | LiteLLM proxy API |
+| `http://localhost:3000` | Grafana dashboard |
+| `http://localhost:9090` | Prometheus |
+
+Traffic is encrypted via SSH. No ports exposed to the network.
+
+### Option B — Bind to All Interfaces
+
+Set `BIND_ADDRESS` in `.env` to expose ports to all network interfaces:
+
+```bash
+# In .env:
+BIND_ADDRESS="0.0.0.0"
+
+# Apply:
+docker compose up -d
+```
+
+Then access via the VM's IP address:
+
+| URL | Service |
+|-----|---------|
+| `http://<vm-ip>:4000/ui` | LiteLLM Admin UI |
+| `http://<vm-ip>:3000` | Grafana dashboard |
+| `http://<vm-ip>:9090` | Prometheus |
+
+**Security:** Ensure firewall rules limit access to trusted IPs only:
+
+```bash
+# Example: ufw (Ubuntu)
+ufw allow from <your-laptop-ip> to any port 4000
+ufw allow from <your-laptop-ip> to any port 3000
+ufw allow from <your-laptop-ip> to any port 9090
+```
