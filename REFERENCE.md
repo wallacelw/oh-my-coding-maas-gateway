@@ -49,10 +49,10 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
   Tools               LiteLLM (:4000)                  Huawei MaaS
   ─────               ───────────────                  ────────────
 
-  opencode ──→ /v1/chat/completions ──→ openai/ provider ──→ /openai/v1/chat/completions
-  Codex CLI ──→ /v1/responses ────────→ openai/ provider ──→ /openai/v1/chat/completions
-  Claude Code ─→ /v1/messages ────────→ anthropic/ provider ─→ /anthropic/v1/messages
-  Pi agent ───→ /v1/chat/completions ──→ openai/ provider ──→ /openai/v1/chat/completions
+  opencode    ──→ /v1/chat/completions ──→ openai/ provider    ──→ /openai/v1/chat/completions
+  Codex CLI   ──→ /v1/responses        ──→ openai/ provider    ──→ /openai/v1/chat/completions
+  Claude Code ──→ /v1/messages         ──→ anthropic/ provider ──→ /anthropic/v1/messages
+  Pi agent    ──→ /v1/chat/completions ──→ openai/ provider    ──→ /openai/v1/chat/completions
 
   opencode: 7 agents (1 disabled), 4 presets (LiteLLM-Huawei-MaaS-Full default)
   Codex CLI: Responses API bridged to Chat Completions by LiteLLM
