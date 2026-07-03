@@ -173,6 +173,34 @@ pi
 - **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
   keys, spend, budgets. Login: `admin` / your master key.
 
+### Remote Access (from another machine)
+
+All ports bind to `127.0.0.1` by default (localhost only). Two ways to access
+from another machine (e.g. your laptop when the stack runs on a VM):
+
+**Option A — SSH port forwarding (recommended, no config change):**
+
+```bash
+ssh -L 4000:127.0.0.1:4000 -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 user@vm
+```
+
+Then open `http://localhost:4000/ui` and `http://localhost:3000` on your
+local machine. Traffic is encrypted via SSH. No ports exposed to the network.
+
+**Option B — Bind to all interfaces (direct access, less secure):**
+
+```bash
+# In .env:
+BIND_ADDRESS="0.0.0.0"
+
+# Restart:
+docker compose up -d
+```
+
+Then access via `http://<vm-ip>:4000/ui` and `http://<vm-ip>:3000` from any
+machine on the network. Ensure firewall rules limit access (e.g. security
+group, `ufw allow from <your-ip> to any port 4000`).
+
 ---
 
 ## Documentation

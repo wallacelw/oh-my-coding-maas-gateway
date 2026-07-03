@@ -13,7 +13,7 @@ services:
     image: ghcr.io/berriai/litellm:v1.89.3
     entrypoint: ["/app/entrypoint.sh"]
     ports:
-      - "127.0.0.1:4000:4000"
+      - "${BIND_ADDRESS:-127.0.0.1}:4000:4000"
     volumes:
       - ./configs/litellm/config.yaml:/app/config.yaml:ro
       - ./configs/litellm/entrypoint.sh:/app/entrypoint.sh:ro
@@ -75,7 +75,7 @@ services:
     image: prom/prometheus:v3.2.1
     container_name: litellm_prometheus
     ports:
-      - "127.0.0.1:9090:9090"
+      - "${BIND_ADDRESS:-127.0.0.1}:9090:9090"
     volumes:
       - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -96,7 +96,7 @@ services:
     image: grafana/grafana:11.5.2
     container_name: litellm_grafana
     ports:
-      - "127.0.0.1:3000:3000"
+      - "${BIND_ADDRESS:-127.0.0.1}:3000:3000"
     volumes:
       - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./configs/grafana/dashboards:/var/lib/grafana/dashboards:ro

@@ -74,6 +74,7 @@ if [ -f "$ENV_FILE" ]; then
   EXISTING_PROM_RETENTION="$(grep -oP '^PROMETHEUS_RETENTION="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_MAAS_BASE="$(grep -oP '^HUAWEI_MAAS_API_BASE="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_MAAS_ANTHROPIC_BASE="$(grep -oP '^HUAWEI_MAAS_ANTHROPIC_API_BASE="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_BIND_ADDRESS="$(grep -oP '^BIND_ADDRESS="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_MAAS_KEY="$(grep -oP '^HUAWEI_MAAS_API_KEY="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_KEY_COUNT="$(grep -oP '^HUAWEI_MAAS_API_KEY_COUNT="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
   # Read existing extra keys (R2: validate numeric before comparison)
@@ -108,6 +109,7 @@ AUTO_GRAFANA_PASSWORD="$(generate_secret)"
 AUTO_PROM_RETENTION="30d"
 MAAS_API_BASE="https://api-ap-southeast-1.modelarts-maas.com/openai/v1"
 MAAS_ANTHROPIC_BASE="https://api-ap-southeast-1.modelarts-maas.com/anthropic"
+BIND_ADDRESS="127.0.0.1"
 
 if [ "$IS_FRESH" = false ]; then
   # Validate existing secrets are non-empty before preserving
@@ -126,6 +128,7 @@ fi
 # Preserve MaaS base URLs from existing .env if present (R1: always, not just when IS_FRESH=false)
 [ -n "$EXISTING_MAAS_BASE" ] && MAAS_API_BASE="$EXISTING_MAAS_BASE"
 [ -n "$EXISTING_MAAS_ANTHROPIC_BASE" ] && MAAS_ANTHROPIC_BASE="$EXISTING_MAAS_ANTHROPIC_BASE"
+[ -n "$EXISTING_BIND_ADDRESS" ] && BIND_ADDRESS="$EXISTING_BIND_ADDRESS"
 
 if [ "$IS_FRESH" = true ]; then
   # Fresh install or --force — prompt for each secret
@@ -268,6 +271,10 @@ HUAWEI_MAAS_API_BASE="${MAAS_API_BASE}"
 
 # ── MaaS Anthropic Endpoint ───────────────────────
 HUAWEI_MAAS_ANTHROPIC_API_BASE="${MAAS_ANTHROPIC_BASE}"
+
+# ── Bind Address ──────────────────────────────────
+# 127.0.0.1 = localhost only (default, secure). 0.0.0.0 = all interfaces (remote access).
+BIND_ADDRESS="${BIND_ADDRESS}"
 EOF
 chmod 600 "$ENV_FILE.tmp"
 mv "$ENV_FILE.tmp" "$ENV_FILE"
@@ -297,3 +304,4 @@ log_dim "HUAWEI_MAAS_API_KEY   = $(mask_key "$MAAS_API_KEY")"
 log_dim "MAAS API key count    = ${KEY_COUNT}"
 log_dim "LITELLM_MASTER_KEY    = $(mask_key "$MASTER_KEY")"
 log_dim "PROMETHEUS_RETENTION  = ${PROM_RETENTION}"
+log_dim "BIND_ADDRESS          = ${BIND_ADDRESS}"
