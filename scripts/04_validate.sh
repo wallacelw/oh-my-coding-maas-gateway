@@ -105,6 +105,18 @@ skip() { log_dim "$1 (skipped)"; }
 
 jqc() { printf '%s' "$1" | jq -e "$2" 2>/dev/null; }
 
+# Get file permissions (Linux stat -c or BSD stat -f)
+file_perms() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null; }
+
+# Check multiple jq expressions against a config (args: config desc expr desc expr ...)
+check_jq() {
+  local config="$1"; shift
+  while [ $# -gt 0 ]; do
+    local desc="$1" expr="$2"; shift 2
+    if jqc "$config" "$expr"; then pass "$desc"; else fail "$desc"; fi
+  done
+}
+
 # ── Load .env if present ──
 source_env "$PROJECT_DIR"
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
@@ -124,7 +136,7 @@ if [ "$RUN_LITELLM" = true ]; then
   log_info "A1. .env completeness and permissions"
   if [ -f "$PROJECT_DIR/.env" ]; then
     pass ".env exists"
-    PERMS=$(stat -c '%a' "$PROJECT_DIR/.env" 2>/dev/null || stat -f '%Lp' "$PROJECT_DIR/.env" 2>/dev/null)
+    PERMS=$(file_perms "$PROJECT_DIR/.env")
     if [ "$PERMS" = "600" ]; then
       pass ".env permissions are 0600"
     else
@@ -295,13 +307,7 @@ if [ "$RUN_OPENCODE" = true ]; then
   log_info "B3. Provider configuration"
   if [ -n "$CONFIG_FILE" ]; then
     CLEAN_CONFIG=$(strip_jsonc "$CONFIG_FILE")
-    check_provider() {
-      while [ $# -gt 0 ]; do
-        local desc="$1" expr="$2"; shift 2
-        if jqc "$CLEAN_CONFIG" "$expr"; then pass "$desc"; else fail "$desc"; fi
-      done
-    }
-    check_provider \
+    check_jq "$CLEAN_CONFIG" \
       "LiteLLM provider defined" '.provider.LiteLLM' \
       "LiteLLM baseURL is 127.0.0.1:4000" '.provider.LiteLLM.options.baseURL == "http://127.0.0.1:4000"' \
       "LiteLLM apiKey set" '.provider.LiteLLM.options.apiKey' \
@@ -314,7 +320,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       "general agent disabled" '.agent.general.disable == true' \
       "LSP enabled" '.lsp == true'
 
-    PERMS=$(stat -c '%a' "$CONFIG_FILE" 2>/dev/null || stat -f '%Lp' "$CONFIG_FILE" 2>/dev/null)
+    PERMS=$(file_perms "$CONFIG_FILE")
     if [ "$PERMS" = "600" ]; then
       pass "Config file permissions 600"
     else
@@ -336,13 +342,7 @@ if [ "$RUN_OPENCODE" = true ]; then
 
   if [ -n "$SLIM_CONFIG" ]; then
     CLEAN_SLIM=$(strip_jsonc "$SLIM_CONFIG")
-    check_slim_pair() {
-      while [ $# -gt 0 ]; do
-        local desc="$1" expr="$2"; shift 2
-        if jqc "$CLEAN_SLIM" "$expr"; then pass "$desc"; else fail "$desc"; fi
-      done
-    }
-    check_slim_pair \
+    check_jq "$CLEAN_SLIM" \
       "LiteLLM-Huawei-MaaS-Full preset" '.presets["LiteLLM-Huawei-MaaS-Full"]' \
       "LiteLLM-Huawei-MaaS-Core preset" '.presets["LiteLLM-Huawei-MaaS-Core"]' \
       "Huawei-MaaS-Full direct preset" '.presets["Huawei-MaaS-Full"]' \
@@ -366,7 +366,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Huawei-MaaS-Full orchestrator model set" '.presets["Huawei-MaaS-Full"].orchestrator.model' \
       "Huawei-MaaS-Core orchestrator model set" '.presets["Huawei-MaaS-Core"].orchestrator.model'
 
-    PERMS=$(stat -c '%a' "$SLIM_CONFIG" 2>/dev/null || stat -f '%Lp' "$SLIM_CONFIG" 2>/dev/null)
+    PERMS=$(file_perms "$SLIM_CONFIG")
     if [ "$PERMS" = "600" ]; then
       pass "Slim config permissions 600"
     else
@@ -540,7 +540,7 @@ if [ "$RUN_CODEX" = true ]; then
     else
       fail "default model not set"
     fi
-    PERMS=$(stat -c '%a' "$CODEX_CONFIG" 2>/dev/null || stat -f '%Lp' "$CODEX_CONFIG" 2>/dev/null)
+    PERMS=$(file_perms "$CODEX_CONFIG")
     if [ "$PERMS" = "600" ]; then
       pass "Config file permissions 600"
     else
@@ -630,7 +630,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
     else
       fail "default model not set"
     fi
-    PERMS=$(stat -c '%a' "$CLAUDE_SETTINGS" 2>/dev/null || stat -f '%Lp' "$CLAUDE_SETTINGS" 2>/dev/null)
+    PERMS=$(file_perms "$CLAUDE_SETTINGS")
     if [ "$PERMS" = "600" ]; then
       pass "Config file permissions 600"
     else
@@ -691,7 +691,7 @@ if [ "$RUN_PI" = true ]; then
     else
       fail "Config is not valid JSON"
     fi
-    PERMS=$(stat -c '%a' "$PI_CONFIG" 2>/dev/null || stat -f '%Lp' "$PI_CONFIG" 2>/dev/null)
+    PERMS=$(file_perms "$PI_CONFIG")
     if [ "$PERMS" = "600" ]; then
       pass "Config file permissions 600"
     else
