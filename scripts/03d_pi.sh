@@ -124,7 +124,7 @@ mkdir -p "$PI_DIR"
 MODELS_JSON="[]"
 for model_entry in "${MODELS[@]}"; do
   IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost <<< "$model_entry"
-  
+
   # Use max_tokens as contextWindow (total context), max_output as maxTokens (output limit)
   MODELS_JSON=$(echo "$MODELS_JSON" | jq --arg id "$model_name" \
                                     --arg name "$model_name" \

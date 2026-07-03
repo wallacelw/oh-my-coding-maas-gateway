@@ -129,7 +129,7 @@ if [ -f "$CLAUDE_SETTINGS" ]; then
     if [ "$MERGED_SETTINGS" = "$EXISTING_SETTINGS" ]; then
       log_info "settings.json unchanged — skipping write"
     else
-      EXISTING_KEYS=$(echo "$EXISTING_SETTINGS" | jq -r 'keys | .[]' 2>/dev/null | sort | uniq)
+      EXISTING_KEYS=$(echo "$EXISTING_SETTINGS" | jq -r 'keys | .[]' 2>/dev/null | sort -u)
       NON_ENV_KEYS=$(echo "$EXISTING_KEYS" | grep -v '^env$' || true)
       if [ -n "$NON_ENV_KEYS" ]; then
         log_warn "Overwriting existing settings with keys: $(echo "$NON_ENV_KEYS" | tr '\n' ' ')"
