@@ -241,17 +241,17 @@ if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM already healthy."
 else
   log_info "Waiting for LiteLLM to become healthy (up to 90s)..."
-  local_waited=0
-  while [ $local_waited -lt 90 ]; do
+  waited=0
+  while [ $waited -lt 90 ]; do
     if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
-      log_ok "LiteLLM healthy after ~${local_waited}s."
+      log_ok "LiteLLM healthy after ~${waited}s."
       break
     fi
     printf "  ."
     sleep 5
-    local_waited=$((local_waited + 5))
+    waited=$((waited + 5))
   done
-  if [ $local_waited -ge 90 ]; then
+  if [ $waited -ge 90 ]; then
     echo ""
     log_error "LiteLLM did not become healthy within 90s. Check: docker compose logs"
     exit 1

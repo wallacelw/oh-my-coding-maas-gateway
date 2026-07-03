@@ -128,7 +128,7 @@ mint_or_reuse_key() {
     done
   fi
 
-  if [ -n "$existing_key" ] && [[ "$existing_key" == sk-* ]]; then
+  if [ -n "$existing_key" ] && [ "${existing_key#sk-}" != "$existing_key" ]; then
     # Validate the existing key still works (free /v1/models endpoint)
     if curl -sf -m 10 "$litellm_url/v1/models" \
        -H "Authorization: Bearer $existing_key" &>/dev/null; then

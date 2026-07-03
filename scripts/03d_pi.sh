@@ -26,9 +26,8 @@ source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
-source_env "$PROJECT_DIR"
-
 LOG_TAG="pi"
+source_env "$PROJECT_DIR"
 
 # ── Parse args ──
 DRY_RUN=false

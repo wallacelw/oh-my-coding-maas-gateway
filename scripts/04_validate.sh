@@ -102,6 +102,8 @@ pass() { PASS=$((PASS + 1)); log_ok "$1"; }
 fail() { FAIL=$((FAIL + 1)); log_error "$1"; }
 warn() { WARN=$((WARN + 1)); log_warn "$1"; }
 skip() { log_dim "$1 (skipped)"; }
+# Record N failed checks at once (for skipped sub-checks when config is missing)
+fail_n() { local n="$1"; shift; FAIL=$((FAIL + n)); log_error "$*"; }
 
 jqc() { printf '%s' "$1" | jq -e "$2" 2>/dev/null; }
 
@@ -327,8 +329,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       warn "Config file permissions $PERMS (expected 600)"
     fi
   else
-    fail "No opencode config file — skipping provider checks"
-    FAIL=$((FAIL + 11))
+    fail_n 11 "No opencode config file — skipping 11 provider checks"
   fi
 
   echo ""
@@ -373,8 +374,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       warn "Slim config permissions $PERMS (expected 600)"
     fi
   else
-    fail "No oh-my-opencode-slim config — skipping preset checks"
-    FAIL=$((FAIL + 22))
+    fail_n 22 "No oh-my-opencode-slim config — skipping 22 preset checks"
   fi
 
   echo ""
@@ -547,8 +547,7 @@ if [ "$RUN_CODEX" = true ]; then
       warn "Config file permissions $PERMS (expected 600)"
     fi
   else
-    fail "No Codex config file — skipping provider checks"
-    FAIL=$((FAIL + 5))
+    fail_n 5 "No Codex config file — skipping 5 provider checks"
   fi
 
   echo ""
@@ -637,8 +636,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
       warn "Config file permissions $PERMS (expected 600)"
     fi
   else
-    fail "No Claude Code config — skipping provider checks"
-    FAIL=$((FAIL + 4))
+    fail_n 4 "No Claude Code config — skipping 4 provider checks"
     CLAUDE_VK=""
   fi
 
@@ -729,8 +727,7 @@ if [ "$RUN_PI" = true ]; then
       fail "providers.LiteLLM.models has only $PI_MODEL_COUNT models (expected >= 6)"
     fi
   else
-    fail "No Pi config file — skipping provider checks"
-    FAIL=$((FAIL + 4))
+    fail_n 4 "No Pi config file — skipping 4 provider checks"
     PI_API_KEY=""
   fi
 

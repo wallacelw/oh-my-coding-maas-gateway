@@ -30,6 +30,24 @@ deepseek-v3.2
 
 ---
 
+## Quickstart
+
+```bash
+# 1. Install (prompts for MaaS API key, auto-installs prerequisites)
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
+
+# 2. Use any coding tool
+opencode          # or: codex  or:  claude --bare  or:  pi
+
+# 3. Monitor (optional)
+open http://localhost:3000   # Grafana dashboard
+```
+
+That's it. LiteLLM proxy at `http://localhost:4000`, 6 models, 4 coding tools.
+For details, keep reading. For upgrade, re-run the same command.
+
+---
+
 ## Install & Upgrade
 
 Same one-liner for both — bootstrap detects an existing install and pulls
