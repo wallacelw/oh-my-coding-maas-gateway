@@ -1,6 +1,6 @@
 ---
 name: oh-my-coding-maas-gateway
-description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + Codex CLI + Claude Code CLI with virtual keys and 4 presets.
+description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + Codex CLI + Claude Code CLI + Pi agent with virtual keys and 4 presets.
 ---
 
 # oh-my-coding-maas-gateway — Agent Procedure
@@ -25,7 +25,7 @@ Output a structured summary to the user:
 - **What it does** — LiteLLM proxy routing to Huawei MaaS, multi-key load
   balancing, observability stack (Prometheus + Grafana).
 - **What gets installed** — Docker stack (LiteLLM + Postgres + Prometheus +
-  Grafana), then selected coding tools (opencode, Codex CLI, Claude Code CLI).
+  Grafana), then selected coding tools (opencode, Codex CLI, Claude Code CLI, Pi agent).
 - **Prerequisites** — Docker, git, curl, jq, bun/npm (installed automatically).
 - **What you'll be asked for** — MaaS API key, install mode, extra keys.
 - **Estimated time** — ~5 min fresh, ~2 min upgrade.
