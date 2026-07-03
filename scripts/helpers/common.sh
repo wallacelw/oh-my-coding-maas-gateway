@@ -6,7 +6,7 @@
 #
 # Provides:
 #   source_env <project_dir>   — load .env into the environment (no-op if absent)
-#   retry_curl [-o] curl_args  — retry curl with backoff (-o captures body)
+#   retry_curl curl_args...  — retry curl with backoff (3 attempts)
 #   strip_jsonc <file>         — strip // and /* */ comments outside strings
 #   mask_key <key>             — print first8...last4 of a key
 #
@@ -68,7 +68,7 @@ retry_curl() {
 strip_jsonc() {
   python3 -c "
 import sys
-text = open(sys.argv[1]).read()
+text = sys.stdin.read()
 result = []
 in_string = False
 escape = False
