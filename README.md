@@ -16,10 +16,10 @@ observability — all through a single local proxy.
   Tools               LiteLLM (:4000)                  Huawei MaaS
   ─────               ───────────────                  ────────────
 
-  opencode ──→ /v1/chat/completions ──→ openai/ provider ──→ MaaS OpenAI endpoint
-  Codex CLI ──→ /v1/responses ────────→ openai/ provider ──→ MaaS OpenAI endpoint
-  Claude Code ─→ /v1/messages ────────→ anthropic/ provider ─→ MaaS Anthropic endpoint
-  Pi agent ───→ /v1/chat/completions ──→ openai/ provider ──→ MaaS OpenAI endpoint
+  opencode    ──→ /v1/chat/completions ──→ openai/ provider    ──→ MaaS OpenAI endpoint
+  Codex CLI   ──→ /v1/responses        ──→ openai/ provider    ──→ MaaS OpenAI endpoint
+  Claude Code ──→ /v1/messages         ──→ anthropic/ provider ──→ MaaS Anthropic endpoint
+  Pi agent    ──→ /v1/chat/completions ──→ openai/ provider    ──→ MaaS OpenAI endpoint
 
   LiteLLM: load-balances across N MaaS keys · PostgreSQL (:5432)
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
