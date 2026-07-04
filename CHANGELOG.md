@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `strip_jsonc` was non-functional — Python read `sys.argv[1]` but file was
+  passed via stdin. Fixed to `sys.stdin.read()`.
+- Concurrent bootstrap runs could corrupt `.env` and `config.yaml`. Added
+  `flock` locking via `.bootstrap.lock`.
+- Invalid MaaS API key was accepted at install time, causing a vague error
+  2–3 minutes later during validation. Pre-flight check now hard-fails on
+  HTTP 401/403 with a clear message.
+- `curl` calls in `prereqs.sh` (bun, docker install) had no timeout — could
+  hang indefinitely on stalled network. Added `--max-time 60/120`.
+- `grep -c ... || echo "0"` in `04_validate.sh` produced `"0\n0"` on zero
+  matches. Fixed to `|| true` with `:-0` default.
+- `04_validate.sh`: extracted `file_perms()`, `check_jq()`, `fail_n()` helpers
+  to eliminate duplication (6× stat, 2× identical checker, 5× magic FAIL count).
+- `common.sh`: removed dead `retry_curl -o` capture branch.
+- All 03x scripts normalized: `LOG_TAG` before `source_env`, `log_warn` for
+  dry-run and invalid key, unnumbered steps.
+- `03a_opencode.sh`: added `trap` for tmpfile cleanup.
+- `.env.template`: removed nonexistent virtual key vars, fixed stale script
+  references.
+- `configs/pi/models.json.template`: deleted (dead file, 03d generates from
+  scratch).
+
 ## [0.6.0] - 2026-07-02
 
 ### Added
