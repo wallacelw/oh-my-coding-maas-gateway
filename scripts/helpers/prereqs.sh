@@ -115,7 +115,7 @@ prereq_ensure_bun() {
     _prereq_fail "bun"
   fi
 
-  curl -fsSL https://bun.sh/install | bash
+  curl -fsSL --max-time 60 https://bun.sh/install | bash
   export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
   export PATH="$BUN_INSTALL/bin:$PATH"
 
@@ -153,7 +153,7 @@ prereq_ensure_docker() {
     if ! _prereq_prompt "  Install Docker?"; then
       _prereq_fail "docker"
     fi
-    curl -fsSL https://get.docker.com | _prereq_sudo sh
+    curl -fsSL --max-time 120 https://get.docker.com | _prereq_sudo sh
   fi
 
   # Ensure compose plugin

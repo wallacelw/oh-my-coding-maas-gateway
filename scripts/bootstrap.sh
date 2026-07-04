@@ -98,6 +98,14 @@ source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 LOG_TAG="bootstrap"
 
+# ── Prevent concurrent runs (flock) ──
+exec 9>"$PROJECT_DIR/.bootstrap.lock"
+if ! flock -n 9; then
+  log_error "Another bootstrap is already running in $PROJECT_DIR."
+  log_dim "If this is stale, remove $PROJECT_DIR/.bootstrap.lock and retry."
+  exit 1
+fi
+
 # ── Defaults ──
 INSTALL_OPENCODE=true
 INSTALL_CODEX=true

@@ -212,10 +212,14 @@ log_info "Validating MaaS API key..."
 MAAS_BASE="${HUAWEI_MAAS_API_BASE:-https://api-ap-southeast-1.modelarts-maas.com/openai/v1}"
 MAAS_KEY_0="${HUAWEI_MAAS_API_KEY_0:-${HUAWEI_MAAS_API_KEY:-}}"
 if [ -n "$MAAS_KEY_0" ] && [ "$DRY_RUN" != true ]; then
-  if ! curl -sf -m 10 "$MAAS_BASE/models" -H "Authorization: Bearer $MAAS_KEY_0" &>/dev/null; then
-    log_warn "MaaS API key validation failed — endpoint may be unreachable or key invalid. Continuing anyway (LiteLLM will retry)."
-  else
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "$MAAS_BASE/models" -H "Authorization: Bearer $MAAS_KEY_0" 2>/dev/null || echo "000")
+  if [ "$HTTP_CODE" = "200" ]; then
     log_ok "MaaS API key valid"
+  elif [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
+    log_error "MaaS API key rejected (HTTP $HTTP_CODE). Check HUAWEI_MAAS_API_KEY in .env."
+    exit 1
+  else
+    log_warn "MaaS endpoint unreachable (HTTP $HTTP_CODE) — may be transient. Continuing (LiteLLM will retry)."
   fi
 fi
 
