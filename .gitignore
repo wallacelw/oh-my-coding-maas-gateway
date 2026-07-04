@@ -8,3 +8,4 @@ configs/litellm/config.yaml
 
 # ── Temp files from interrupted script runs ──
 *.tmp
+.bootstrap.lock
