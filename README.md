@@ -38,15 +38,22 @@ preserves all secrets and data.
 
 ### 👤 Human — run it yourself
 
+**1. Install or upgrade** (prompts for MaaS API key, auto-installs prerequisites):
+
 ```bash
-# 1. Install or upgrade (prompts for MaaS API key, auto-installs prerequisites)
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
+```
 
-# 2. Use any coding tool
+**2. Use any coding tool:**
+
+```bash
 opencode          # or: codex  or:  claude --bare  or:  pi
+```
 
-# 3. Monitor (optional)
-open http://localhost:3000   # Grafana dashboard
+**3. Monitor** (optional — Grafana dashboard):
+
+```bash
+open http://localhost:3000
 ```
 
 That's it. LiteLLM proxy at `http://localhost:4000`, 6 models, 4 coding tools.
