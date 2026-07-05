@@ -66,6 +66,9 @@ version_compare() {
   read -ra a2 <<< "$v2"
   for ((i = 0; i < ${#a1[@]} || i < ${#a2[@]}; i++)); do
     local n1=${a1[i]:-0} n2=${a2[i]:-0}
+    # Guard against non-numeric values
+    [[ "$n1" =~ ^[0-9]+$ ]] || n1=0
+    [[ "$n2" =~ ^[0-9]+$ ]] || n2=0
     if (( n1 < n2 )); then return 1; fi
     if (( n1 > n2 )); then return 2; fi
   done
@@ -81,6 +84,8 @@ show_version_info() {
   fi
   if [ "$existing_version" = "unknown" ]; then
     echo -e "  ${C_DIM}Existing version: unknown (pre-v1.0.0)${C_RESET}"
+  elif [ "$PROJECT_VERSION" = "unknown" ]; then
+    echo -e "  ${C_DIM}Existing version: $existing_version${C_RESET}"
   elif [ "$existing_version" = "$PROJECT_VERSION" ]; then
     echo -e "  ${C_DIM}Version: $existing_version (up to date)${C_RESET}"
   else
