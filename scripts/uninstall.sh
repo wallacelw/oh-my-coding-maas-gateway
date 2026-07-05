@@ -241,9 +241,28 @@ if [ "$REMOVE_DOCKER" = true ]; then
     if [ "$DRY_RUN" = true ]; then
       log_dim "  Would run: docker compose down -v --rmi all"
     else
-      docker compose -f "$PROJECT_DIR/docker-compose.yml" down -v --rmi all 2>&1 \
-        | run_filtered "docker" || true
-      log_ok "Docker containers, volumes, and images removed"
+      compose_file="$PROJECT_DIR/docker-compose.yml"
+      if [ -f "$compose_file" ]; then
+        set +e
+        docker compose -f "$compose_file" down -v --rmi all 2>&1 | while IFS= read -r line; do
+          log_dim "  $line"
+        done
+        set -e
+        log_ok "docker compose down completed"
+      else
+        log_warn "docker-compose.yml not found at $compose_file"
+      fi
+      # Fallback: stop/remove any lingering containers from this project
+      # (covers cases where compose project name differs or compose file was missing)
+      lingering=""
+      lingering=$(docker ps -a --filter "name=litellm_" --filter "name=oh-my-coding" --format '{{.Names}}' 2>/dev/null || true)
+      if [ -n "$lingering" ]; then
+        log_warn "Found lingering containers: $lingering"
+        echo "$lingering" | while IFS= read -r c; do
+          docker rm -f "$c" 2>/dev/null || true
+        done
+        log_ok "Lingering containers removed"
+      fi
     fi
   else
     log_warn "docker not found — skipping Docker cleanup"
