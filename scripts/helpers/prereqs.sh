@@ -55,6 +55,7 @@ _prereq_fail() {
 
 # Prompt user y/n (only in prompt mode); returns 0 for yes, 1 for no.
 # Non-interactive shells (piped stdin / CI) auto-confirm.
+# Uses prompt_yesno from common.sh for reliable /dev/tty handling.
 _prereq_prompt() {
   local question="$1"
   if [ "${PREREQ_MODE:-prompt}" = "auto" ]; then
@@ -64,15 +65,7 @@ _prereq_prompt() {
   if ! is_interactive; then
     return 0
   fi
-  local answer
-  while true; do
-    echo -n "$question [y/N] " >&2
-    read -r answer < /dev/tty
-    case "$answer" in
-      [yY]|[yY][eE][sS]) return 0 ;;
-      [nN]|[nN][oO]|"") return 1 ;;
-    esac
-  done
+  prompt_yesno "$question" n
 }
 
 # ---------------------------------------------------------------------------
