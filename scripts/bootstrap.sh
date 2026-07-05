@@ -534,6 +534,8 @@ fi
 
 echo ""
 echo -e "  ${C_BOLD}Next steps:${C_RESET}"
+echo -e "  ${C_DIM}Restart your terminal (or run: exec \"\$SHELL\") for newly installed tools to appear on PATH.${C_RESET}"
+echo ""
 [ "$INSTALL_OPENCODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "opencode:"  "exit any running session, then run: ${C_CYAN}opencode${C_RESET}"
 [ "$INSTALL_CODEX" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "Codex:"     "${C_CYAN}codex${C_RESET}"
 [ "$INSTALL_CLAUDE_CODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "Claude:"    "${C_CYAN}claude --bare${C_RESET}"
