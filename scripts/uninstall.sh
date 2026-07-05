@@ -85,7 +85,7 @@ if [ "$TOOL_SPECIFIED" = false ] \
     echo -e "  ${C_BOLD}2${C_RESET}  Codex CLI"
     echo -e "  ${C_BOLD}3${C_RESET}  Claude Code CLI"
     echo -e "  ${C_BOLD}4${C_RESET}  Pi agent"
-    echo -e "  ${C_BOLD}5${C_RESET}  All coding agents (configs only)"
+    echo -e "  ${C_BOLD}5${C_RESET}  All coding agents (binaries + configs)"
     echo -e "  ${C_BOLD}6${C_RESET}  Docker stack (containers + volumes + images)"
     echo -e "  ${C_BOLD}7${C_RESET}  Everything (agents + Docker + repo)"
     echo -e "  ${C_DIM}Or combine: 1,2,6 (opencode + codex + Docker)${C_RESET}"
@@ -174,10 +174,10 @@ add_summary() {
     SUMMARY="$1"
   fi
 }
-[ "$REMOVE_OPENCODE" = true ] && add_summary "opencode config"
-[ "$REMOVE_CODEX" = true ]    && add_summary "codex config"
-[ "$REMOVE_CLAUDE" = true ]   && add_summary "claude config"
-[ "$REMOVE_PI" = true ]       && add_summary "pi config"
+[ "$REMOVE_OPENCODE" = true ] && add_summary "opencode"
+[ "$REMOVE_CODEX" = true ]    && add_summary "codex"
+[ "$REMOVE_CLAUDE" = true ]   && add_summary "claude"
+[ "$REMOVE_PI" = true ]       && add_summary "pi"
 [ "$REMOVE_DOCKER" = true ]   && add_summary "Docker stack"
 [ "$REMOVE_REPO" = true ]     && add_summary "repository"
 
@@ -199,39 +199,64 @@ echo ""
 
 # ── Remove opencode ──
 if [ "$REMOVE_OPENCODE" = true ]; then
-  log_step "Removing opencode configuration"
-  remove_path "$HOME/.config/opencode/opencode.json" "opencode config"
+  log_step "Removing opencode"
+  remove_path "$HOME/.config/opencode/opencode.json" "config"
   remove_path "$HOME/.config/opencode/oh-my-opencode-slim.json" "slim plugin config"
-  remove_glob "$HOME/.config/opencode/opencode.json.bak.*" "opencode config"
-  remove_glob "$HOME/.config/opencode/oh-my-opencode-slim.json.bak.*" "slim plugin config"
-  log_dim "  opencode binary left in place (use your package manager to remove it)"
+  remove_glob "$HOME/.config/opencode/opencode.json.bak.*" "config backup"
+  remove_glob "$HOME/.config/opencode/oh-my-opencode-slim.json.bak.*" "slim config backup"
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "  Would remove: $HOME/.opencode/ (binary)"
+  elif [ -d "$HOME/.opencode" ]; then
+    rm -rf "$HOME/.opencode"
+    log_ok "Removed binary: $HOME/.opencode/"
+  fi
 fi
 
 # ── Remove codex ──
 if [ "$REMOVE_CODEX" = true ]; then
-  log_step "Removing Codex CLI configuration"
-  remove_path "$HOME/.codex/config.toml" "codex config"
-  remove_path "$HOME/.codex/model_catalog.json" "codex model catalog"
-  remove_path "$HOME/.codex/.env" "codex env file"
-  remove_glob "$HOME/.codex/config.toml.bak.*" "codex config"
-  log_dim "  codex binary left in place (npm uninstall -g @openai/codex to remove)"
+  log_step "Removing Codex CLI"
+  remove_path "$HOME/.codex/config.toml" "config"
+  remove_path "$HOME/.codex/model_catalog.json" "model catalog"
+  remove_path "$HOME/.codex/.env" "env file"
+  remove_glob "$HOME/.codex/config.toml.bak.*" "config backup"
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "  Would run: npm uninstall -g @openai/codex"
+  elif command -v npm &>/dev/null && command -v codex &>/dev/null; then
+    npm uninstall -g @openai/codex 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
+    log_ok "Removed npm package: @openai/codex"
+  fi
 fi
 
 # ── Remove claude ──
 if [ "$REMOVE_CLAUDE" = true ]; then
-  log_step "Removing Claude Code CLI configuration"
-  remove_path "$HOME/.claude/settings.json" "claude settings"
-  remove_path "$HOME/.claude.json" "claude global config"
-  remove_glob "$HOME/.claude/settings.json.bak.*" "claude settings"
-  log_dim "  claude binary left in place (npm uninstall -g @anthropic-ai/claude-code to remove)"
+  log_step "Removing Claude Code CLI"
+  remove_path "$HOME/.claude/settings.json" "settings"
+  remove_path "$HOME/.claude.json" "global config"
+  remove_glob "$HOME/.claude/settings.json.bak.*" "settings backup"
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "  Would run: npm uninstall -g @anthropic-ai/claude-code"
+  elif command -v npm &>/dev/null && command -v claude &>/dev/null; then
+    npm uninstall -g @anthropic-ai/claude-code 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
+    log_ok "Removed npm package: @anthropic-ai/claude-code"
+  fi
 fi
 
 # ── Remove pi ──
 if [ "$REMOVE_PI" = true ]; then
-  log_step "Removing Pi agent configuration"
-  remove_path "$HOME/.pi/agent/models.json" "pi config"
-  remove_glob "$HOME/.pi/agent/models.json.bak.*" "pi config"
-  log_dim "  pi binary left in place (use pi.dev uninstall instructions to remove)"
+  log_step "Removing Pi agent"
+  remove_path "$HOME/.pi/agent/models.json" "config"
+  remove_glob "$HOME/.pi/agent/models.json.bak.*" "config backup"
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "  Would run: npm uninstall -g @earendil-works/pi-coding-agent"
+  elif command -v npm &>/dev/null && command -v pi &>/dev/null; then
+    npm uninstall -g @earendil-works/pi-coding-agent 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
+    log_ok "Removed npm package: @earendil-works/pi-coding-agent"
+  fi
+  # Also remove pi-managed Node.js if present
+  if [ "$DRY_RUN" != true ] && [ -d "$HOME/.local/share/pi-node" ]; then
+    rm -rf "$HOME/.local/share/pi-node"
+    log_ok "Removed pi-managed Node.js: $HOME/.local/share/pi-node/"
+  fi
 fi
 
 # ── Remove Docker stack ──

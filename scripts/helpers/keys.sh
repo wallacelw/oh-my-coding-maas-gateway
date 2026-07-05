@@ -103,7 +103,7 @@ mint_or_reuse_key() {
   body=$(jq -n "${jq_args[@]}" "$jq_filter")
 
   # ── Try to reuse existing key with same alias ──
-  local existing_key=""
+  local existing_key="" existing_key_id=""
   local key_list
   key_list=$(curl -sf -m 10 "$litellm_url/key/list" \
     -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
@@ -122,20 +122,20 @@ mint_or_reuse_key() {
         found_alias=$(echo "$key_info" | jq -r '.info.key_alias // empty' 2>/dev/null)
         if [ "$found_alias" = "$alias" ]; then
           existing_key=$(echo "$key_info" | jq -r '.info.key_name // empty' 2>/dev/null)
+          existing_key_id="$key_id"
           break
         fi
       fi
     done
   fi
 
-  if [ -n "$existing_key" ] && [ "${existing_key#sk-}" != "$existing_key" ]; then
-    # Validate the existing key still works (free /v1/models endpoint)
-    if curl -sf -m 10 "$litellm_url/v1/models" \
-       -H "Authorization: Bearer $existing_key" &>/dev/null; then
-      echo "$existing_key"
-      return 0
-    fi
-    echo "  Existing key with alias '$alias' is invalid or expired. Minting new key." >&2
+  if [ -n "$existing_key_id" ]; then
+    # Delete the existing key (by ID) so we can reuse the alias
+    echo "  Deleting existing key with alias '$alias'." >&2
+    curl -sf -m 10 -X POST "$litellm_url/key/delete" \
+      -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+      -H "Content-Type: application/json" \
+      -d "{\"keys\": [\"$existing_key_id\"]}" &>/dev/null || true
   fi
 
   # ── Mint the key (retry with backoff) ──
