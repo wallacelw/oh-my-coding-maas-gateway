@@ -232,12 +232,15 @@ if [ "$DRY_RUN" = true ]; then
 fi
 
 log_info "Starting Docker Compose (idempotent — no-op if already running)..."
-run_filtered "docker" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d
+if ! run_with_spinner "Starting containers" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d; then
+  log_error "Docker Compose failed to start."
+  exit 1
+fi
 
 # Restart LiteLLM if config changed (bind mount — compose won't auto-restart)
 if [ -n "${BACKUP:-}" ] && [ -f "$BACKUP" ] && ! diff -q "$BACKUP" "$CONFIG_FILE" &>/dev/null; then
   log_info "Config changed — restarting LiteLLM to load new config..."
-  run_filtered "docker" docker compose -f "$PROJECT_DIR/docker-compose.yml" restart litellm || log_warn "LiteLLM restart failed — health check will verify"
+  run_with_spinner "Restarting LiteLLM" docker compose -f "$PROJECT_DIR/docker-compose.yml" restart litellm || log_warn "LiteLLM restart failed — health check will verify"
 fi
 
 # Wait for LiteLLM to become healthy

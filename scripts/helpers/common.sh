@@ -254,3 +254,38 @@ run_filtered() {
   done <<< "$output"
   return $rc
 }
+
+# ── Spinner for long-running operations ───────────────────────
+# Runs a command in the background with a dim spinner.
+# Output is captured to a temp file and shown on failure.
+# Usage: run_with_spinner "Installing Docker" command args...
+run_with_spinner() {
+  local msg="$1"; shift
+  local spin='|/-\'
+  local i=0 pid rc
+  local tmpfile
+  tmpfile=$(mktemp 2>/dev/null || echo "/tmp/.spinner.$$")
+  printf "  ${C_DIM}%s... ${C_RESET}" "$msg" >&2
+  "$@" &>"$tmpfile" &
+  pid=$!
+  while kill -0 $pid 2>/dev/null; do
+    printf "\r  ${C_DIM}%s... %s${C_RESET}" "$msg" "${spin:i%4:1}" >&2
+    sleep 0.3
+    i=$((i + 1))
+  done
+  wait $pid && rc=0 || rc=$?
+  if [ $rc -eq 0 ]; then
+    printf "\r  ${C_DIM}%s... ${C_GREEN}done${C_RESET}\n" "$msg" >&2
+  else
+    printf "\r  ${C_DIM}%s... ${C_RED}failed${C_RESET}\n" "$msg" >&2
+    # Show captured output on failure for debugging
+    if [ -s "$tmpfile" ]; then
+      echo -e "  ${C_DIM}--- output ---${C_RESET}" >&2
+      tail -20 "$tmpfile" | while IFS= read -r line; do
+        echo -e "  ${C_DIM}  $line${C_RESET}" >&2
+      done
+    fi
+  fi
+  rm -f "$tmpfile" 2>/dev/null || true
+  return $rc
+}
