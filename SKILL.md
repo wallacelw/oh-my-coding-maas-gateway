@@ -1,6 +1,6 @@
 ---
 name: oh-my-coding-maas-gateway
-description: Operational companion for the oh-my-coding-maas-gateway LiteLLM proxy stack. When invoked, presents an interactive menu of operations: health check, validation, upgrade, key/model management, debug routing, metrics, and more. Can also be loaded as passive context.
+description: Operational companion for the oh-my-coding-maas-gateway LiteLLM proxy stack. Provides context and commands for health checks, validation, upgrades, key/model management, debug routing, metrics, and recovery.
 ---
 
 # oh-my-coding-maas-gateway — Operational Companion
@@ -9,14 +9,13 @@ Operational companion for a self-hosted LiteLLM proxy routing Huawei MaaS
 models to opencode, Codex CLI, Claude Code CLI, and Pi agent with virtual
 keys, multi-key load balancing, and Prometheus + Grafana observability.
 
-Bootstrap is the only installation method. This skill helps operate the
-running stack.
+This skill loads as context. The user can ask for help with any of the
+operations below — respond to their request directly. No need to present
+a menu unless they ask "what can you do?"
 
 ## Project Location
 
-The gateway is installed at `$HOME/oh-my-coding-maas-gateway` (or wherever
-the user chose during install). All scripts below are relative to this
-directory. If you're not in the project dir, `cd` there first:
+The gateway is at `~/oh-my-coding-maas-gateway`. `cd` there first:
 
 ```bash
 cd ~/oh-my-coding-maas-gateway
@@ -43,116 +42,68 @@ cd ~/oh-my-coding-maas-gateway
 | Grafana Dashboard | `http://127.0.0.1:3000` | Anonymous |
 | Prometheus | `http://127.0.0.1:9090` | None |
 
-## When Invoked
+## What You Can Help With
 
-When the user invokes this skill, present the following menu. If the
-user's request is already specific (e.g. "check health" or "rotate my
-key"), skip the menu and go straight to that option.
+When the user asks for any of these, use the commands below:
 
-```
-What would you like to do?
-
-  1) Health check         — quick status of all services
-  2) Run validation       — full end-to-end validation
-  3) Upgrade              — check for and apply updates
-  4) Key management       — rotate, add, or mint keys
-  5) Model management     — list, add, or remove models
-  6) Debug routing        — diagnose 401s, latency, errors
-  7) View metrics         — Prometheus queries + Grafana link
-  8) Install skill        — install a new skill into all agents
-  9) Uninstall            — remove all or part of the gateway
- 10) Just load context    — no action, I just need the reference info
-
-  Choice [1-10]:
-```
-
-After completing an action, ask if the user wants to do anything else.
-Loop until they're done.
-
----
-
-## Option 1: Health Check
-
-Run these commands and report the status:
+### Health check
 
 ```bash
 docker compose ps
 curl -sf http://127.0.0.1:4000/health/liveliness && echo "LiteLLM: healthy" || echo "LiteLLM: unhealthy"
-curl -sf http://127.0.0.1:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
 curl -sf http://127.0.0.1:3000/api/health && echo "Grafana: healthy" || echo "Grafana: unhealthy"
 ```
 
-Report: how many containers are running, which are healthy, any issues.
-If problems found, suggest fixes from the Recovery table below.
-
-## Option 2: Run Validation
+### Validation
 
 ```bash
 ./scripts/04_validate.sh
 ```
 
-Interpret the results:
-- **All passed** — report healthy, show summary.
-- **Failures** — for each failure, match the Recovery table, suggest the
-  fix, and offer to run it.
-- **Warnings** — advisory only, report but don't act unless asked.
+If failures occur, match them against the Recovery table below, suggest
+the fix, and offer to run it. WARN messages are advisory only.
 
-## Option 3: Upgrade
+### Upgrade
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
 ```
 
-Bootstrap detects existing install, compares versions, pulls updates.
-After upgrade, remind the user to restart any running coding tools.
-
+After upgrade, remind user to restart any running coding tools.
 If Grafana looks stale: `docker compose restart grafana`.
 
-## Option 4: Key Management
+### Key management
 
-Ask which sub-action:
-
-**a) Rotate MaaS API key**
-
-The MaaS key is in `.env` as `HUAWEI_MAAS_API_KEY`. To rotate:
-1. Get a new key from Huawei cloud console (region ap-southeast-1)
-2. Edit `.env`: replace `HUAWEI_MAAS_API_KEY` value
-3. Regenerate config and restart:
+Read the master key from `.env` when needed:
 ```bash
-./scripts/02_litellm.sh
-```
-
-**b) Add load-balancing keys**
-
-1. Edit `.env`:
-   - Set `HUAWEI_MAAS_API_KEY_COUNT=3` (or however many total keys)
-   - Add `HUAWEI_MAAS_API_KEY_1="sk-..."`, `HUAWEI_MAAS_API_KEY_2="sk-..."`
-2. Regenerate and restart:
-```bash
-./scripts/02_litellm.sh
-```
-
-**c) Mint a new virtual key** (for an additional tool)
-
-```bash
-# Read master key from .env
 MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
+```
 
-# Mint a new key
+**Rotate MaaS key**: edit `.env` (change `HUAWEI_MAAS_API_KEY`), then:
+```bash
+./scripts/02_litellm.sh
+```
+
+**Add load-balancing keys**: edit `.env` — set `HUAWEI_MAAS_API_KEY_COUNT=N`
+and add `HUAWEI_MAAS_API_KEY_1`, `_2`, etc. Then:
+```bash
+./scripts/02_litellm.sh
+```
+
+**Mint a virtual key**:
+```bash
 curl -X POST http://127.0.0.1:4000/key/generate \
   -H "Authorization: Bearer $MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"key_alias": "my-new-tool", "models": ["all"], "max_budget": 0}'
+  -d '{"key_alias": "my-tool", "models": ["all"], "max_budget": 0}'
 ```
 
-**d) List existing keys** — point user to `http://127.0.0.1:4000/ui`
-(login: `admin` / master key from `.env`).
+**List keys**: point user to `http://127.0.0.1:4000/ui` (login: `admin` /
+master key).
 
-## Option 5: Model Management
+### Model management
 
-Models are defined in `scripts/helpers/models.sh` — the single source of
-truth. Each line in the `MODELS` array has this format:
-
+Models are in `scripts/helpers/models.sh`. Format:
 ```
 model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
 ```
@@ -160,141 +111,70 @@ model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
 Current models: `glm-5.2`, `glm-5.1`, `glm-5`, `deepseek-v4-pro`,
 `deepseek-v4-flash`, `deepseek-v3.2`.
 
-Ask which sub-action:
-
-**a) List models**
+**List models**:
 ```bash
 grep -oP '^\s*"\K[^:]+' scripts/helpers/models.sh
 ```
 
-**b) Add a model**
-
-1. Edit `scripts/helpers/models.sh` — add a new line to the `MODELS` array
-   with the model details
-2. Regenerate config and validate:
+**Add a model**: add a line to the `MODELS` array in `scripts/helpers/models.sh`,
+then regenerate (this creates N deployments per model, one per API key):
 ```bash
 ./scripts/02_litellm.sh
 ./scripts/04_validate.sh
 ```
 
-**c) Remove a model**
+**Remove a model**: delete the line from `MODELS`, then same regenerate +
+validate.
 
-1. Edit `scripts/helpers/models.sh` — delete the line from `MODELS`
-2. Same regenerate + validate as above.
+### Debug routing
 
-## Option 6: Debug Routing
-
-Ask what the user is experiencing:
-
-**a) Tool getting 401 errors**
+**401 errors**:
 ```bash
-MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
-
-# Check the tool's virtual key is valid
-curl -sf http://127.0.0.1:4000/key/info?key=<virtual-key> \
-  -H "Authorization: Bearer $MASTER_KEY"
-
-# Check LiteLLM logs
 docker compose logs litellm --tail 100 | grep 401
 ```
 
-**b) Model not responding or slow**
+**Slow/no response**:
 ```bash
-# Deployment health
 curl -sf http://127.0.0.1:4000/health/liveliness
-
-# Latency from Prometheus
-curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_request_total_latency_seconds_sum' | jq .
-
-# Error logs
 docker compose logs litellm --tail 100 | grep -i error
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_request_total_latency_seconds_sum' | jq .
 ```
 
-**c) Inference smoke test**
+**Inference smoke test**:
 ```bash
 MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
-
 curl -X POST http://127.0.0.1:4000/v1/chat/completions \
   -H "Authorization: Bearer $MASTER_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "deepseek-v3.2", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
 ```
 
-## Option 7: View Metrics
-
-Show the Grafana link and run Prometheus queries:
+### View metrics
 
 ```bash
-# Total requests by model
 curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_total_requests' | jq .
-
-# Spend by model
 curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_spend' | jq .
-
-# Error rate (5m window)
 curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_total_errors[5m])' | jq .
 ```
 
-Grafana: `http://127.0.0.1:3000` — 28-panel dashboard (anonymous).
-LiteLLM Admin: `http://127.0.0.1:4000/ui` — keys, spend, deployments.
+Grafana: `http://127.0.0.1:3000` — 28-panel dashboard.
 
-## Option 8: Install Skill
+### Install a new skill
 
-Install a **new** skill (not this one) into all detected coding agents.
-Ask the user for:
-
-1. **Skill name** — directory name (e.g. `my-deploy-skill`)
-2. **Skill source** — a local file path or URL to a SKILL.md file
-
-Then run:
-
+Ask for skill name and source (local path or URL), then:
 ```bash
-# From a local file
-./scripts/install-skill.sh --name=my-skill --source=/path/to/SKILL.md
-
-# From a URL
-./scripts/install-skill.sh --name=my-skill --source=https://example.com/SKILL.md
-
-# Preview first
-./scripts/install-skill.sh --name=my-skill --source=... --dry-run
+./scripts/install-skill.sh --name=<name> --source=<path-or-url>
 ```
 
-This installs into all detected agents (`~/.config/opencode/skills/`,
-`~/.codex/skills/`, `~/.pi/agent/skills/`, `~/.claude/skills/`).
+Remind user to restart their coding agents afterward.
 
-The SKILL.md file should have YAML frontmatter with `name` and `description`.
-
-After installing, remind the user to restart their coding agents for the
-new skill to be discovered.
-
-## Option 9: Uninstall
-
-Ask what to remove:
+### Uninstall
 
 ```bash
-# Preview everything that would be removed
-./scripts/uninstall.sh --all --dry-run
-
-# Remove one agent only
-./scripts/uninstall.sh --tool=opencode
-
-# Remove Docker stack only
-./scripts/uninstall.sh --docker
-
-# Remove everything (agents + skills + Docker + repo)
-./scripts/uninstall.sh --all
+./scripts/uninstall.sh --all --dry-run   # preview
+./scripts/uninstall.sh --tool=opencode   # one agent
+./scripts/uninstall.sh --all             # everything
 ```
-
-Removes binaries, runtimes (bun, pi-node), configs, companion skills,
-and `.bashrc` entries.
-
-## Option 10: Just Load Context
-
-No action. The agent now has the operational context loaded and can answer
-questions about the gateway, suggest commands, or help with issues using
-the reference tables in this skill.
-
----
 
 ## Recovery
 
@@ -315,9 +195,6 @@ the reference tables in this skill.
 | Port 4000/3000/9090 in use | `lsof -i :<port>`, stop conflicting process |
 | `git pull` conflicts on upgrade | `git stash && git pull && git stash pop` |
 
-WARN messages in validation output are advisory — they do not cause
-non-zero exit.
-
 ## Remote Access
 
 **SSH forwarding (recommended):**
@@ -325,8 +202,5 @@ non-zero exit.
 ssh -L 4000:127.0.0.1:4000 -L 3000:127.0.0.1:3000 user@vm
 ```
 
-**Bind to all interfaces:**
-```bash
-# In .env: BIND_ADDRESS="0.0.0.0"
-# Then: docker compose up -d
-```
+**Bind to all interfaces:** set `BIND_ADDRESS="0.0.0.0"` in `.env`, then
+`docker compose up -d`.
