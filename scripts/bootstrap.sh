@@ -46,6 +46,50 @@ for arg in "$@"; do
   esac
 done
 
+# ── Version ──
+PROJECT_VERSION="unknown"
+if [ -f "$SCRIPT_DIR/../VERSION" ]; then
+  PROJECT_VERSION=$(cat "$SCRIPT_DIR/../VERSION" | tr -d '[:space:]')
+elif [ -f "$SCRIPT_DIR/VERSION" ]; then
+  PROJECT_VERSION=$(cat "$SCRIPT_DIR/VERSION" | tr -d '[:space:]')
+fi
+
+# Compare versions: returns 0 if equal, 1 if v1 < v2, 2 if v1 > v2
+version_compare() {
+  local v1="$1" v2="$2"
+  if [ "$v1" = "$v2" ]; then return 0; fi
+  local IFS=.
+  local i a1 a2
+  read -ra a1 <<< "$v1"
+  read -ra a2 <<< "$v2"
+  for ((i = 0; i < ${#a1[@]} || i < ${#a2[@]}; i++)); do
+    local n1=${a1[i]:-0} n2=${a2[i]:-0}
+    if (( n1 < n2 )); then return 1; fi
+    if (( n1 > n2 )); then return 2; fi
+  done
+  return 0
+}
+
+# Show version info for an existing install
+show_version_info() {
+  local existing_dir="$1"
+  local existing_version="unknown"
+  if [ -f "$existing_dir/VERSION" ]; then
+    existing_version=$(cat "$existing_dir/VERSION" | tr -d '[:space:]')
+  fi
+  if [ "$existing_version" = "unknown" ]; then
+    echo -e "  ${C_DIM}Existing version: unknown (pre-v1.0.0)${C_RESET}"
+  elif [ "$existing_version" = "$PROJECT_VERSION" ]; then
+    echo -e "  ${C_DIM}Version: $existing_version (up to date)${C_RESET}"
+  else
+    version_compare "$existing_version" "$PROJECT_VERSION" && rc=0 || rc=$?
+    case $rc in
+      1) echo -e "  ${C_GREEN}Update available: $existing_version → $PROJECT_VERSION${C_RESET}" ;;
+      2) echo -e "  ${C_YELLOW}Local version $PROJECT_VERSION is newer than existing $existing_version${C_RESET}" ;;
+    esac
+  fi
+}
+
 # ── Standalone detection ──
 # If helpers/common.sh doesn't exist, we're running outside the repo
 # (e.g., curl | bash). Prompt for install dir, clone, and re-exec.
@@ -75,6 +119,7 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
   target_dir="$install_parent/$REPO_NAME"
   if [ -d "$target_dir/.git" ]; then
     echo "  Existing install found at $target_dir"
+    show_version_info "$target_dir"
     if is_interactive; then
       echo ""
       echo -e "  ${C_BOLD}1)${C_RESET} Pull updates (preserve existing config & data) ${C_DIM}[default]${C_RESET}"
@@ -220,7 +265,7 @@ if [ "$TOOL_SPECIFIED" = true ]; then
 fi
 
 # ── Banner ──
-_banner_text="oh-my-coding-maas-gateway — Bootstrap"
+_banner_text="oh-my-coding-maas-gateway — Bootstrap v${PROJECT_VERSION}"
 _banner_width=$(( ${#_banner_text} + 4 ))
 _banner_border=""
 for _i in $(seq 1 $_banner_width); do _banner_border+="═"; done
@@ -245,6 +290,7 @@ target_dir="$install_parent/$REPO_NAME"
 if [ "$target_dir" != "$PROJECT_DIR" ]; then
   if [ -d "$target_dir/.git" ]; then
     log_info "Project already exists at $target_dir"
+    show_version_info "$target_dir"
     echo ""
     echo -e "  ${C_BOLD}1)${C_RESET} Switch to existing (pull updates) ${C_DIM}[default]${C_RESET}"
     echo -e "  ${C_BOLD}2)${C_RESET} Fresh install (uninstall old, remove all configs & Docker data)"
@@ -504,6 +550,7 @@ else
   echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with validation failures${C_RESET}"
 fi
 echo ""
+printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Version:"           "v${PROJECT_VERSION}"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Project dir:"       "$PROJECT_DIR"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM proxy:"     "$LITELLM_URL"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM Admin UI:"  "${LITELLM_URL}/ui"

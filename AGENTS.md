@@ -131,7 +131,7 @@ consistent, and readable. These standards apply to ALL scripts.
 
 ### Output Formatting
 
-- **`log_step`** — section headers (`━━━ Title ━━━`). Each step
+- **`log_step`** — section headers (green box-drawing `┌── Title ──┐`). Each step
   script prints its own header. Bootstrap must NOT also print it
   (causes duplicate headers). Bootstrap only prints headers in
   `--dry-run` mode (when the script doesn't run).

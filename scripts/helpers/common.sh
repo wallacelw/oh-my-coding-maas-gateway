@@ -11,7 +11,7 @@
 #   mask_key <key>             — print first8...last4 of a key
 #
 #   ── Logging (colored, action-labeled) ──
-#   log_step "title"           — bold cyan section header
+#   log_step "title"           — bold green box-drawing section header
 #   log_ok "msg"               — green ✓
 #   log_info "msg"             — blue →
 #   log_warn "msg"             — yellow ⚠ (stderr)
