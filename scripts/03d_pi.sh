@@ -112,7 +112,7 @@ log_info "Generating models.json..."
 
 if [ "$DRY_RUN" = true ]; then
   log_dim "Would write: $PI_CONFIG"
-  log_step "Dry run complete — no changes made"
+  log_info "Dry run complete — no changes made"
   exit 0
 fi
 
@@ -168,6 +168,7 @@ else
   log_ok "Written: $PI_CONFIG"
 fi
 
+echo ""
 log_step "Pi installation complete"
 log_dim "Provider: LiteLLM — ${#MODELS[@]} models available"
 log_dim "Config: $PI_CONFIG"

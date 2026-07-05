@@ -109,7 +109,7 @@ log_info "Writing Claude Code CLI config..."
 if [ "$DRY_RUN" = true ]; then
   log_info "Would write: $CLAUDE_SETTINGS, ~/.claude.json"
   echo ""
-  log_ok "Dry run complete — no changes made"
+  log_info "Dry run complete — no changes made"
   exit 0
 fi
 
