@@ -215,10 +215,18 @@ lines with a dim `[tag]` prefix.
 
 - `prompt_yesno "question" [y|n]` — colored `? Question [Y/n]`, auto-defaults on non-TTY
 - `prompt_input "question" [default]` — colored input with default hint
-- `prompt_password "label" "auto_value"` — shows masked auto-generated preview, offers custom entry
+- `prompt_password "label" "auto_value" [prefix]` — shows masked auto-generated preview, offers custom entry; when `prefix` is given, custom input is validated and re-prompted on mismatch (e.g. `LITELLM_MASTER_KEY` requires `sk-`)
 
 In `01_env.sh`, each secret prompts: "Use auto-generated value? [Y/n]" or
 enter custom. Non-interactive defaults to auto-generated.
+
+**Prompt conventions:**
+
+- Yes/no prompts are **case-insensitive**: `y`, `Y`, `yes`, `YES` all mean
+  yes; `n`, `N`, `no`, `NO` all mean no.
+- The **uppercase letter** in the hint indicates the default: `[Y/n]` →
+  Enter defaults to yes, `[y/N]` → Enter defaults to no.
+- Pressing **Enter** without typing accepts the default.
 
 ---
 
