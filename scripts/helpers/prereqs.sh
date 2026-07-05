@@ -89,7 +89,9 @@ prereq_ensure_apt() {
   fi
 
   _prereq_apt_update_once
-  _prereq_sudo apt-get install -y -qq "$pkg"
+  if ! run_with_spinner "Installing $display_name" _prereq_sudo apt-get install -y -qq "$pkg"; then
+    _prereq_fail "$display_name"
+  fi
   export _PREREQ_APT_UPDATED=true
 
   if ! command -v "$cmd" &>/dev/null; then
@@ -109,7 +111,9 @@ prereq_ensure_bun() {
     _prereq_fail "bun"
   fi
 
-  curl -fsSL --max-time 60 https://bun.sh/install | bash
+  if ! run_with_spinner "Installing bun" bash -c 'curl -fsSL --max-time 60 https://bun.sh/install | bash'; then
+    _prereq_fail "bun"
+  fi
   export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
   export PATH="$BUN_INSTALL/bin:$PATH"
 
@@ -131,7 +135,9 @@ prereq_ensure_npm() {
   fi
 
   _prereq_apt_update_once
-  _prereq_sudo apt-get install -y -qq nodejs npm
+  if ! run_with_spinner "Installing Node.js + npm" _prereq_sudo apt-get install -y -qq nodejs npm; then
+    _prereq_fail "npm/node"
+  fi
 
   if ! command -v npm &>/dev/null; then
     _prereq_fail "npm"
@@ -147,8 +153,7 @@ prereq_ensure_docker() {
     if ! _prereq_prompt "  Install Docker?"; then
       _prereq_fail "docker"
     fi
-    if ! curl -fsSL --max-time 120 https://get.docker.com | _prereq_sudo sh; then
-      echo "  ✗ Docker install script failed." >&2
+    if ! run_with_spinner "Installing Docker Engine" bash -c 'curl -fsSL --max-time 120 https://get.docker.com | _prereq_sudo sh'; then
       _prereq_fail "docker"
     fi
     # Refresh PATH — get.docker.com installs to /usr/bin which should exist
@@ -164,8 +169,7 @@ prereq_ensure_docker() {
   if ! docker compose version &>/dev/null; then
     echo "→ [${LOG_TAG:-system}] Installing Docker Compose plugin..."
     _prereq_apt_update_once
-    if ! _prereq_sudo apt-get install -y -qq docker-compose-v2; then
-      echo "  ✗ Docker Compose plugin install failed." >&2
+    if ! run_with_spinner "Installing Docker Compose plugin" _prereq_sudo apt-get install -y -qq docker-compose-v2; then
       _prereq_fail "docker-compose-v2"
     fi
   fi
