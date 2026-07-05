@@ -154,14 +154,27 @@ prereq_ensure_docker() {
     if ! _prereq_prompt "  Install Docker?"; then
       _prereq_fail "docker"
     fi
-    curl -fsSL --max-time 120 https://get.docker.com | _prereq_sudo sh
+    if ! curl -fsSL --max-time 120 https://get.docker.com | _prereq_sudo sh; then
+      echo "  ✗ Docker install script failed." >&2
+      _prereq_fail "docker"
+    fi
+    # Refresh PATH — get.docker.com installs to /usr/bin which should exist
+    hash -r 2>/dev/null || true
+  fi
+
+  # Verify docker is now available
+  if ! command -v docker &>/dev/null; then
+    _prereq_fail "docker"
   fi
 
   # Ensure compose plugin
   if ! docker compose version &>/dev/null; then
     echo "→ [${LOG_TAG:-system}] Installing Docker Compose plugin..."
     _prereq_apt_update_once
-    _prereq_sudo apt-get install -y -qq docker-compose-v2
+    if ! _prereq_sudo apt-get install -y -qq docker-compose-v2; then
+      echo "  ✗ Docker Compose plugin install failed." >&2
+      _prereq_fail "docker-compose-v2"
+    fi
   fi
 
   # Start daemon if not running
