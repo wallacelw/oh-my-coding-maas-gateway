@@ -110,7 +110,7 @@ log_info "Writing Codex CLI config..."
 if [ "$DRY_RUN" = true ]; then
   log_info "Would write: $CODEX_CONFIG, $CODEX_DIR/model_catalog.json, $CODEX_DIR/.env"
   echo ""
-  log_ok "Dry run complete — no changes made"
+  log_info "Dry run complete — no changes made"
   exit 0
 fi
 

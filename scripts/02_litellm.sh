@@ -47,6 +47,7 @@ done
 log_step "Step 02 — LiteLLM proxy + observability"
 
 # ── Port conflict check ──
+echo ""
 for port in 4000 5432 9090 3000; do
   port_in_use=false
   if command -v ss &>/dev/null && ss -tlnp 2>/dev/null | grep -qE ":${port}\b"; then

@@ -100,7 +100,7 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
           cd "$target_dir"
           if ! git pull --ff-only; then
             echo ""
-            echo "  git pull failed. Reset to origin/main? [y/N]: "
+            echo -e "  ${C_YELLOW}⚠ git pull failed.${C_RESET} Reset to origin/main? ${C_DIM}[y/N]${C_RESET}: "
             read -r reset_choice < /dev/tty || reset_choice="n"
             case "$reset_choice" in
               y|Y|yes|YES)

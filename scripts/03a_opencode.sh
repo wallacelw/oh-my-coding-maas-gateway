@@ -135,7 +135,7 @@ log_info "Writing opencode config..."
 if [ "$DRY_RUN" = true ]; then
   log_dim "Would write: $OPENCODE_CONFIG"
   log_dim "Would write: $OPENCODE_DIR/oh-my-opencode-slim.json"
-  log_step "Dry run complete — no changes made"
+  log_info "Dry run complete — no changes made"
   exit 0
 fi
 
@@ -207,6 +207,7 @@ else
   log_ok "Written: $SLIM_CONFIG"
 fi
 
+echo ""
 log_step "opencode installation complete"
 log_dim "Preset: LiteLLM-Huawei-MaaS-Full (default) — all 6 models via LiteLLM"
 log_dim "Switch preset: /preset LiteLLM-Huawei-MaaS-Core"

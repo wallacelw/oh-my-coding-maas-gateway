@@ -178,10 +178,9 @@ fi
 if [ -n "$MAAS_API_KEY" ]; then
   log_ok "HUAWEI_MAAS_API_KEY set from environment"
 elif is_interactive; then
-  echo ""
   while true; do
     echo ""
-    MAAS_API_KEY=$(prompt_input "Enter Huawei MaaS API key (region ap-southeast-1)" "")
+    MAAS_API_KEY=$(prompt_input "Enter Huawei MaaS API key ($MAAS_API_BASE)" "")
     if [ -z "$MAAS_API_KEY" ]; then
       log_warn "Key cannot be empty. Please try again."
       continue
@@ -228,7 +227,6 @@ elif is_interactive; then
   log_dim "Additional MaaS API keys for load balancing."
   log_dim "Each extra key multiplies effective RPM/TPM across all models."
   log_dim "Press Enter without typing anything to skip (0 extra keys)."
-  echo ""
   while true; do
     echo ""
     EXTRA_NUM=$(( ${#EXTRA_KEYS[@]} + 1 ))
