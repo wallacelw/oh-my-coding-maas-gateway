@@ -153,7 +153,7 @@ if [ "$IS_FRESH" = true ]; then
   GRAFANA_PASSWORD=$(prompt_password "GRAFANA_ADMIN_PASSWORD" "$AUTO_GRAFANA_PASSWORD")
 
   echo ""
-  PROM_RETENTION=$(prompt_input "PROMETHEUS_RETENTION (e.g. 30d, 14d, 7d)" "$AUTO_PROM_RETENTION")
+  PROM_RETENTION=$(prompt_password "PROMETHEUS_RETENTION (e.g. 30d, 14d, 7d)" "$AUTO_PROM_RETENTION")
 fi
 
 # ── Collect MaaS API key (env var or prompt) ──
