@@ -30,7 +30,7 @@ What would you like to do?
   5) Model management     — list, add, or remove models
   6) Debug routing        — diagnose 401s, latency, errors
   7) View metrics         — Prometheus queries + Grafana link
-  8) Install skill        — install this skill into all agents
+  8) Install skill         — install a new skill into all agents
   9) Uninstall            — remove all or part of the gateway
  10) Just load context    — no action, I just need the reference info
 
@@ -195,17 +195,32 @@ LiteLLM Admin: `http://127.0.0.1:4000/ui` — keys, spend, deployments.
 
 ## Option 8: Install Skill
 
-Install this companion skill into all detected coding agents:
+Install a **new** skill (not this one) into all detected coding agents.
+Ask the user for:
+
+1. **Skill name** — directory name (e.g. `my-deploy-skill`)
+2. **Skill source** — a local file path or URL to a SKILL.md file
+
+Then run:
 
 ```bash
-./scripts/05_skill.sh --yes
+# From a local file
+./scripts/install-skill.sh --name=my-skill --source=/path/to/SKILL.md
+
+# From a URL
+./scripts/install-skill.sh --name=my-skill --source=https://example.com/SKILL.md
+
+# Preview first
+./scripts/install-skill.sh --name=my-skill --source=... --dry-run
 ```
 
-Skill locations:
-- opencode: `~/.config/opencode/skills/oh-my-coding-maas-gateway/SKILL.md`
-- codex: `~/.codex/skills/oh-my-coding-maas-gateway/SKILL.md`
-- pi: `~/.pi/agent/skills/oh-my-coding-maas-gateway/SKILL.md`
-- claude: `~/.claude/skills/oh-my-coding-maas-gateway/SKILL.md`
+Installs into all detected agents:
+- opencode: `~/.config/opencode/skills/<name>/SKILL.md`
+- codex: `~/.codex/skills/<name>/SKILL.md`
+- pi: `~/.pi/agent/skills/<name>/SKILL.md`
+- claude: `~/.claude/skills/<name>/SKILL.md`
+
+The SKILL.md file should have YAML frontmatter with `name` and `description`.
 
 ## Option 9: Uninstall
 
