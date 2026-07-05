@@ -204,9 +204,10 @@ prompt_input() {
 # Password prompt with optional auto-generated default.
 # If default is provided and TTY: offers to use it or enter custom.
 # If non-TTY: echoes the default.
-# Usage: prompt_password "DB_PASSWORD" "$auto_generated_value"
+# Usage: prompt_password "DB_PASSWORD" "$auto_generated_value" [prefix]
+# When prefix is given, custom input must start with it (re-prompts on mismatch).
 prompt_password() {
-  local label="$1" default="$2"
+  local label="$1" default="$2" prefix="${3:-}"
   if ! is_interactive; then
     echo "$default"; return
   fi
@@ -216,10 +217,21 @@ prompt_password() {
     echo "$default"
     return
   fi
-  echo -ne "  ${C_BOLD}Enter custom value${C_RESET}: " >&2
-  local answer
-  read -r answer < /dev/tty
-  echo "$answer"
+  while true; do
+    if [ -n "$prefix" ]; then
+      echo -ne "  ${C_BOLD}Enter custom value${C_RESET} ${C_DIM}(must start with '$prefix')${C_RESET}: " >&2
+    else
+      echo -ne "  ${C_BOLD}Enter custom value${C_RESET}: " >&2
+    fi
+    local answer
+    read -r answer < /dev/tty
+    if [ -n "$prefix" ] && [ "${answer#$prefix}" = "$answer" ]; then
+      log_warn "Value must start with '$prefix'. Please try again."
+      continue
+    fi
+    echo "$answer"
+    return
+  done
 }
 
 # ── Subprocess output filtering ──────────────────────────────
