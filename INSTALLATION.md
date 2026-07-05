@@ -395,5 +395,132 @@ exec "$SHELL"
 Then run your coding tool:
 
 ```bash
-opencode          # or: codex  or:  claude --bare
+opencode          # or:  codex  or:  claude --bare  or:  pi
+```
+
+### Using opencode
+
+```bash
+opencode
+# Switch preset: /preset LiteLLM-Huawei-MaaS-Core
+# Available presets:
+#   LiteLLM-Huawei-MaaS-Full  (default, all 6 models via proxy)
+#   LiteLLM-Huawei-MaaS-Core  (4 models, no v4-pro/v4-flash)
+#   Huawei-MaaS-Full          (direct, bypass proxy)
+#   Huawei-MaaS-Core          (direct, bypass proxy)
+```
+
+If opencode was already running, exit it first (`/exit` or Ctrl+C).
+
+### Using Codex CLI
+
+```bash
+codex
+codex --model deepseek-v4-pro    # deep reasoning
+codex --model deepseek-v3.2      # fast
+```
+
+### Using Claude Code CLI
+
+```bash
+claude --bare
+claude --bare --model claude-deepseek-v4-pro    # deep reasoning
+```
+
+### Using Pi agent
+
+```bash
+pi
+# Switch model at runtime via Pi's model selection UI
+```
+
+### Monitoring
+
+- **Grafana:** `http://127.0.0.1:3000` — 28-panel dashboard (anonymous, no
+  login). 6 sections: At-a-glance, Latency, Errors & Health, Throughput &
+  Capacity, Tokens, Cost. Time window selectable (default 1h).
+- **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
+  keys, spend, budgets. Login: `admin` / your master key.
+- **Prometheus:** `http://127.0.0.1:9090` — raw metrics.
+
+### Remote Access
+
+All ports bind to `127.0.0.1` by default (localhost only). Two ways to access
+from another machine (e.g. your laptop when the stack runs on a VM):
+
+**Option A — SSH port forwarding (recommended, no config change):**
+
+```bash
+ssh -L 4000:127.0.0.1:4000 -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 user@vm
+```
+
+Then open `http://localhost:4000/ui` and `http://localhost:3000` on your
+local machine. Traffic is encrypted via SSH. No ports exposed to the network.
+
+**Option B — Bind to all interfaces (direct access, less secure):**
+
+```bash
+# In .env:
+BIND_ADDRESS="0.0.0.0"
+
+# Restart:
+docker compose up -d
+```
+
+Then access via `http://<vm-ip>:4000/ui` and `http://<vm-ip>:3000` from any
+machine on the network. Ensure firewall rules limit access (e.g. security
+group, `ufw allow from <your-ip> to any port 4000`).
+
+### Services
+
+| Service | URL | Auth | Purpose |
+|---------|-----|------|---------|
+| LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key | API gateway |
+| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key | View keys, spend, deployments |
+| Grafana Dashboard | `http://127.0.0.1:3000` | Anonymous | 28-panel observability dashboard |
+| Prometheus | `http://127.0.0.1:9090` | None | Metrics storage |
+| PostgreSQL | `localhost:5432` (internal) | — | LiteLLM database |
+
+### Coding Tools
+
+| Tool | Activate | API Format | Config location |
+|------|----------|------------|-----------------|
+| opencode | `opencode` | OpenAI Chat Completions | `~/.config/opencode/opencode.json` |
+| Codex CLI | `codex` | OpenAI Responses (bridged) | `~/.codex/config.toml` |
+| Claude Code CLI | `claude --bare` | Anthropic Messages | `~/.claude/settings.json` |
+| Pi agent | `pi` | OpenAI Chat Completions | `~/.pi/agent/models.json` |
+
+Each tool gets its own virtual key with unlimited budget and access to all
+models. opencode also gets 4 presets and 7 agents via the
+oh-my-opencode-slim plugin.
+
+### Install Modes
+
+Interactive menu appears when you run bootstrap. Or use `--tool=` flag:
+
+| Choice | Flag | What gets installed |
+|--------|------|-------------------|
+| 1 (default) | `--tool=all` | LiteLLM + all coding tools |
+| 2 | `--tool=litellm` | LiteLLM proxy only |
+| 3 | `--tool=opencode` | LiteLLM + opencode |
+| 4 | `--tool=codex` | LiteLLM + Codex CLI |
+| 5 | `--tool=claude` | LiteLLM + Claude Code CLI |
+| 6 | `--tool=pi` | LiteLLM + Pi agent |
+| 7 | `--tool=opencode,codex` | Custom combo (comma-separated) |
+
+### Companion Skill
+
+After installation, bootstrap offers to install SKILL.md as a skill into
+each detected coding agent. This gives your agents operational guidance
+for the gateway.
+
+| Tool | Skill location | How to invoke |
+|------|---------------|---------------|
+| opencode | `~/.config/opencode/skills/oh-my-coding-maas-gateway/SKILL.md` | Automatic (agent reads skill) |
+| Codex CLI | `~/.codex/skills/oh-my-coding-maas-gateway/SKILL.md` | Automatic (agent reads skill) |
+| Pi agent | `~/.pi/agent/skills/oh-my-coding-maas-gateway/SKILL.md` | `/skill:oh-my-coding-maas-gateway` |
+| Claude Code | `~/.claude/commands/oh-my-gateway.md` | `/oh-my-gateway` (slash command) |
+
+```bash
+./scripts/05_skill.sh --yes    # install manually anytime
 ```
