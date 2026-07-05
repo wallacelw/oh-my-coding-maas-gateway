@@ -167,6 +167,20 @@ refresh_path() {
 }
 refresh_path
 
+# ── Track whether keys came from env vars (vs interactive prompts) ──
+# Used to decide if the security disclaimer is shown at the end.
+KEYS_FROM_ENV=false
+if [ -n "${HUAWEI_MAAS_API_KEY:-}" ] \
+   || [ -n "${HUAWEI_MAAS_API_KEY_COUNT:-}" ] \
+   || [ -n "${LITELLM_MASTER_KEY:-}" ] \
+   || [ -n "${VIRTUAL_KEY:-}" ]; then
+  KEYS_FROM_ENV=true
+fi
+# Also check for HUAWEI_MAAS_API_KEY_1..N
+for _v in "${!HUAWEI_MAAS_API_KEY_@}"; do
+  [ -n "${!_v}" ] && KEYS_FROM_ENV=true
+done
+
 # ── Prevent concurrent runs (flock) ──
 exec 9>"$PROJECT_DIR/.bootstrap.lock"
 if ! flock -n 9; then
@@ -520,21 +534,24 @@ fi
 
 echo ""
 echo -e "  ${C_BOLD}Next steps:${C_RESET}"
-[ "$INSTALL_OPENCODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %s\n" "opencode:"  "exit any running session, then run: ${C_CYAN}opencode${C_RESET}"
-[ "$INSTALL_CODEX" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %s\n" "Codex:"     "${C_CYAN}codex${C_RESET}"
-[ "$INSTALL_CLAUDE_CODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %s\n" "Claude:"    "${C_CYAN}claude --bare${C_RESET}"
-[ "$INSTALL_PI" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %s\n" "Pi:"        "${C_CYAN}pi${C_RESET}"
+[ "$INSTALL_OPENCODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "opencode:"  "exit any running session, then run: ${C_CYAN}opencode${C_RESET}"
+[ "$INSTALL_CODEX" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "Codex:"     "${C_CYAN}codex${C_RESET}"
+[ "$INSTALL_CLAUDE_CODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "Claude:"    "${C_CYAN}claude --bare${C_RESET}"
+[ "$INSTALL_PI" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "Pi:"        "${C_CYAN}pi${C_RESET}"
 echo ""
-echo -e "  ${C_YELLOW}⚠ Security:${C_RESET} API keys were shared via environment variables and command line."
-echo -e "    ${C_DIM}Rotate your MaaS keys to prevent unauthorized use:${C_RESET}"
-echo -e "      ${C_DIM}1. Get new key(s) from https://console.huaweicloud.com/modelarts/${C_RESET}"
-echo -e "      ${C_DIM}2. Edit .env: replace HUAWEI_MAAS_API_KEY and HUAWEI_MAAS_API_KEY_1..N${C_RESET}"
-echo -e "      ${C_DIM}3. Regenerate config: ./scripts/02_litellm.sh${C_RESET}"
-echo -e "      ${C_DIM}4. Restart LiteLLM:  docker compose restart litellm${C_RESET}"
-echo -e "      ${C_DIM}5. Re-validate:      ./scripts/04_validate.sh${C_RESET}"
-echo ""
-echo -e "  ${C_BOLD}Restart your shell${C_RESET} (or open a new terminal) to clear exported environment"
-echo -e "  variables and apply all changes:"
-echo -e "    ${C_CYAN}exec \"\$SHELL\"${C_RESET}    ${C_DIM}# or close and reopen your terminal${C_RESET}"
+
+if [ "$KEYS_FROM_ENV" = true ]; then
+  echo -e "  ${C_YELLOW}⚠ Security:${C_RESET} API keys were shared via environment variables and command line."
+  echo -e "    ${C_DIM}Rotate your MaaS keys to prevent unauthorized use:${C_RESET}"
+  echo -e "      ${C_DIM}1. Get new key(s) from https://console.huaweicloud.com/modelarts/${C_RESET}"
+  echo -e "      ${C_DIM}2. Edit .env: replace HUAWEI_MAAS_API_KEY and HUAWEI_MAAS_API_KEY_1..N${C_RESET}"
+  echo -e "      ${C_DIM}3. Regenerate config: ./scripts/02_litellm.sh${C_RESET}"
+  echo -e "      ${C_DIM}4. Restart LiteLLM:  docker compose restart litellm${C_RESET}"
+  echo -e "      ${C_DIM}5. Re-validate:      ./scripts/04_validate.sh${C_RESET}"
+  echo ""
+  echo -e "  ${C_BOLD}Restart your shell${C_RESET} (or open a new terminal) to clear exported environment"
+  echo -e "  variables and apply all changes:"
+  echo -e "    ${C_CYAN}exec \"\$SHELL\"${C_RESET}    ${C_DIM}# or close and reopen your terminal${C_RESET}"
+fi
 
 exit "$VALIDATE_RC"
