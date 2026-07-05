@@ -11,7 +11,7 @@ set -euo pipefail
 #                prints a colored summary. This is the only script a human
 #                needs to run. Each step is independently runnable too.
 #
-# Usage (callable from any directory — resolves paths via $0):
+# Usage:
 #   ./bootstrap.sh                          # interactive — prompts + tool menu
 #   ./bootstrap.sh --tool=all               # install all (default)
 #   ./bootstrap.sh --tool=litellm           # LiteLLM proxy only
