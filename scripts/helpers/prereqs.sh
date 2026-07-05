@@ -65,7 +65,7 @@ _prereq_prompt() {
   if ! is_interactive; then
     return 0
   fi
-  prompt_yesno "$question" n
+  prompt_yesno "$question" y
 }
 
 # ---------------------------------------------------------------------------
