@@ -56,13 +56,13 @@ Estimated time: ~5 min fresh, ~2 min upgrade.
 
 ```bash
 # Install LiteLLM + all coding tools
-HUAWEI_MAAS_API_KEY="sk-..." curl -fsSL .../bootstrap.sh | bash -- --tool=all
+HUAWEI_MAAS_API_KEY="sk-..." curl -fsSL .../bootstrap.sh | bash -s -- --tool=all
 
 # Install LiteLLM only
-curl -fsSL .../bootstrap.sh | bash -- --tool=litellm
+curl -fsSL .../bootstrap.sh | bash -s -- --tool=litellm
 
 # Custom combo
-curl -fsSL .../bootstrap.sh | bash -- --tool=opencode,codex
+curl -fsSL .../bootstrap.sh | bash -s -- --tool=opencode,codex
 ```
 
 ### After install
