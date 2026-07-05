@@ -9,9 +9,24 @@ Operational companion for a self-hosted LiteLLM proxy routing Huawei MaaS
 models to opencode, Codex CLI, Claude Code CLI, and Pi agent with virtual
 keys, multi-key load balancing, and Prometheus + Grafana observability.
 
-This skill loads as context. The user can ask for help with any of the
-operations below — respond to their request directly. No need to present
-a menu unless they ask "what can you do?"
+## When Invoked
+
+Present this menu. Default (just press Enter) loads context without action:
+
+```
+What would you like to do?
+
+  1) Health check     — quick status of all services
+  2) Run validation   — full end-to-end validation
+  3) Upgrade          — check for and apply updates
+  4) Uninstall        — remove all or part of the gateway
+
+  Choice [1-4] or Enter for context only:
+```
+
+After completing an action, ask if they need anything else. For anything
+not in the menu (key management, model management, debug routing, metrics,
+install skill), respond using the reference sections below.
 
 ## Project Location
 
@@ -42,11 +57,9 @@ cd ~/oh-my-coding-maas-gateway
 | Grafana Dashboard | `http://127.0.0.1:3000` | Anonymous |
 | Prometheus | `http://127.0.0.1:9090` | None |
 
-## What You Can Help With
+---
 
-When the user asks for any of these, use the commands below:
-
-### Health check
+## Option 1: Health Check
 
 ```bash
 docker compose ps
@@ -54,16 +67,19 @@ curl -sf http://127.0.0.1:4000/health/liveliness && echo "LiteLLM: healthy" || e
 curl -sf http://127.0.0.1:3000/api/health && echo "Grafana: healthy" || echo "Grafana: unhealthy"
 ```
 
-### Validation
+Report: how many containers are running, which are healthy, any issues.
+If problems found, suggest fixes from the Recovery table below.
+
+## Option 2: Run Validation
 
 ```bash
 ./scripts/04_validate.sh
 ```
 
-If failures occur, match them against the Recovery table below, suggest
-the fix, and offer to run it. WARN messages are advisory only.
+If failures occur, match them against the Recovery table, suggest the fix,
+and offer to run it. WARN messages are advisory only.
 
-### Upgrade
+## Option 3: Upgrade
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
@@ -72,7 +88,19 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 After upgrade, remind user to restart any running coding tools.
 If Grafana looks stale: `docker compose restart grafana`.
 
-### Key management
+## Option 4: Uninstall
+
+Ask what to remove:
+
+```bash
+./scripts/uninstall.sh --all --dry-run   # preview
+./scripts/uninstall.sh --tool=opencode   # one agent
+./scripts/uninstall.sh --all             # everything
+```
+
+---
+
+## Key Management
 
 Read the master key from `.env` when needed:
 ```bash
@@ -101,7 +129,7 @@ curl -X POST http://127.0.0.1:4000/key/generate \
 **List keys**: point user to `http://127.0.0.1:4000/ui` (login: `admin` /
 master key).
 
-### Model management
+## Model Management
 
 Models are in `scripts/helpers/models.sh`. Format:
 ```
@@ -126,7 +154,7 @@ then regenerate (this creates N deployments per model, one per API key):
 **Remove a model**: delete the line from `MODELS`, then same regenerate +
 validate.
 
-### Debug routing
+## Debug Routing
 
 **401 errors**:
 ```bash
@@ -149,7 +177,7 @@ curl -X POST http://127.0.0.1:4000/v1/chat/completions \
   -d '{"model": "deepseek-v3.2", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
 ```
 
-### View metrics
+## View Metrics
 
 ```bash
 curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_total_requests' | jq .
@@ -159,7 +187,7 @@ curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_total_errors[5m]
 
 Grafana: `http://127.0.0.1:3000` — 28-panel dashboard.
 
-### Install a new skill
+## Install a New Skill
 
 Ask for skill name and source (local path or URL), then:
 ```bash
@@ -168,13 +196,7 @@ Ask for skill name and source (local path or URL), then:
 
 Remind user to restart their coding agents afterward.
 
-### Uninstall
-
-```bash
-./scripts/uninstall.sh --all --dry-run   # preview
-./scripts/uninstall.sh --tool=opencode   # one agent
-./scripts/uninstall.sh --all             # everything
-```
+---
 
 ## Recovery
 
