@@ -231,7 +231,7 @@ elif is_interactive; then
   while true; do
     echo ""
     EXTRA_NUM=$(( ${#EXTRA_KEYS[@]} + 1 ))
-    extra_key=$(prompt_input "MaaS API key #$EXTRA_NUM (or press Enter to finish)" "")
+    extra_key=$(prompt_input "Extra MaaS API key #$EXTRA_NUM (or press Enter to finish)" "")
     [ -z "$extra_key" ] && break
     log_info "Validating key #$EXTRA_NUM..."
     validate_maas_key "$extra_key" "$MAAS_API_BASE" && rc=0 || rc=$?
