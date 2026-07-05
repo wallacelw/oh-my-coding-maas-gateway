@@ -221,9 +221,20 @@ if [ "$REMOVE_CODEX" = true ]; then
   remove_glob "$HOME/.codex/config.toml.bak.*" "config backup"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @openai/codex"
-  elif command -v npm &>/dev/null && command -v codex &>/dev/null; then
-    npm uninstall -g @openai/codex 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
-    log_ok "Removed npm package: @openai/codex"
+  else
+    if command -v npm &>/dev/null; then
+      npm uninstall -g @openai/codex 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
+    fi
+    # Fallback: npm uninstall may silently no-op if registry is out of sync
+    if command -v codex &>/dev/null; then
+      rm -f "$(command -v codex)"
+      hash -r 2>/dev/null || true
+    fi
+    if command -v codex &>/dev/null; then
+      log_warn "codex binary still present at $(command -v codex)"
+    else
+      log_ok "Removed codex binary"
+    fi
   fi
 fi
 
@@ -235,9 +246,19 @@ if [ "$REMOVE_CLAUDE" = true ]; then
   remove_glob "$HOME/.claude/settings.json.bak.*" "settings backup"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @anthropic-ai/claude-code"
-  elif command -v npm &>/dev/null && command -v claude &>/dev/null; then
-    npm uninstall -g @anthropic-ai/claude-code 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
-    log_ok "Removed npm package: @anthropic-ai/claude-code"
+  else
+    if command -v npm &>/dev/null; then
+      npm uninstall -g @anthropic-ai/claude-code 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
+    fi
+    if command -v claude &>/dev/null; then
+      rm -f "$(command -v claude)"
+      hash -r 2>/dev/null || true
+    fi
+    if command -v claude &>/dev/null; then
+      log_warn "claude binary still present at $(command -v claude)"
+    else
+      log_ok "Removed claude binary"
+    fi
   fi
 fi
 
@@ -248,9 +269,19 @@ if [ "$REMOVE_PI" = true ]; then
   remove_glob "$HOME/.pi/agent/models.json.bak.*" "config backup"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @earendil-works/pi-coding-agent"
-  elif command -v npm &>/dev/null && command -v pi &>/dev/null; then
-    npm uninstall -g @earendil-works/pi-coding-agent 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
-    log_ok "Removed npm package: @earendil-works/pi-coding-agent"
+  else
+    if command -v npm &>/dev/null; then
+      npm uninstall -g @earendil-works/pi-coding-agent 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
+    fi
+    if command -v pi &>/dev/null; then
+      rm -f "$(command -v pi)"
+      hash -r 2>/dev/null || true
+    fi
+    if command -v pi &>/dev/null; then
+      log_warn "pi binary still present at $(command -v pi)"
+    else
+      log_ok "Removed pi binary"
+    fi
   fi
   # Also remove pi-managed Node.js if present
   if [ "$DRY_RUN" != true ] && [ -d "$HOME/.local/share/pi-node" ]; then
