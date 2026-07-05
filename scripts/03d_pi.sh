@@ -59,13 +59,13 @@ fi
 log_info "Installing pi..."
 if ! command -v pi &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
-    log_dim "Would run: curl -fsSL $PI_INSTALL_URL | sh"
+    log_info "Would run: curl -fsSL $PI_INSTALL_URL | sh"
   else
     run_filtered "pi" sh -c "curl -fsSL $PI_INSTALL_URL | sh"
-    log_ok "Installed: $(pi --version 2>/dev/null || echo 'pi')"
+    log_ok "Installed: $(pi --version 2>/dev/null || echo 'unknown')"
   fi
 else
-  log_ok "Already installed: $(pi --version 2>/dev/null || echo 'pi')"
+  log_ok "Already installed: $(pi --version 2>/dev/null || echo 'unknown')"
 fi
 
 # ── 3. Acquire virtual key (idempotent) ──
@@ -94,7 +94,7 @@ fi
 
 if [ -z "$VIRTUAL_KEY" ]; then
   if [ "$DRY_RUN" = true ]; then
-    log_dim "Would mint key (alias=pi, unlimited budget)"
+    log_info "Would mint key (alias=pi, unlimited budget)"
     VIRTUAL_KEY="sk-dryrun-placeholder"
   else
     resolve_master_key "$PROJECT_DIR" || exit 1
@@ -111,7 +111,8 @@ fi
 log_info "Generating models.json..."
 
 if [ "$DRY_RUN" = true ]; then
-  log_dim "Would write: $PI_CONFIG"
+  log_info "Would write: $PI_CONFIG"
+  echo ""
   log_info "Dry run complete — no changes made"
   exit 0
 fi
@@ -155,7 +156,7 @@ fi
 # ── 5. Write models.json ──
 if [ -f "$PI_CONFIG" ]; then
   if [ "$NEW_CONFIG" = "$(cat "$PI_CONFIG")" ]; then
-    log_dim "Config unchanged — skipping write"
+    log_info "Config unchanged — skipping write"
   else
     cp "$PI_CONFIG" "$PI_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
     echo "$NEW_CONFIG" > "$PI_CONFIG"
@@ -169,8 +170,8 @@ else
 fi
 
 echo ""
-log_step "Pi installation complete"
-log_dim "Provider: LiteLLM — ${#MODELS[@]} models available"
-log_dim "Config: $PI_CONFIG"
+log_ok "Pi installation complete"
+log_info "Provider: LiteLLM — ${#MODELS[@]} models available"
+log_info "Config: $PI_CONFIG"
 echo ""
 log_dim "Note: on first run, Pi auto-installs fd and ripgrep — this is normal."
