@@ -58,7 +58,7 @@ for port in 4000 5432 9090 3000; do
   elif command -v netstat &>/dev/null && netstat -tlnp 2>/dev/null | grep -qE ":${port}\b"; then
     port_in_use=true
   fi
-  if [ "$port_in_use" = true ]; then
+  if [ "$port_in_use" = true ] && [ "$DRY_RUN" != true ]; then
     log_warn "Port $port is already in use. Docker Compose may fail."
   fi
 done

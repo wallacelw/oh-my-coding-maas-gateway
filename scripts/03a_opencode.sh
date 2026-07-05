@@ -67,7 +67,7 @@ fi
 log_info "Installing opencode..."
 if ! command -v opencode &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
-    log_dim "Would run: curl -fsSL $OPENCODE_INSTALL_URL | bash"
+    log_info "Would run: curl -fsSL $OPENCODE_INSTALL_URL | bash"
   else
     TMPFILE=$(mktemp /tmp/opencode_install.XXXXXX.sh)
     trap 'rm -f "$TMPFILE"' EXIT
@@ -90,7 +90,7 @@ log_info "Installing oh-my-opencode-slim plugin (v${SLIM_VERSION})..."
 if [ -f "$OPENCODE_DIR/oh-my-opencode-slim.json" ] || [ -f "$OPENCODE_DIR/oh-my-opencode-slim.jsonc" ]; then
   log_ok "Plugin already installed — skipping"
 elif [ "$DRY_RUN" = true ]; then
-  log_dim "Would run: bunx oh-my-opencode-slim@${SLIM_VERSION} install --companion=no"
+  log_info "Would run: bunx oh-my-opencode-slim@${SLIM_VERSION} install --companion=no"
 else
   run_filtered "slim" bunx "oh-my-opencode-slim@${SLIM_VERSION}" install --companion=no
   log_ok "Plugin installed."
@@ -135,8 +135,8 @@ fi
 # ── 5. Write opencode.json ──
 log_info "Writing opencode config..."
 if [ "$DRY_RUN" = true ]; then
-  log_dim "Would write: $OPENCODE_CONFIG"
-  log_dim "Would write: $OPENCODE_DIR/oh-my-opencode-slim.json"
+  log_info "Would write: $OPENCODE_CONFIG"
+  log_info "Would write: $OPENCODE_DIR/oh-my-opencode-slim.json"
   log_info "Dry run complete — no changes made"
   exit 0
 fi
