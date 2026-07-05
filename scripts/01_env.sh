@@ -141,7 +141,7 @@ if [ "$IS_FRESH" = true ]; then
   log_dim "For each secret, choose auto-generated or enter a custom value."
   echo ""
 
-  MASTER_KEY=$(prompt_password "LITELLM_MASTER_KEY (proxy auth)" "$AUTO_MASTER_KEY")
+  MASTER_KEY=$(prompt_password "LITELLM_MASTER_KEY (proxy auth)" "$AUTO_MASTER_KEY" "sk-")
   SALT_KEY=$(prompt_password "LITELLM_SALT_KEY (virtual key signing)" "$AUTO_SALT_KEY")
   DB_PASSWORD=$(prompt_password "DB_PASSWORD (PostgreSQL)" "$AUTO_DB_PASSWORD")
   GRAFANA_PASSWORD=$(prompt_password "GRAFANA_ADMIN_PASSWORD" "$AUTO_GRAFANA_PASSWORD")
