@@ -50,11 +50,9 @@ log_step "Step 03a — opencode + oh-my-opencode-slim"
 
 # ── 1. Check prerequisites ──
 log_info "Checking prerequisites..."
-LOG_TAG="system"
-prereq_ensure_apt "curl" curl curl
-prereq_ensure_apt "jq"   jq   jq
-prereq_ensure_bun
-LOG_TAG="opencode"
+prereq_ensure_apt "curl" curl curl "curl is needed to download opencode and plugin assets"
+prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse opencode config JSON"
+prereq_ensure_bun "bun is the JavaScript runtime that opencode executes on"
 
 if curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"

@@ -45,10 +45,8 @@ log_step "Step 03d — Pi coding agent"
 
 # ── 1. Check prerequisites ──
 log_info "Checking prerequisites..."
-LOG_TAG="system"
-prereq_ensure_apt "curl" curl curl
-prereq_ensure_apt "jq"   jq   jq
-LOG_TAG="pi"
+prereq_ensure_apt "curl" curl curl "curl is needed to download the Pi agent installer"
+prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse Pi config JSON"
 
 if curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"

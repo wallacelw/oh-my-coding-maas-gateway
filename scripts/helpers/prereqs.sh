@@ -74,17 +74,18 @@ _prereq_prompt() {
 # ---------------------------------------------------------------------------
 
 # Ensure a command is on PATH; install via apt-get if missing.
-#   prereq_ensure_apt <display_name> <command> <apt_package>
+#   prereq_ensure_apt <display_name> <command> <apt_package> <reason>
 prereq_ensure_apt() {
   local display_name="$1"
   local cmd="$2"
   local pkg="$3"
+  local reason="$4"
 
   if command -v "$cmd" &>/dev/null; then
     return 0
   fi
 
-  echo "→ [${LOG_TAG:-system}] Installing $display_name ($pkg)..."
+  log_info "$reason"
   if ! _prereq_prompt "  Install $display_name?"; then
     _prereq_fail "$display_name"
   fi
@@ -98,16 +99,19 @@ prereq_ensure_apt() {
   if ! command -v "$cmd" &>/dev/null; then
     _prereq_fail "$display_name"
   fi
-  echo "  ✓ [${LOG_TAG:-system}] $display_name installed"
+  log_ok "$display_name installed"
 }
 
 # Ensure bun is available (special: needs PATH sourcing after install)
+#   prereq_ensure_bun <reason>
 prereq_ensure_bun() {
+  local reason="$1"
+
   if command -v bun &>/dev/null; then
     return 0
   fi
 
-  echo "→ [${LOG_TAG:-system}] Installing bun..."
+  log_info "$reason"
   if ! _prereq_prompt "  Install bun?"; then
     _prereq_fail "bun"
   fi
@@ -121,16 +125,19 @@ prereq_ensure_bun() {
   if ! command -v bun &>/dev/null; then
     _prereq_fail "bun"
   fi
-  echo "  ✓ [${LOG_TAG:-system}] bun installed"
+  log_ok "bun installed"
 }
 
 # Ensure node + npm are available
+#   prereq_ensure_npm <reason>
 prereq_ensure_npm() {
+  local reason="$1"
+
   if command -v npm &>/dev/null && command -v node &>/dev/null; then
     return 0
   fi
 
-  echo "→ [${LOG_TAG:-system}] Installing Node.js + npm..."
+  log_info "$reason"
   if ! _prereq_prompt "  Install Node.js + npm?"; then
     _prereq_fail "npm/node"
   fi
@@ -143,14 +150,17 @@ prereq_ensure_npm() {
   if ! command -v npm &>/dev/null; then
     _prereq_fail "npm"
   fi
-  echo "  ✓ [${LOG_TAG:-system}] Node.js + npm installed"
+  log_ok "Node.js + npm installed"
 }
 
 # Ensure docker + compose plugin + daemon are running
+#   prereq_ensure_docker <reason>
 prereq_ensure_docker() {
+  local reason="$1"
+
   # Install docker engine if missing
   if ! command -v docker &>/dev/null; then
-    echo "→ [${LOG_TAG:-system}] Installing Docker Engine..."
+    log_info "$reason"
     if ! _prereq_prompt "  Install Docker?"; then
       _prereq_fail "docker"
     fi
@@ -168,7 +178,7 @@ prereq_ensure_docker() {
 
   # Ensure compose plugin
   if ! docker compose version &>/dev/null; then
-    echo "→ [${LOG_TAG:-system}] Installing Docker Compose plugin..."
+    log_info "Docker Compose plugin is needed to orchestrate multi-container stacks"
     _prereq_apt_update_once
     if ! run_with_spinner "Installing Docker Compose plugin" _prereq_sudo apt-get install -y -qq docker-compose-v2; then
       _prereq_fail "docker-compose-v2"
@@ -177,7 +187,7 @@ prereq_ensure_docker() {
 
   # Start daemon if not running
   if ! docker info &>/dev/null; then
-    echo "→ [${LOG_TAG:-system}] Starting Docker daemon..."
+    log_info "Starting Docker daemon — containers cannot run without it"
     if command -v systemctl &>/dev/null; then
       _prereq_sudo systemctl start docker
     elif command -v service &>/dev/null; then
@@ -192,5 +202,5 @@ prereq_ensure_docker() {
   if ! docker info &>/dev/null; then
     _prereq_fail "docker daemon"
   fi
-  echo "  ✓ [${LOG_TAG:-system}] Docker ready"
+  log_ok "Docker ready"
 }
