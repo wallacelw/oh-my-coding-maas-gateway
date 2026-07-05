@@ -16,17 +16,19 @@ Present this menu. Default (just press Enter) loads context without action:
 ```
 What would you like to do?
 
-  1) Health check     — quick status of all services
-  2) Run validation   — full end-to-end validation
-  3) Upgrade          — check for and apply updates
-  4) Uninstall        — remove all or part of the gateway
+  1) Health check      — quick status of all services
+  2) Run validation    — full end-to-end validation
+  3) Upgrade           — check for and apply updates
+  4) Uninstall         — remove all or part of the gateway
+  5) Install skill     — install a new skill into all agents
+  6) Mint new keys     — add MaaS or virtual keys
 
-  Choice [1-4] or Enter for context only:
+  Choice [1-6] or Enter for context only:
 ```
 
 After completing an action, ask if they need anything else. For anything
-not in the menu (key management, model management, debug routing, metrics,
-install skill), respond using the reference sections below.
+not in the menu (model management, debug routing, metrics), respond using
+the reference sections below.
 
 ## Project Location
 
@@ -98,36 +100,98 @@ Ask what to remove:
 ./scripts/uninstall.sh --all             # everything
 ```
 
----
+## Option 5: Install Skill
 
-## Key Management
+Install a **new** skill (not this companion) into all detected coding agents.
 
-Read the master key from `.env` when needed:
+**Step 1**: Ask the user for:
+- **Skill name** — a short directory name (e.g. `my-deploy-skill`)
+- **Source** — a local file path or URL to a SKILL.md file
+
+**Step 2**: Preview what would be installed:
+```bash
+./scripts/install-skill.sh --name=<name> --source=<source> --dry-run
+```
+
+**Step 3**: If the user confirms, install:
+```bash
+./scripts/install-skill.sh --name=<name> --source=<source>
+```
+
+This installs into all detected agents:
+- opencode: `~/.config/opencode/skills/<name>/SKILL.md`
+- codex: `~/.codex/skills/<name>/SKILL.md`
+- pi: `~/.pi/agent/skills/<name>/SKILL.md`
+- claude: `~/.claude/skills/<name>/SKILL.md`
+
+**Step 4**: Remind the user to restart their coding agents for the new
+skill to be discovered.
+
+## Option 6: Mint New Keys
+
+Ask the user which type of key:
+
+**a) Add a MaaS load-balancing key**
+
+This adds another Huawei MaaS API key for load balancing across multiple
+keys, increasing throughput.
+
+**Step 1**: Ask the user for the new MaaS API key (from Huawei cloud
+console, region ap-southeast-1, starts with `sk-`).
+
+**Step 2**: Read the current key count from `.env`:
+```bash
+CURRENT_COUNT=$(grep '^HUAWEI_MAAS_API_KEY_COUNT=' .env | cut -d= -f2)
+NEW_INDEX=$((CURRENT_COUNT - 1))
+NEW_COUNT=$((CURRENT_COUNT + 1))
+```
+
+**Step 3**: Append the new key to `.env` and update the count:
+```bash
+echo "HUAWEI_MAAS_API_KEY_${NEW_INDEX}=\"sk-the-new-key\"" >> .env
+sed -i "s/^HUAWEI_MAAS_API_KEY_COUNT=.*/HUAWEI_MAAS_API_KEY_COUNT=${NEW_COUNT}/" .env
+```
+
+**Step 4**: Regenerate LiteLLM config and restart (this creates
+deployments for all models across all keys including the new one):
+```bash
+./scripts/02_litellm.sh
+```
+
+**Step 5**: Verify:
+```bash
+./scripts/04_validate.sh
+```
+
+**b) Mint a LiteLLM virtual key**
+
+This creates a new virtual key for an additional coding tool or custom
+integration. Each virtual key has its own budget and access control.
+
+**Step 1**: Ask the user for:
+- **Key alias** — a name for the key (e.g. `my-tool`)
+- **Budget** — max spend in USD, or 0 for unlimited
+
+**Step 2**: Read the master key from `.env`:
 ```bash
 MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
 ```
 
-**Rotate MaaS key**: edit `.env` (change `HUAWEI_MAAS_API_KEY`), then:
-```bash
-./scripts/02_litellm.sh
-```
-
-**Add load-balancing keys**: edit `.env` — set `HUAWEI_MAAS_API_KEY_COUNT=N`
-and add `HUAWEI_MAAS_API_KEY_1`, `_2`, etc. Then:
-```bash
-./scripts/02_litellm.sh
-```
-
-**Mint a virtual key**:
+**Step 3**: Mint the key:
 ```bash
 curl -X POST http://127.0.0.1:4000/key/generate \
   -H "Authorization: Bearer $MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"key_alias": "my-tool", "models": ["all"], "max_budget": 0}'
+  -d '{"key_alias": "<alias>", "models": ["all"], "max_budget": <budget>}'
 ```
 
-**List keys**: point user to `http://127.0.0.1:4000/ui` (login: `admin` /
-master key).
+**Step 4**: Show the returned key to the user and tell them to use it as
+the API key in their tool's config.
+
+**Step 5**: Remind the user they can view all keys at
+`http://127.0.0.1:4000/ui` (login: `admin` / master key).
+
+---
 
 ## Model Management
 
@@ -186,15 +250,6 @@ curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_total_errors[5m]
 ```
 
 Grafana: `http://127.0.0.1:3000` — 28-panel dashboard.
-
-## Install a New Skill
-
-Ask for skill name and source (local path or URL), then:
-```bash
-./scripts/install-skill.sh --name=<name> --source=<path-or-url>
-```
-
-Remind user to restart their coding agents afterward.
 
 ---
 
