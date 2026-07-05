@@ -139,10 +139,14 @@ if [ "$TOOL_SPECIFIED" = true ]; then
 fi
 
 # ── Banner ──
+_banner_text="oh-my-coding-maas-gateway — Bootstrap"
+_banner_width=$(( ${#_banner_text} + 4 ))
+_banner_border=""
+for _i in $(seq 1 $_banner_width); do _banner_border+="═"; done
 echo ""
-echo -e "${C_BOLD}${C_CYAN}╔══════════════════════════════════════════════════════╗${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}║  oh-my-coding-maas-gateway — Bootstrap                 ║${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}╚══════════════════════════════════════════════════════╝${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}╔${_banner_border}╗${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}║  ${_banner_text}  ║${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}╚${_banner_border}╝${C_RESET}"
 echo ""
 
 # ── Install directory prompt ──
@@ -222,11 +226,13 @@ fi
 # ── Show selected scope ──
 echo ""
 log_info "Installation scope:"
-echo -e "    ${C_DIM}LiteLLM:${C_RESET}      yes (always)"
-echo -e "    ${C_DIM}opencode:${C_RESET}     $( [ "$INSTALL_OPENCODE" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
-echo -e "    ${C_DIM}Codex:${C_RESET}        $( [ "$INSTALL_CODEX" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
-echo -e "    ${C_DIM}Claude Code:${C_RESET}  $( [ "$INSTALL_CLAUDE_CODE" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
-echo -e "    ${C_DIM}Pi:${C_RESET}            $( [ "$INSTALL_PI" = true ] && echo "${C_GREEN}yes${C_RESET}" || echo "${C_DIM}no${C_RESET}" )"
+_yes() { echo -e "${C_GREEN}yes${C_RESET}"; }
+_no()  { echo -e "${C_DIM}no${C_RESET}"; }
+printf "    ${C_DIM}%-14s${C_RESET} %s\n" "LiteLLM:"      "yes (always)"
+printf "    ${C_DIM}%-14s${C_RESET} %s\n" "opencode:"     "$([ "$INSTALL_OPENCODE" = true ] && _yes || _no)"
+printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Codex:"        "$([ "$INSTALL_CODEX" = true ] && _yes || _no)"
+printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Claude Code:"  "$([ "$INSTALL_CLAUDE_CODE" = true ] && _yes || _no)"
+printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Pi:"           "$([ "$INSTALL_PI" = true ] && _yes || _no)"
 
 # ── Selection-driven prerequisite summary (prereq → needed by) ──
 log_dim "Prerequisites to install (as needed):"
@@ -257,7 +263,7 @@ run_step() {
   local step_name="$1"; shift
   log_step "$step_name"
   if [ "$DRY_RUN" = true ]; then
-    log_dim "Would run: $*"
+    log_dim "Would run: $(echo "$*" | sed "s|$SCRIPT_DIR/|scripts/|g")"
   else
     "$@"
   fi
@@ -268,6 +274,7 @@ if [ "$DRY_RUN" = true ]; then
   log_step "Step 01: Environment & secrets"
   log_dim "Would run: scripts/01_env.sh"
 else
+  log_step "Step 01: Environment & secrets"
   "$SCRIPT_DIR/01_env.sh"
 fi
 
@@ -327,49 +334,45 @@ set -e
 # ── Summary ──
 echo ""
 if [ "$VALIDATE_RC" -eq 0 ]; then
-  echo -e "${C_BOLD}${C_CYAN}══════════════════════════════════════════════════════${C_RESET}"
-  echo -e "${C_BOLD}${C_CYAN}  Bootstrap complete${C_RESET}"
-  echo -e "${C_BOLD}${C_CYAN}══════════════════════════════════════════════════════${C_RESET}"
+  echo -e "${C_BOLD}${C_GREEN}  ✓ Bootstrap complete${C_RESET}"
 else
-  echo -e "${C_BOLD}${C_YELLOW}══════════════════════════════════════════════════════${C_RESET}"
-  echo -e "${C_BOLD}${C_YELLOW}  Bootstrap completed with validation failures${C_RESET}"
-  echo -e "${C_BOLD}${C_YELLOW}══════════════════════════════════════════════════════${C_RESET}"
+  echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with validation failures${C_RESET}"
 fi
 echo ""
-echo -e "  ${C_DIM}Project dir:${C_RESET}       $PROJECT_DIR"
-echo -e "  ${C_DIM}LiteLLM proxy:${C_RESET}     $LITELLM_URL"
-echo -e "  ${C_DIM}LiteLLM Admin UI:${C_RESET}  ${LITELLM_URL}/ui"
-echo -e "  ${C_DIM}Grafana:${C_RESET}           http://127.0.0.1:3000 (anonymous, no login)"
-echo -e "  ${C_DIM}Prometheus:${C_RESET}        http://127.0.0.1:9090"
+printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Project dir:"       "$PROJECT_DIR"
+printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM proxy:"     "$LITELLM_URL"
+printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM Admin UI:"  "${LITELLM_URL}/ui"
+printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Grafana:"           "http://127.0.0.1:3000 (anonymous)"
+printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Prometheus:"        "http://127.0.0.1:9090"
 
 if [ "$INSTALL_OPENCODE" = true ] && [ -f "$HOME/.config/opencode/opencode.json" ]; then
-  echo -e "  ${C_DIM}opencode config:${C_RESET}   ~/.config/opencode/opencode.json"
+  printf "  ${C_DIM}%-20s${C_RESET} %s\n" "opencode config:"   "~/.config/opencode/opencode.json"
   FINAL_VK=$(strip_jsonc "$HOME/.config/opencode/opencode.json" 2>/dev/null \
     | jq -r '.provider.LiteLLM.options.apiKey // empty' 2>/dev/null || true)
-  [ -n "$FINAL_VK" ] && echo -e "  ${C_DIM}opencode key:${C_RESET}      $(mask_key "$FINAL_VK")"
+  [ -n "$FINAL_VK" ] && printf "  ${C_DIM}%-20s${C_RESET} %s\n" "opencode key:"      "$(mask_key "$FINAL_VK")"
 fi
 if [ "$INSTALL_CODEX" = true ] && [ -f "$HOME/.codex/.env" ]; then
-  echo -e "  ${C_DIM}Codex CLI config:${C_RESET}   ~/.codex/config.toml"
+  printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Codex CLI config:"   "~/.codex/config.toml"
   CODEX_VK=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$HOME/.codex/.env" 2>/dev/null || true)
-  [ -n "$CODEX_VK" ] && echo -e "  ${C_DIM}Codex CLI key:${C_RESET}      $(mask_key "$CODEX_VK")"
+  [ -n "$CODEX_VK" ] && printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Codex CLI key:"      "$(mask_key "$CODEX_VK")"
 fi
 if [ "$INSTALL_CLAUDE_CODE" = true ] && [ -f "$HOME/.claude/settings.json" ]; then
-  echo -e "  ${C_DIM}Claude Code config:${C_RESET} ~/.claude/settings.json"
+  printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Claude Code config:" "~/.claude/settings.json"
   CLAUDE_VK=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$HOME/.claude/settings.json" 2>/dev/null || true)
-  [ -n "$CLAUDE_VK" ] && echo -e "  ${C_DIM}Claude Code key:${C_RESET}    $(mask_key "$CLAUDE_VK")"
+  [ -n "$CLAUDE_VK" ] && printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Claude Code key:"    "$(mask_key "$CLAUDE_VK")"
 fi
 if [ "$INSTALL_PI" = true ] && [ -f "$HOME/.pi/agent/models.json" ]; then
-  echo -e "  ${C_DIM}Pi config:${C_RESET}         ~/.pi/agent/models.json"
+  printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Pi config:"         "~/.pi/agent/models.json"
   PI_VK=$(jq -r '.providers.LiteLLM.apiKey // empty' "$HOME/.pi/agent/models.json" 2>/dev/null || true)
-  [ -n "$PI_VK" ] && echo -e "  ${C_DIM}Pi key:${C_RESET}              $(mask_key "$PI_VK")"
+  [ -n "$PI_VK" ] && printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Pi key:"              "$(mask_key "$PI_VK")"
 fi
 
 echo ""
 echo -e "  ${C_BOLD}Next steps:${C_RESET}"
-[ "$INSTALL_OPENCODE" = true ] && echo -e "    opencode:  exit any running session, then run: ${C_CYAN}opencode${C_RESET}"
-[ "$INSTALL_CODEX" = true ] && echo -e "    Codex:     ${C_CYAN}codex${C_RESET}"
-[ "$INSTALL_CLAUDE_CODE" = true ] && echo -e "    Claude:    ${C_CYAN}claude --bare${C_RESET}"
-[ "$INSTALL_PI" = true ] && echo -e "    Pi:        ${C_CYAN}pi${C_RESET}"
+[ "$INSTALL_OPENCODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %s\n" "opencode:"  "exit any running session, then run: ${C_CYAN}opencode${C_RESET}"
+[ "$INSTALL_CODEX" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %s\n" "Codex:"     "${C_CYAN}codex${C_RESET}"
+[ "$INSTALL_CLAUDE_CODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %s\n" "Claude:"    "${C_CYAN}claude --bare${C_RESET}"
+[ "$INSTALL_PI" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %s\n" "Pi:"        "${C_CYAN}pi${C_RESET}"
 echo ""
 echo -e "  ${C_YELLOW}⚠ Security:${C_RESET} API keys were shared via environment variables and command line."
 echo -e "    ${C_DIM}Rotate your MaaS keys to prevent unauthorized use:${C_RESET}"
