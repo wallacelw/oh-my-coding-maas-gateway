@@ -1,119 +1,259 @@
 ---
 name: oh-my-coding-maas-gateway
-description: Deploy LiteLLM proxy (litellm + postgres + prometheus + grafana) routing through Huawei MaaS with multi-key load balancing, then bootstrap opencode + Codex CLI + Claude Code CLI + Pi agent with virtual keys. opencode additionally gets 4 presets and 7 agents via the oh-my-opencode-slim plugin.
+description: Operational companion for the oh-my-coding-maas-gateway LiteLLM proxy stack. Helps with installation guidance, upgrades, health diagnosis, key management, model management, and recovery — not a replacement for bootstrap.
 ---
 
-# oh-my-coding-maas-gateway — Agent Procedure
+# oh-my-coding-maas-gateway — Operational Companion
 
-You are both a supervisor and a wrapper around the bootstrap script.
-You understand the project, guide the user, relay every bootstrap prompt
-with context, and deliver a final summary with next steps.
+This is a companion guide for agents operating alongside the
+oh-my-coding-maas-gateway — a self-hosted LiteLLM proxy routing Huawei
+MaaS models to opencode, Codex CLI, Claude Code CLI, and Pi agent with
+virtual keys, multi-key load balancing, and Prometheus + Grafana
+observability.
 
-Do NOT launch opencode or any coding tool. Your job ends at verification.
+Bootstrap is the only installation method. This guide helps you
+**install**, **upgrade**, **diagnose**, **manage**, and **recover** the
+running stack.
 
-## 1. Read the project
+## Services
 
-Fetch and read these docs from GitHub (works before cloning):
+| Service | URL | Auth |
+|---------|-----|------|
+| LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key |
+| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key |
+| Grafana Dashboard | `http://127.0.0.1:3000` | Anonymous |
+| Prometheus | `http://127.0.0.1:9090` | None |
 
-- `https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/INSTALLATION.md`
-- `https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/REFERENCE.md`
+## Installation
 
-## 2. Present summary, ask intent
-
-Output a structured summary to the user:
-
-- **What it does** — LiteLLM proxy routing to Huawei MaaS, multi-key load
-  balancing, observability stack (Prometheus + Grafana).
-- **What gets installed** — Docker stack (LiteLLM + Postgres + Prometheus +
-  Grafana), then selected coding tools (opencode, Codex CLI, Claude Code CLI, Pi agent).
-- **Prerequisites** — Docker, git, curl, jq, bun/npm (installed automatically).
-- **What you'll be asked for** — MaaS API key, install mode, extra keys.
-- **Estimated time** — ~5 min fresh, ~2 min upgrade.
-
-Then ask: **"Install or upgrade?"** If `/home/oh-my-coding-maas-gateway/.env`
-exists, suggest upgrade. Otherwise suggest install.
-
-## 3. Run bootstrap, relay prompts
+If the gateway is not yet installed, bootstrap handles everything —
+prerequisites, Docker stack, coding tools, virtual keys, validation.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
 ```
 
-Bootstrap will emit prompts one at a time. For **each** prompt:
+Bootstrap will prompt for:
+- **MaaS API key** — from Huawei cloud console, region ap-southeast-1.
+  Validated at prompt time (invalid keys re-prompt).
+- **Install scope** — which coding tools to install (menu or `--tool=`).
+- **Extra MaaS keys** — optional, for multi-key load balancing.
 
-1. Read what bootstrap is asking.
-2. Elaborate — explain what's being asked and why, add context from the
-   docs you read (e.g., "Bootstrap is asking for your Huawei MaaS API key.
-   This is from the Huawei cloud console, region ap-southeast-1. It will
-   be stored in .env and never committed.").
-3. Relay to the user and get their answer.
-4. Feed the answer back to bootstrap on stdin.
+Prerequisites (Docker, git, curl, jq, bun, npm) are auto-installed with
+explanations before each. Estimated time: ~5 min fresh.
 
-This applies to **all** prompts — including auto-generated secrets (inform
-the user what was generated and why) and the install directory. Maximum
-transparency, no silent auto-answering.
+For full install details, see
+[INSTALLATION.md](https://github.com/wallacelw/oh-my-coding-maas-gateway/blob/main/INSTALLATION.md).
 
-For **upgrade**: bootstrap preserves the MaaS key from `.env` automatically
-— do not ask the user. Relay all other prompts normally.
+## Upgrade
 
-If sudo prompts for a password, ask the user.
+Same command — bootstrap detects existing install, compares versions, and
+pulls updates. All secrets and data preserved.
 
-## 4. Verify
+```bash
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
+```
 
-Bootstrap runs `04_validate.sh` automatically. Check its exit code:
+After upgrade, restart any running coding tools (opencode, codex, etc.) —
+plugin/preset changes are not hot-reloaded.
 
-- **Exit 0** — proceed to final summary.
-- **Exit non-zero** — match the FAIL pattern in the recovery table below,
-  run the recovery, re-validate **once**. If it still fails, stop and
-  report the full output to the user.
+If Grafana dashboard looks stale after upgrade: `docker compose restart grafana`.
 
-## 5. Final summary
+## Health Check
 
-Take bootstrap's output and complement it with:
+Run the validation script anytime:
 
-- **Service URLs** — LiteLLM `http://127.0.0.1:4000`, Admin UI
-  `http://127.0.0.1:4000/ui`, Grafana `http://127.0.0.1:3000`,
-  Prometheus `http://127.0.0.1:9090`.
-- **How to launch tools** — `opencode`, `codex`, `claude --bare`.
-- **Health check** — `./scripts/04_validate.sh` (re-run anytime).
-- **Key rotation** — remind the user to rotate their MaaS keys if shared
-  with you during the process.
-- **Upgrade note** — if this was an upgrade, remind them to restart
-  opencode if it's running (plugin changes are not hot-reloaded).
+```bash
+./scripts/04_validate.sh
+```
+
+Checks LiteLLM health, config sync, inference smoke test, observability
+stack, and each coding tool's configuration. Exit 0 = healthy.
+
+### Quick diagnosis commands
+
+```bash
+# Container status
+docker compose ps
+
+# LiteLLM logs (last 50 lines)
+docker compose logs litellm --tail 50
+
+# Check if all 4 containers are healthy
+docker compose ps --format json | jq '[.[] | .State] | unique'
+
+# LiteLLM health endpoint
+curl -sf http://127.0.0.1:4000/health/liveliness
+
+# Prometheus targets
+curl -sf http://127.0.0.1:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
+```
+
+## Key Management
+
+### Rotate MaaS API key
+
+```bash
+# 1. Get new key from Huawei cloud console
+# 2. Update .env
+nano .env  # change HUAWEI_MAAS_API_KEY
+# 3. Regenerate LiteLLM config and restart
+./scripts/02_litellm.sh
+```
+
+### Add load-balancing keys
+
+```bash
+# 1. Edit .env — increase HUAWEI_MAAS_API_KEY_COUNT and add keys
+HUAWEI_MAAS_API_KEY_COUNT=3
+HUAWEI_MAAS_API_KEY_1="sk-new-key-1"
+HUAWEI_MAAS_API_KEY_2="sk-new-key-2"
+# 2. Regenerate and restart
+./scripts/02_litellm.sh
+```
+
+### Mint a new virtual key (for an additional tool)
+
+```bash
+# Via LiteLLM Admin API
+curl -X POST http://127.0.0.1:4000/key/generate \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"key_alias": "my-new-tool", "models": ["all"], "max_budget": 0}'
+```
+
+View existing keys at `http://127.0.0.1:4000/ui` (login: `admin` / master key).
+
+## Model Management
+
+Models are defined in `scripts/helpers/models.sh` — the single source of
+truth. Format:
+
+```
+model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
+```
+
+### Add a model
+
+```bash
+# 1. Edit scripts/helpers/models.sh — add entry to MODELS array
+# 2. Regenerate LiteLLM config and restart
+./scripts/02_litellm.sh
+# 3. Verify
+./scripts/04_validate.sh
+```
+
+### Remove a model
+
+Same process — delete the entry from `models.sh`, regenerate, restart.
+
+## Debug Routing
+
+### Tool getting 401 errors
+
+```bash
+# Check the tool's virtual key is valid
+curl -sf http://127.0.0.1:4000/key/info?key=<virtual-key> \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY"
+
+# Check LiteLLM logs for the error
+docker compose logs litellm --tail 100 | grep 401
+```
+
+### Model not responding or slow
+
+```bash
+# Check deployment health
+curl -sf http://127.0.0.1:4000/health/liveliness
+
+# Check Prometheus for latency
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_request_total_latency_seconds_sum' | jq .
+
+# Check LiteLLM logs
+docker compose logs litellm --tail 100 | grep -i error
+```
+
+### Inference smoke test
+
+```bash
+curl -X POST http://127.0.0.1:4000/v1/chat/completions \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "deepseek-v3.2", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+```
+
+## Observability
+
+### Grafana dashboard
+
+Open `http://127.0.0.1:3000` — 28-panel dashboard with 6 sections:
+At-a-glance, Latency, Errors & Health, Throughput & Capacity, Tokens, Cost.
+Default time window: 1h (selectable).
+
+### Prometheus queries
+
+```bash
+# Total requests by model
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_total_requests' | jq .
+
+# Spend by model
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_spend' | jq .
+
+# Error rate
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_total_errors[5m])' | jq .
+```
 
 ## Recovery
 
-| FAIL pattern | Recovery |
-|--------------|----------|
-| `.env not found` / `placeholder value` | Re-run `01_env.sh` |
-| `services running` + `expected 4` | `docker compose up -d`, wait 30s, retry |
-| `liveness probe returned` | `docker compose logs litellm --tail 50` |
-| `Inference smoke test` + `did not respond` | Re-validate MaaS key; check logs |
-| opencode issues (`opencode not found`, config) | Re-run `03a_opencode.sh` |
-| Codex issues (`codex not found`, config) | Re-run `03b_codex.sh` |
-| Claude Code issues (`claude not found`, config) | Re-run `03c_claude_code.sh` |
-| Pi issues (`pi not found`, config) | Re-run `03d_pi.sh` |
-| `Prometheus not reachable` | `docker compose up -d prometheus`, wait 10s |
-| `/metrics endpoint not responding` | `docker compose restart litellm`, wait 15s |
-| `Grafana not reachable` | `docker compose up -d grafana`, wait 20s |
+| Symptom | Fix |
+|---------|-----|
+| `.env not found` / `placeholder value` | Re-run `scripts/01_env.sh` |
+| Fewer than 4 containers running | `docker compose up -d`, wait 30s |
+| LiteLLM liveness probe fails | `docker compose logs litellm --tail 50` |
+| Inference smoke test fails | Check MaaS key validity; `docker compose logs litellm --tail 100` |
+| `opencode not found` / config issues | Re-run `scripts/03a_opencode.sh` |
+| `codex not found` / config issues | Re-run `scripts/03b_codex.sh` |
+| `claude not found` / config issues | Re-run `scripts/03c_claude_code.sh` |
+| `pi not found` / config issues | Re-run `scripts/03d_pi.sh` |
+| Prometheus not reachable | `docker compose up -d prometheus`, wait 10s |
+| `/metrics` endpoint not responding | `docker compose restart litellm`, wait 15s |
+| Grafana not reachable | `docker compose up -d grafana`, wait 20s |
+| Docker daemon not running | `systemctl start docker` |
+| Port 4000/3000/9090 in use | `lsof -i :<port>`, stop conflicting process |
+| `git pull` conflicts on upgrade | `git stash && git pull && git stash pop` |
 
-WARN messages are advisory — they do not cause non-zero exit.
+WARN messages in validation output are advisory — they do not cause
+non-zero exit.
 
-### Common failures before validation
+## Uninstall
 
-These issues prevent bootstrap from completing — handle before running validate:
+```bash
+# Preview what would be removed
+./scripts/uninstall.sh --all --dry-run
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `Docker daemon not running` | Docker not started | `systemctl start docker` (or start Docker Desktop) |
-| `Port 4000 already in use` | Another service on the port | `lsof -i :4000` to find it, stop it or change port in docker-compose.yml |
-| `Invalid MaaS API key` | Key expired or wrong region | Re-run `01_env.sh` with a valid `HUAWEI_MAAS_API_KEY` |
-| `bun not found` / `npm not found` | Prereq install failed | Install manually: `curl -fsSL https://bun.sh/install \| bash` or `apt install nodejs npm` |
-| `docker compose up` exits non-zero | Config error or resource limit | `docker compose config` to validate, `docker compose logs` for details |
-| `git pull` conflicts on upgrade | Local changes in repo | `git stash && git pull && git stash pop` or `git checkout . && git pull` |
+# Remove one agent
+./scripts/uninstall.sh --tool=opencode
 
-## Rules
+# Remove Docker stack only
+./scripts/uninstall.sh --docker
 
-- Do not skip steps. Do not improvise. Do not launch opencode.
-- If `git pull` fails during upgrade, ask: "Reset to origin/main? (y/n)".
-- If anything is unclear, ask the user before proceeding.
+# Remove everything (agents + Docker + repo)
+./scripts/uninstall.sh --all
+```
+
+Removes binaries, runtimes (bun, pi-node), configs, and `.bashrc` entries.
+
+## Remote Access
+
+Ports bind to `127.0.0.1` by default. For remote access from a VM:
+
+**SSH forwarding (recommended):**
+```bash
+ssh -L 4000:127.0.0.1:4000 -L 3000:127.0.0.1:3000 user@vm
+```
+
+**Bind to all interfaces:**
+```bash
+# In .env: BIND_ADDRESS="0.0.0.0"
+# Then: docker compose up -d
+```
