@@ -213,6 +213,36 @@ group, `ufw allow from <your-ip> to any port 4000`).
 
 ---
 
+## Uninstall
+
+Remove all or part of the installation. Interactive menu if no flags.
+
+```bash
+# Remove one agent's config
+./scripts/uninstall.sh --tool=opencode
+
+# Remove a subset
+./scripts/uninstall.sh --tool=opencode,codex
+
+# Remove all agent configs
+./scripts/uninstall.sh --tool=all
+
+# Remove Docker stack (containers + volumes + images)
+./scripts/uninstall.sh --docker
+
+# Remove everything (agents + Docker + this repo)
+./scripts/uninstall.sh --all
+
+# Preview without deleting
+./scripts/uninstall.sh --all --dry-run
+```
+
+Binaries (opencode, codex, claude, pi) are left in place — only configs
+this project created are removed. Use `--dry-run` first to see exactly
+what would be deleted.
+
+---
+
 ## Documentation
 
 | File | For | Description |

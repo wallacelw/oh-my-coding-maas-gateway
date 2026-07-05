@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/uninstall.sh` — customizable uninstall: remove single agent,
+  subset, all agent configs, Docker stack, or everything (including repo).
+  Supports `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes`,
+  and interactive menu. Binaries left in place; only project-created configs
+  removed.
+
 ### Fixed
 
 - `strip_jsonc` was non-functional — Python read `sys.argv[1]` but file was

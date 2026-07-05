@@ -611,6 +611,34 @@ re-configuration after rotation.
 
 ---
 
+## Uninstall
+
+`scripts/uninstall.sh` removes all or part of the installation.
+
+| Artifact | Path | Removed by |
+|----------|------|------------|
+| opencode config | `~/.config/opencode/opencode.json` | `--tool=opencode` |
+| slim plugin config | `~/.config/opencode/oh-my-opencode-slim.json` | `--tool=opencode` |
+| codex config | `~/.codex/config.toml` | `--tool=codex` |
+| codex model catalog | `~/.codex/model_catalog.json` | `--tool=codex` |
+| codex env | `~/.codex/.env` | `--tool=codex` |
+| claude settings | `~/.claude/settings.json` | `--tool=claude` |
+| claude global config | `~/.claude.json` | `--tool=claude` |
+| pi config | `~/.pi/agent/models.json` | `--tool=pi` |
+| Docker containers + volumes + images | — | `--docker` |
+| Repository (`.env`, configs, scripts) | `$PROJECT_DIR` | `--repo` |
+
+Binaries (opencode, codex, claude, pi) are **not** removed — only configs
+this project created. Backup files (`*.bak.*`) are also removed.
+
+```bash
+./scripts/uninstall.sh --all --dry-run        # preview
+./scripts/uninstall.sh --tool=opencode,codex  # subset
+./scripts/uninstall.sh --all --yes            # everything, no prompt
+```
+
+---
+
 ## Remote Access
 
 All ports bind to `127.0.0.1` by default (localhost only). To access from
