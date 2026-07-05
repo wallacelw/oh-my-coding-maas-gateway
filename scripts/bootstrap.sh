@@ -249,80 +249,93 @@ prereq_ensure_apt "jq"      jq     jq
 
 # ── Tool selection (menu if --tool= not given) ──
 if [ "$TOOL_SPECIFIED" = false ] && is_interactive; then
-  log_step "Select installation scope"
-  echo -e "  ${C_BOLD}1)${C_RESET} Default — LiteLLM + all coding tools"
-  echo -e "  ${C_BOLD}2)${C_RESET} LiteLLM only"
-  echo -e "  ${C_BOLD}3)${C_RESET} LiteLLM + opencode"
-  echo -e "  ${C_BOLD}4)${C_RESET} LiteLLM + Codex"
-  echo -e "  ${C_BOLD}5)${C_RESET} LiteLLM + Claude Code"
-  echo -e "  ${C_BOLD}6)${C_RESET} LiteLLM + Pi"
-  echo -e "  ${C_BOLD}7)${C_RESET} Custom — toggle each component"
-  echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[1]${C_RESET}: "
-  choice=""
-  read -r choice < /dev/tty || choice="1"
-  case "${choice:-1}" in
-    1) INSTALL_OPENCODE=true;  INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=true;  INSTALL_PI=true ;;
-    2) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
-    3) INSTALL_OPENCODE=true;  INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
-    4) INSTALL_OPENCODE=false; INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
-    5) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=true;  INSTALL_PI=false ;;
-    6) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=true ;;
-    7)
-      log_dim "Custom selection (LiteLLM is always installed):"
-      if prompt_yesno "Install opencode?" n; then INSTALL_OPENCODE=true; else INSTALL_OPENCODE=false; fi
-      if prompt_yesno "Install Codex?" n; then INSTALL_CODEX=true; else INSTALL_CODEX=false; fi
-      if prompt_yesno "Install Claude Code?" n; then INSTALL_CLAUDE_CODE=true; else INSTALL_CLAUDE_CODE=false; fi
-      if prompt_yesno "Install Pi?" n; then INSTALL_PI=true; else INSTALL_PI=false; fi
-      ;;
-    *)
-      log_warn "Invalid choice. Defaulting to all."
-      INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true; INSTALL_PI=true
-      ;;
-  esac
+  while true; do
+    log_step "Select installation scope"
+    echo -e "  ${C_BOLD}1)${C_RESET} Default — LiteLLM + all coding tools"
+    echo -e "  ${C_BOLD}2)${C_RESET} LiteLLM only"
+    echo -e "  ${C_BOLD}3)${C_RESET} LiteLLM + opencode"
+    echo -e "  ${C_BOLD}4)${C_RESET} LiteLLM + Codex"
+    echo -e "  ${C_BOLD}5)${C_RESET} LiteLLM + Claude Code"
+    echo -e "  ${C_BOLD}6)${C_RESET} LiteLLM + Pi"
+    echo -e "  ${C_BOLD}7)${C_RESET} Custom — toggle each component"
+    echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[1]${C_RESET}: "
+    choice=""
+    read -r choice < /dev/tty || choice="1"
+    case "${choice:-1}" in
+      1) INSTALL_OPENCODE=true;  INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=true;  INSTALL_PI=true ;;
+      2) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
+      3) INSTALL_OPENCODE=true;  INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
+      4) INSTALL_OPENCODE=false; INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
+      5) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=true;  INSTALL_PI=false ;;
+      6) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=true ;;
+      7)
+        log_dim "Custom selection (LiteLLM is always installed):"
+        if prompt_yesno "Install opencode?" n; then INSTALL_OPENCODE=true; else INSTALL_OPENCODE=false; fi
+        if prompt_yesno "Install Codex?" n; then INSTALL_CODEX=true; else INSTALL_CODEX=false; fi
+        if prompt_yesno "Install Claude Code?" n; then INSTALL_CLAUDE_CODE=true; else INSTALL_CLAUDE_CODE=false; fi
+        if prompt_yesno "Install Pi?" n; then INSTALL_PI=true; else INSTALL_PI=false; fi
+        ;;
+      *)
+        log_warn "Invalid choice. Defaulting to all."
+        INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true; INSTALL_PI=true
+        ;;
+    esac
+
+    # ── Show selected scope ──
+    echo ""
+    log_info "Installation scope:"
+    _yes() { echo -e "${C_GREEN}yes${C_RESET}"; }
+    _no()  { echo -e "${C_DIM}no${C_RESET}"; }
+    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "LiteLLM:"      "yes (always)"
+    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "opencode:"     "$([ "$INSTALL_OPENCODE" = true ] && _yes || _no)"
+    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Codex:"        "$([ "$INSTALL_CODEX" = true ] && _yes || _no)"
+    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Claude Code:"  "$([ "$INSTALL_CLAUDE_CODE" = true ] && _yes || _no)"
+    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Pi:"           "$([ "$INSTALL_PI" = true ] && _yes || _no)"
+
+    # ── Selection-driven prerequisite summary (prereq → needed by) ──
+    log_dim "Prerequisites to install (as needed):"
+    echo ""
+
+    CURL_TOOLS="bootstrap, litellm, validate"
+    JQ_TOOLS="bootstrap, validate"
+    [ "$INSTALL_OPENCODE" = true ]   && CURL_TOOLS+=", opencode"  && JQ_TOOLS+=", opencode"
+    [ "$INSTALL_CODEX" = true ]      && CURL_TOOLS+=", codex"     && JQ_TOOLS+=", codex"
+    [ "$INSTALL_CLAUDE_CODE" = true ] && CURL_TOOLS+=", claude"   && JQ_TOOLS+=", claude"
+    [ "$INSTALL_PI" = true ]         && CURL_TOOLS+=", pi"        && JQ_TOOLS+=", pi"
+
+    NPM_TOOLS=""
+    [ "$INSTALL_CODEX" = true ]       && NPM_TOOLS="codex"
+    [ "$INSTALL_CLAUDE_CODE" = true ] && NPM_TOOLS="${NPM_TOOLS:+$NPM_TOOLS, }claude"
+
+    printf "    ${C_DIM}%-14s %s${C_RESET}\n" "git"          "— bootstrap, env"
+    printf "    ${C_DIM}%-14s %s${C_RESET}\n" "python3"      "— bootstrap, env"
+    printf "    ${C_DIM}%-14s %s${C_RESET}\n" "curl"         "— $CURL_TOOLS"
+    printf "    ${C_DIM}%-14s %s${C_RESET}\n" "jq"           "— $JQ_TOOLS"
+    printf "    ${C_DIM}%-14s %s${C_RESET}\n" "docker"       "— litellm"
+    [ "$INSTALL_OPENCODE" = true ]    && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bun"        "— opencode"
+    [ -n "$NPM_TOOLS" ]               && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "npm/node"   "— $NPM_TOOLS"
+    [ "$INSTALL_CODEX" = true ]       && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bubblewrap" "— codex"
+
+    # ── Confirm selection before proceeding ──
+    echo ""
+    if prompt_yesno "Proceed with this selection?" y; then
+      break
+    fi
+    log_info "Let's try again."
+  done
 fi
 
-# ── Show selected scope ──
-echo ""
-log_info "Installation scope:"
-_yes() { echo -e "${C_GREEN}yes${C_RESET}"; }
-_no()  { echo -e "${C_DIM}no${C_RESET}"; }
-printf "    ${C_DIM}%-14s${C_RESET} %s\n" "LiteLLM:"      "yes (always)"
-printf "    ${C_DIM}%-14s${C_RESET} %s\n" "opencode:"     "$([ "$INSTALL_OPENCODE" = true ] && _yes || _no)"
-printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Codex:"        "$([ "$INSTALL_CODEX" = true ] && _yes || _no)"
-printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Claude Code:"  "$([ "$INSTALL_CLAUDE_CODE" = true ] && _yes || _no)"
-printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Pi:"           "$([ "$INSTALL_PI" = true ] && _yes || _no)"
-
-# ── Selection-driven prerequisite summary (prereq → needed by) ──
-log_dim "Prerequisites to install (as needed):"
-echo ""
-
-CURL_TOOLS="bootstrap, litellm, validate"
-JQ_TOOLS="bootstrap, validate"
-[ "$INSTALL_OPENCODE" = true ]   && CURL_TOOLS+=", opencode"  && JQ_TOOLS+=", opencode"
-[ "$INSTALL_CODEX" = true ]      && CURL_TOOLS+=", codex"     && JQ_TOOLS+=", codex"
-[ "$INSTALL_CLAUDE_CODE" = true ] && CURL_TOOLS+=", claude"   && JQ_TOOLS+=", claude"
-[ "$INSTALL_PI" = true ]         && CURL_TOOLS+=", pi"        && JQ_TOOLS+=", pi"
-
-NPM_TOOLS=""
-[ "$INSTALL_CODEX" = true ]       && NPM_TOOLS="codex"
-[ "$INSTALL_CLAUDE_CODE" = true ] && NPM_TOOLS="${NPM_TOOLS:+$NPM_TOOLS, }claude"
-
-printf "    ${C_DIM}%-14s %s${C_RESET}\n" "git"          "— bootstrap, env"
-printf "    ${C_DIM}%-14s %s${C_RESET}\n" "python3"      "— bootstrap, env"
-printf "    ${C_DIM}%-14s %s${C_RESET}\n" "curl"         "— $CURL_TOOLS"
-printf "    ${C_DIM}%-14s %s${C_RESET}\n" "jq"           "— $JQ_TOOLS"
-printf "    ${C_DIM}%-14s %s${C_RESET}\n" "docker"       "— litellm"
-[ "$INSTALL_OPENCODE" = true ]    && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bun"        "— opencode"
-[ -n "$NPM_TOOLS" ]               && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "npm/node"   "— $NPM_TOOLS"
-[ "$INSTALL_CODEX" = true ]       && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bubblewrap" "— codex"
-
-# ── Confirm selection before proceeding ──
-if [ "$DRY_RUN" = false ] && is_interactive; then
+# ── Show scope for non-interactive mode (--tool= given) ──
+if [ "$TOOL_SPECIFIED" = true ] || ! is_interactive; then
   echo ""
-  if ! prompt_yesno "Proceed with this selection?" y; then
-    log_info "Aborted by user."
-    exit 0
-  fi
+  log_info "Installation scope:"
+  _yes() { echo -e "${C_GREEN}yes${C_RESET}"; }
+  _no()  { echo -e "${C_DIM}no${C_RESET}"; }
+  printf "    ${C_DIM}%-14s${C_RESET} %s\n" "LiteLLM:"      "yes (always)"
+  printf "    ${C_DIM}%-14s${C_RESET} %s\n" "opencode:"     "$([ "$INSTALL_OPENCODE" = true ] && _yes || _no)"
+  printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Codex:"        "$([ "$INSTALL_CODEX" = true ] && _yes || _no)"
+  printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Claude Code:"  "$([ "$INSTALL_CLAUDE_CODE" = true ] && _yes || _no)"
+  printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Pi:"           "$([ "$INSTALL_PI" = true ] && _yes || _no)"
 fi
 echo ""
 
