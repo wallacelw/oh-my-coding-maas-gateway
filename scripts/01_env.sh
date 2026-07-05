@@ -142,8 +142,11 @@ if [ "$IS_FRESH" = true ]; then
   echo ""
 
   MASTER_KEY=$(prompt_password "LITELLM_MASTER_KEY (proxy auth)" "$AUTO_MASTER_KEY" "sk-")
+  echo ""
   SALT_KEY=$(prompt_password "LITELLM_SALT_KEY (virtual key signing)" "$AUTO_SALT_KEY")
+  echo ""
   DB_PASSWORD=$(prompt_password "DB_PASSWORD (PostgreSQL)" "$AUTO_DB_PASSWORD")
+  echo ""
   GRAFANA_PASSWORD=$(prompt_password "GRAFANA_ADMIN_PASSWORD" "$AUTO_GRAFANA_PASSWORD")
 
   echo ""
@@ -177,6 +180,7 @@ if [ -n "$MAAS_API_KEY" ]; then
 elif is_interactive; then
   echo ""
   while true; do
+    echo ""
     MAAS_API_KEY=$(prompt_input "Enter Huawei MaaS API key (region ap-southeast-1)" "")
     if [ -z "$MAAS_API_KEY" ]; then
       log_warn "Key cannot be empty. Please try again."
@@ -226,6 +230,7 @@ elif is_interactive; then
   log_dim "Press Enter without typing anything to skip (0 extra keys)."
   echo ""
   while true; do
+    echo ""
     EXTRA_NUM=$(( ${#EXTRA_KEYS[@]} + 1 ))
     extra_key=$(prompt_input "MaaS API key #$EXTRA_NUM (or press Enter to finish)" "")
     [ -z "$extra_key" ] && break
