@@ -152,7 +152,7 @@ Skill locations:
 - opencode: `~/.config/opencode/skills/oh-my-coding-maas-gateway/SKILL.md`
 - codex: `~/.codex/skills/oh-my-coding-maas-gateway/SKILL.md`
 - pi: `~/.pi/agent/skills/oh-my-coding-maas-gateway/SKILL.md`
-- claude: `~/.claude/commands/oh-my-gateway.md` (slash command: `/oh-my-gateway`)
+- claude: `~/.claude/skills/oh-my-coding-maas-gateway/SKILL.md`
 
 ---
 
@@ -519,7 +519,7 @@ for the gateway.
 | opencode | `~/.config/opencode/skills/oh-my-coding-maas-gateway/SKILL.md` | Automatic (agent reads skill) |
 | Codex CLI | `~/.codex/skills/oh-my-coding-maas-gateway/SKILL.md` | Automatic (agent reads skill) |
 | Pi agent | `~/.pi/agent/skills/oh-my-coding-maas-gateway/SKILL.md` | `/skill:oh-my-coding-maas-gateway` |
-| Claude Code | `~/.claude/commands/oh-my-gateway.md` | `/oh-my-gateway` (slash command) |
+| Claude Code | `~/.claude/skills/oh-my-coding-maas-gateway/SKILL.md` | Automatic (agent reads skill) |
 
 ```bash
 ./scripts/05_skill.sh --yes    # install manually anytime

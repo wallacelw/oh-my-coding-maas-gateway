@@ -14,10 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   detected coding agent. Idempotent, skips agents that already have it.
   Skill locations: opencode `~/.config/opencode/skills/`, codex
   `~/.codex/skills/`, pi `~/.pi/agent/skills/`, claude
-  `~/.claude/commands/` (slash command). `--no-skill` flag to skip.
+  `~/.claude/skills/`. `--no-skill` flag to skip.
 - **`helpers/skills.sh`** — install/uninstall helpers for each agent tool.
-  Claude gets frontmatter stripped (slash command format); others use
-  Agent Skills standard (SKILL.md with YAML frontmatter).
+  All four tools use the same Agent Skills standard (SKILL.md with YAML
+  frontmatter). Claude uses `~/.claude/skills/` (not legacy `commands/`).
 - **SKILL.md redesigned** — operational companion for post-install
   operations (health diagnosis, key/model management, debug routing,
   observability, recovery). No longer an agent-as-supervisor install
