@@ -165,6 +165,51 @@ remove_glob() {
   fi
 }
 
+# Remove lines from ~/.bashrc matching a pattern (or between marker pairs)
+remove_bashrc_block() {
+  local start_marker="$1" end_marker="${2:-}"
+  local bashrc="$HOME/.bashrc"
+  [ ! -f "$bashrc" ] && return 0
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "  Would clean .bashrc: $start_marker"
+    return 0
+  fi
+  local tmp
+  tmp=$(mktemp)
+  if [ -n "$end_marker" ]; then
+    # Remove block between markers (inclusive)
+    awk -v s="$start_marker" -v e="$end_marker" '
+      $0 ~ s { skip=1; next }
+      $0 ~ e { skip=0; next }
+      !skip { print }
+    ' "$bashrc" > "$tmp"
+  else
+    # Remove lines matching the pattern
+    grep -v "$start_marker" "$bashrc" > "$tmp" || true
+  fi
+  mv "$tmp" "$bashrc"
+}
+
+# Remove a commented section from .bashrc (comment line + following lines until blank line)
+remove_bashrc_section() {
+  local comment_marker="$1"
+  local bashrc="$HOME/.bashrc"
+  [ ! -f "$bashrc" ] && return 0
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "  Would clean .bashrc section: $comment_marker"
+    return 0
+  fi
+  local tmp
+  tmp=$(mktemp)
+  awk -v m="$comment_marker" '
+    $0 ~ m { skip=1; next }
+    skip && /^$/ { skip=0; next }
+    skip { next }
+    { print }
+  ' "$bashrc" > "$tmp"
+  mv "$tmp" "$bashrc"
+}
+
 # Build summary list
 SUMMARY=""
 add_summary() {
@@ -206,9 +251,15 @@ if [ "$REMOVE_OPENCODE" = true ]; then
   remove_glob "$HOME/.config/opencode/oh-my-opencode-slim.json.bak.*" "slim config backup"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would remove: $HOME/.opencode/ (binary)"
-  elif [ -d "$HOME/.opencode" ]; then
-    rm -rf "$HOME/.opencode"
-    log_ok "Removed binary: $HOME/.opencode/"
+    log_dim "  Would remove: $HOME/.bun/ (runtime)"
+  else
+    [ -d "$HOME/.opencode" ] && rm -rf "$HOME/.opencode" && log_ok "Removed binary: $HOME/.opencode/"
+    [ -d "$HOME/.bun" ] && rm -rf "$HOME/.bun" && log_ok "Removed runtime: $HOME/.bun/"
+    # Clean .bashrc entries
+    remove_bashrc_section "^# bun$"
+    remove_bashrc_section "^# opencode$"
+    remove_bashrc_block "^# >>> oh-my-opencode-slim" "^# <<< oh-my-opencode-slim"
+    [ -f "$HOME/.bashrc" ] && log_ok "Cleaned .bashrc entries"
   fi
 fi
 
@@ -287,6 +338,8 @@ if [ "$REMOVE_PI" = true ]; then
   if [ "$DRY_RUN" != true ] && [ -d "$HOME/.local/share/pi-node" ]; then
     rm -rf "$HOME/.local/share/pi-node"
     log_ok "Removed pi-managed Node.js: $HOME/.local/share/pi-node/"
+    # Clean .bashrc entries for pi-node
+    remove_bashrc_block "pi-node"
   fi
 fi
 
