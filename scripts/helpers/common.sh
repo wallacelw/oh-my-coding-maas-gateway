@@ -126,7 +126,15 @@ mask_key() {
 # ── Logging functions ────────────────────────────────────────
 
 log_step() {
-  echo -e "\n${C_BOLD}${C_CYAN}━━━ $* ━━━${C_RESET}"
+  local text="$*"
+  local width=${#text}
+  local border=""
+  local i
+  for ((i = 0; i < width + 4; i++)); do border+="─"; done
+  echo ""
+  echo -e "${C_BOLD}${C_GREEN}┌${border}┐${C_RESET}"
+  echo -e "${C_BOLD}${C_GREEN}│  ${text}  │${C_RESET}"
+  echo -e "${C_BOLD}${C_GREEN}└${border}┘${C_RESET}"
 }
 
 log_ok() {
@@ -143,6 +151,14 @@ log_warn() {
 
 log_error() {
   echo -e "  ${C_RED}✗${C_RESET} $*" >&2
+}
+
+log_desc() {
+  echo -e "  ${C_CYAN}ℹ${C_RESET} ${C_CYAN}$*${C_RESET}"
+}
+
+log_done() {
+  echo -e "  ${C_GREEN}✓${C_RESET} ${C_DIM}$*${C_RESET}"
 }
 
 log_dim() {
