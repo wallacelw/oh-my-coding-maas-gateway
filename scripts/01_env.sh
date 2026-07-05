@@ -183,8 +183,8 @@ elif is_interactive; then
       continue
     fi
     log_info "Validating key..."
-    validate_maas_key "$MAAS_API_KEY" "$MAAS_API_BASE"
-    case $? in
+    validate_maas_key "$MAAS_API_KEY" "$MAAS_API_BASE" && rc=0 || rc=$?
+    case $rc in
       0) log_ok "Key validated."; break ;;
       1) log_warn "Key rejected by MaaS API (invalid). Please try again."; continue ;;
       2) log_warn "Cannot reach MaaS endpoint (may be transient). Accepting key."; break ;;
@@ -230,8 +230,8 @@ elif is_interactive; then
     extra_key=$(prompt_input "MaaS API key #$EXTRA_NUM (or press Enter to finish)" "")
     [ -z "$extra_key" ] && break
     log_info "Validating key #$EXTRA_NUM..."
-    validate_maas_key "$extra_key" "$MAAS_API_BASE"
-    case $? in
+    validate_maas_key "$extra_key" "$MAAS_API_BASE" && rc=0 || rc=$?
+    case $rc in
       0) log_ok "Extra key #$EXTRA_NUM validated" ;;
       1) log_warn "Key #$EXTRA_NUM rejected by MaaS API (invalid). Please re-enter or press Enter to skip."
          continue ;;
