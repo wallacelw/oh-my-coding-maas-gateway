@@ -65,26 +65,51 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
   fi
   target_dir="$install_parent/$REPO_NAME"
   if [ -d "$target_dir/.git" ]; then
-    echo "  Existing install found at $target_dir — pulling updates..."
-    cd "$target_dir"
-    if ! git pull --ff-only; then
+    echo "  Existing install found at $target_dir"
+    if is_interactive; then
       echo ""
-      echo "  git pull failed. Reset to origin/main? [y/N]: "
-      if is_interactive; then
-        read -r reset_choice < /dev/tty || reset_choice="n"
-      else
-        reset_choice="n"
-      fi
-      case "$reset_choice" in
-        y|Y|yes|YES)
-          echo "  Resetting to origin/main..."
-          git reset --hard origin/main
+      echo -e "  ${C_BOLD}1)${C_RESET} Pull updates (preserve existing config & data) ${C_DIM}[default]${C_RESET}"
+      echo -e "  ${C_BOLD}2)${C_RESET} Fresh install (uninstall old, remove all configs & Docker data)"
+      echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[1]${C_RESET}: "
+      read -r existing_choice < /dev/tty || existing_choice="1"
+      echo ""
+      case "${existing_choice:-1}" in
+        2)
+          echo "  Uninstalling old installation..."
+          cd "$target_dir"
+          # Remove Docker stack + tool configs (not the repo yet)
+          ./scripts/uninstall.sh --tool=all --docker --yes 2>/dev/null || true
+          cd "$install_parent"
+          rm -rf "$target_dir"
+          echo "  Old installation removed."
+          echo "  Cloning fresh..."
+          git clone "$REPO_URL" "$target_dir"
+          cd "$target_dir"
           ;;
         *)
-          echo "  Aborting. Please resolve git conflicts manually."
-          exit 1
+          echo "  Pulling updates..."
+          cd "$target_dir"
+          if ! git pull --ff-only; then
+            echo ""
+            echo "  git pull failed. Reset to origin/main? [y/N]: "
+            read -r reset_choice < /dev/tty || reset_choice="n"
+            case "$reset_choice" in
+              y|Y|yes|YES)
+                echo "  Resetting to origin/main..."
+                git reset --hard origin/main
+                ;;
+              *)
+                echo "  Aborting. Please resolve git conflicts manually."
+                exit 1
+                ;;
+            esac
+          fi
           ;;
       esac
+    else
+      echo "  Pulling updates..."
+      cd "$target_dir"
+      git pull --ff-only || git reset --hard origin/main
     fi
   else
     echo "  Cloning to $target_dir..."
@@ -164,10 +189,34 @@ target_dir="$install_parent/$REPO_NAME"
 if [ "$target_dir" != "$PROJECT_DIR" ]; then
   if [ -d "$target_dir/.git" ]; then
     log_info "Project already exists at $target_dir"
-    if prompt_yesno "Switch to existing installation?" y; then
-      cd "$target_dir"
-      exec ./scripts/bootstrap.sh "$@"
+    echo ""
+    echo -e "  ${C_BOLD}1)${C_RESET} Switch to existing (pull updates) ${C_DIM}[default]${C_RESET}"
+    echo -e "  ${C_BOLD}2)${C_RESET} Fresh install (uninstall old, remove all configs & Docker data)"
+    if is_interactive; then
+      echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[1]${C_RESET}: "
+      read -r existing_choice < /dev/tty || existing_choice="1"
+    else
+      existing_choice="1"
     fi
+    echo ""
+    case "${existing_choice:-1}" in
+      2)
+        log_info "Uninstalling old installation..."
+        cd "$target_dir"
+        ./scripts/uninstall.sh --tool=all --docker --yes 2>/dev/null || true
+        cd "$install_parent"
+        rm -rf "$target_dir"
+        log_ok "Old installation removed."
+        log_info "Cloning fresh..."
+        git clone "$REPO_URL" "$target_dir"
+        cd "$target_dir"
+        exec ./scripts/bootstrap.sh "$@"
+        ;;
+      *)
+        cd "$target_dir"
+        exec ./scripts/bootstrap.sh "$@"
+        ;;
+    esac
   elif [ "$DRY_RUN" = true ]; then
     log_dim "Would clone: $REPO_URL → $target_dir"
   else
