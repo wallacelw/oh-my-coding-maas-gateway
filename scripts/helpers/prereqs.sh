@@ -35,6 +35,7 @@ _prereq_sudo() {
     sudo "$@"
   fi
 }
+export -f _prereq_sudo
 
 # Run apt-get update once per process
 declare -g _PREREQ_APT_UPDATED=false

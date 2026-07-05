@@ -339,35 +339,39 @@ if [ "$TOOL_SPECIFIED" = true ] || ! is_interactive; then
 fi
 echo ""
 
-# ── Helper to run a step ──
-run_step() {
-  local step_name="$1"; shift
-  if [ "$DRY_RUN" = true ]; then
-    log_step "$step_name"
-    log_dim "Would run: $(echo "$*" | sed "s|$SCRIPT_DIR/|scripts/|g")"
-  else
-    "$@"
-  fi
-}
-
 # ── Step 01: Environment & secrets ──
 if [ "$DRY_RUN" = true ]; then
   log_step "Step 01: Environment & secrets"
   log_dim "Would run: scripts/01_env.sh"
 else
+  log_desc "Setting up environment variables, secrets, and .env file"
   "$SCRIPT_DIR/01_env.sh"
+  log_done "Environment configured — .env written with MaaS key and secrets"
 fi
 
 # ── Step 02: LiteLLM proxy + observability ──
-run_step "Step 02: LiteLLM proxy + observability" \
-  "$SCRIPT_DIR/02_litellm.sh" $([ "$DRY_RUN" = true ] && echo "--dry-run")
+if [ "$DRY_RUN" = true ]; then
+  log_step "Step 02: LiteLLM proxy + observability"
+  log_dim "Would run: scripts/02_litellm.sh --dry-run"
+else
+  log_desc "Deploying LiteLLM proxy, Docker containers, and observability stack"
+  "$SCRIPT_DIR/02_litellm.sh"
+  log_done "LiteLLM proxy running — 6 models, Grafana + Prometheus active"
+fi
 
 # ── Step 03a: opencode (optional) ──
 if [ "$INSTALL_OPENCODE" = true ]; then
   OPENCODE_ARGS=()
   [ -n "$VIRTUAL_KEY" ] && OPENCODE_ARGS+=("--virtual-key=$VIRTUAL_KEY")
   [ "$DRY_RUN" = true ] && OPENCODE_ARGS+=("--dry-run")
-  run_step "Step 03a: opencode" "$SCRIPT_DIR/03a_opencode.sh" "${OPENCODE_ARGS[@]}"
+  if [ "$DRY_RUN" = true ]; then
+    log_step "Step 03a: opencode"
+    log_dim "Would run: scripts/03a_opencode.sh ${OPENCODE_ARGS[*]}"
+  else
+    log_desc "Installing opencode + oh-my-opencode-slim plugin"
+    "$SCRIPT_DIR/03a_opencode.sh" "${OPENCODE_ARGS[@]}"
+    log_done "opencode configured — LiteLLM provider, 4 presets, 7 agents"
+  fi
 else
   log_dim "(skipping opencode)"
 fi
@@ -376,7 +380,14 @@ fi
 if [ "$INSTALL_CODEX" = true ]; then
   CODEX_ARGS=()
   [ "$DRY_RUN" = true ] && CODEX_ARGS+=("--dry-run")
-  run_step "Step 03b: Codex CLI" "$SCRIPT_DIR/03b_codex.sh" "${CODEX_ARGS[@]}"
+  if [ "$DRY_RUN" = true ]; then
+    log_step "Step 03b: Codex CLI"
+    log_dim "Would run: scripts/03b_codex.sh ${CODEX_ARGS[*]}"
+  else
+    log_desc "Installing Codex CLI and configuring LiteLLM virtual key"
+    "$SCRIPT_DIR/03b_codex.sh" "${CODEX_ARGS[@]}"
+    log_done "Codex CLI configured — LiteLLM virtual key minted"
+  fi
 else
   log_dim "(skipping Codex CLI)"
 fi
@@ -385,7 +396,14 @@ fi
 if [ "$INSTALL_CLAUDE_CODE" = true ]; then
   CLAUDE_ARGS=()
   [ "$DRY_RUN" = true ] && CLAUDE_ARGS+=("--dry-run")
-  run_step "Step 03c: Claude Code CLI" "$SCRIPT_DIR/03c_claude_code.sh" "${CLAUDE_ARGS[@]}"
+  if [ "$DRY_RUN" = true ]; then
+    log_step "Step 03c: Claude Code CLI"
+    log_dim "Would run: scripts/03c_claude_code.sh ${CLAUDE_ARGS[*]}"
+  else
+    log_desc "Installing Claude Code CLI and configuring LiteLLM virtual key"
+    "$SCRIPT_DIR/03c_claude_code.sh" "${CLAUDE_ARGS[@]}"
+    log_done "Claude Code CLI configured — LiteLLM virtual key minted"
+  fi
 else
   log_dim "(skipping Claude Code CLI)"
 fi
@@ -394,7 +412,14 @@ fi
 if [ "$INSTALL_PI" = true ]; then
   PI_ARGS=()
   [ "$DRY_RUN" = true ] && PI_ARGS+=("--dry-run")
-  run_step "Step 03d: Pi agent" "$SCRIPT_DIR/03d_pi.sh" "${PI_ARGS[@]}"
+  if [ "$DRY_RUN" = true ]; then
+    log_step "Step 03d: Pi agent"
+    log_dim "Would run: scripts/03d_pi.sh ${PI_ARGS[*]}"
+  else
+    log_desc "Installing Pi coding agent and configuring LiteLLM virtual key"
+    "$SCRIPT_DIR/03d_pi.sh" "${PI_ARGS[@]}"
+    log_done "Pi agent configured — LiteLLM virtual key minted"
+  fi
 else
   log_dim "(skipping Pi agent)"
 fi
@@ -406,10 +431,22 @@ VALIDATE_ARGS=()
 [ "$INSTALL_CODEX" = false ] && VALIDATE_ARGS+=("--skip-codex")
 [ "$INSTALL_CLAUDE_CODE" = false ] && VALIDATE_ARGS+=("--skip-claude-code")
 [ "$INSTALL_PI" = false ] && VALIDATE_ARGS+=("--skip-pi")
-set +e
-run_step "Step 04: Validate" "$SCRIPT_DIR/04_validate.sh" "${VALIDATE_ARGS[@]}"
-VALIDATE_RC=$?
-set -e
+if [ "$DRY_RUN" = true ]; then
+  log_step "Step 04: Validate"
+  log_dim "Would run: scripts/04_validate.sh ${VALIDATE_ARGS[*]}"
+  VALIDATE_RC=0
+else
+  log_desc "Running end-to-end validation of all components"
+  set +e
+  "$SCRIPT_DIR/04_validate.sh" "${VALIDATE_ARGS[@]}"
+  VALIDATE_RC=$?
+  set -e
+  if [ "$VALIDATE_RC" -eq 0 ]; then
+    log_done "Validation passed — all components verified"
+  else
+    log_warn "Validation completed with failures"
+  fi
+fi
 
 # ── Summary ──
 echo ""
