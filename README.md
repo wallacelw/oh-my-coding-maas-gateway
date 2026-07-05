@@ -30,10 +30,16 @@ deepseek-v3.2
 
 ---
 
-## Quickstart
+## Quickstart (Install & Upgrade)
+
+Same one-liner for both install and upgrade — bootstrap detects an existing
+install and pulls updates, or clones fresh if none found. Idempotent —
+preserves all secrets and data.
+
+### 👤 Human — run it yourself
 
 ```bash
-# 1. Install (prompts for MaaS API key, auto-installs prerequisites)
+# 1. Install or upgrade (prompts for MaaS API key, auto-installs prerequisites)
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
 
 # 2. Use any coding tool
@@ -44,28 +50,7 @@ open http://localhost:3000   # Grafana dashboard
 ```
 
 That's it. LiteLLM proxy at `http://localhost:4000`, 6 models, 4 coding tools.
-For details, keep reading. For upgrade, re-run the same command.
-
----
-
-## Install & Upgrade
-
-Same one-liner for both — bootstrap detects an existing install and pulls
-updates, or clones fresh if none found. Idempotent — preserves all secrets
-and data.
-
-### 👤 Human — run it yourself
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
-```
-
-Bootstrap clones itself, shows a menu to choose what to install, and prompts
-for your MaaS API key. Prerequisites are installed automatically.
-
-```bash
-opencode          # or: codex  or:  claude --bare  or:  pi
-```
+For details, keep reading.
 
 After upgrade, restart opencode if it's running (exit and start fresh —
 plugin/preset changes are not hot-reloaded). If the Grafana dashboard looks
