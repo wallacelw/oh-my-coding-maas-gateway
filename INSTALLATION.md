@@ -329,6 +329,32 @@ start fresh — plugin/preset changes are not hot-reloaded).
 
 ---
 
+## Uninstall
+
+`scripts/uninstall.sh` removes all or part of the installation.
+
+| Flags | What it removes |
+|-------|-----------------|
+| `--tool=opencode` | opencode config only |
+| `--tool=opencode,codex` | Subset of agent configs |
+| `--tool=all` | All agent configs |
+| `--docker` | Docker containers + volumes + images |
+| `--repo` | This repo (`.env`, configs, scripts) |
+| `--all` | Everything above |
+| `--dry-run` | Preview without deleting |
+| `--yes` | Skip confirmation |
+
+No flags → interactive menu. Binaries (opencode, codex, claude, pi) are
+left in place — only configs this project created are removed.
+
+```bash
+./scripts/uninstall.sh --all --dry-run   # preview
+./scripts/uninstall.sh --tool=opencode   # remove one agent
+./scripts/uninstall.sh --all --yes       # remove everything, no prompt
+```
+
+---
+
 ## After Install
 
 Restart your shell (or open a new terminal) to clear exported environment
