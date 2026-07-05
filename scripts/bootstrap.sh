@@ -316,10 +316,10 @@ if [ "$TOOL_SPECIFIED" = false ] && is_interactive; then
       6) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=true ;;
       7)
         log_dim "Custom selection (LiteLLM is always installed):"
-        if prompt_yesno "Install opencode?" n; then INSTALL_OPENCODE=true; else INSTALL_OPENCODE=false; fi
-        if prompt_yesno "Install Codex?" n; then INSTALL_CODEX=true; else INSTALL_CODEX=false; fi
-        if prompt_yesno "Install Claude Code?" n; then INSTALL_CLAUDE_CODE=true; else INSTALL_CLAUDE_CODE=false; fi
-        if prompt_yesno "Install Pi?" n; then INSTALL_PI=true; else INSTALL_PI=false; fi
+        if prompt_yesno "Install opencode?" y; then INSTALL_OPENCODE=true; else INSTALL_OPENCODE=false; fi
+        if prompt_yesno "Install Codex?" y; then INSTALL_CODEX=true; else INSTALL_CODEX=false; fi
+        if prompt_yesno "Install Claude Code?" y; then INSTALL_CLAUDE_CODE=true; else INSTALL_CLAUDE_CODE=false; fi
+        if prompt_yesno "Install Pi?" y; then INSTALL_PI=true; else INSTALL_PI=false; fi
         ;;
       *)
         log_warn "Invalid choice. Defaulting to all."
