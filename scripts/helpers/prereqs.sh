@@ -61,12 +61,13 @@ _prereq_prompt() {
     return 0
   fi
   # Non-interactive shell → auto-install
-  if [ ! -t 0 ]; then
+  if ! is_interactive; then
     return 0
   fi
   local answer
   while true; do
-    read -rp "$question [y/N] " answer
+    echo -n "$question [y/N] " >&2
+    read -r answer < /dev/tty
     case "$answer" in
       [yY]|[yY][eE][sS]) return 0 ;;
       [nN]|[nN][oO]|"") return 1 ;;

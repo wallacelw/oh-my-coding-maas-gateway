@@ -173,7 +173,7 @@ prompt_yesno() {
   local question="$1" default="${2:-y}"
   local hint
   if [ "$default" = "y" ]; then hint="[Y/n]"; else hint="[y/N]"; fi
-  if [ ! -t 0 ]; then
+  if ! is_interactive; then
     [ "$default" = "y" ] && return 0 || return 1
   fi
   echo -ne "  ${C_BOLD}${C_CYAN}?${C_RESET} ${C_BOLD}$question${C_RESET} ${C_DIM}$hint${C_RESET} " >&2
@@ -192,7 +192,7 @@ prompt_input() {
   local question="$1" default="${2:-}"
   local hint=""
   [ -n "$default" ] && hint=" ${C_DIM}(default: $default)${C_RESET}"
-  if [ ! -t 0 ]; then
+  if ! is_interactive; then
     echo "$default"; return
   fi
   echo -ne "  ${C_BOLD}${C_CYAN}?${C_RESET} ${C_BOLD}$question${C_RESET}$hint: " >&2
@@ -207,7 +207,7 @@ prompt_input() {
 # Usage: prompt_password "DB_PASSWORD" "$auto_generated_value"
 prompt_password() {
   local label="$1" default="$2"
-  if [ ! -t 0 ]; then
+  if ! is_interactive; then
     echo "$default"; return
   fi
   echo -e "  ${C_BOLD}${C_CYAN}?${C_RESET} ${C_BOLD}$label${C_RESET}" >&2
