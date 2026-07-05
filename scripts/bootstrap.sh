@@ -7,7 +7,7 @@ set -euo pipefail
 # Description:   Thin sequencer. Prompts for install location (default /home),
 #                resolves the tool selection (interactive menu or --tool=),
 #                ensures core prerequisites, runs the numbered pipeline steps
-#                (01_env → 02_litellm → 03a/03b/03c/03d tools → 04_validate), and
+#                (01_env → 02_litellm → 03a/03b/03c/03d tools → 04_validate → 05_skill), and
 #                prints a colored summary. This is the only script a human
 #                needs to run. Each step is independently runnable too.
 #
@@ -34,13 +34,15 @@ VIRTUAL_KEY=""
 DRY_RUN=false
 TOOL_SPECIFIED=false
 TOOL_SELECTION=""
+NO_SKILL=false
 for arg in "$@"; do
   case "$arg" in
     --virtual-key=*) VIRTUAL_KEY="${arg#--virtual-key=}" ;;
     --dry-run)       DRY_RUN=true ;;
     --tool=*)        TOOL_SPECIFIED=true; TOOL_SELECTION="${arg#--tool=}" ;;
+    --no-skill)      NO_SKILL=true ;;
     *)
-      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--dry-run]"
+      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--dry-run] [--no-skill]"
       exit 1
       ;;
   esac
@@ -540,6 +542,22 @@ else
   else
     log_warn "Validation completed with failures"
   fi
+fi
+
+# ── Step 05: Companion skill ──
+SKILL_ARGS=()
+[ "$DRY_RUN" = true ] && SKILL_ARGS+=("--dry-run")
+[ "$NO_SKILL" = true ] && SKILL_ARGS+=("--no-skill")
+if [ "$NO_SKILL" = true ]; then
+  log_dim "(skipping companion skill)"
+elif [ "$DRY_RUN" = true ]; then
+  log_step "Step 05: Companion skill"
+  log_dim "Would run: scripts/05_skill.sh ${SKILL_ARGS[*]}"
+else
+  log_desc "Installing companion skill into coding agents"
+  set +e
+  "$SCRIPT_DIR/05_skill.sh" "${SKILL_ARGS[@]}"
+  set -e
 fi
 
 # ── Summary ──

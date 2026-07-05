@@ -48,12 +48,13 @@ domain and is independently runnable.
 | 03c | `03c_claude_code.sh` | Claude Code CLI | yes | Install Claude Code CLI; mint virtual key; write settings; disable VSCode extension. |
 | 03d | `03d_pi.sh` | Pi agent | yes | Install Pi agent; mint virtual key; write `~/.pi/agent/models.json`. |
 | 04 | `04_validate.sh` | Validation | no | End-to-end validation of all installed components. |
+| 05 | `05_skill.sh` | Companion skill | yes | Install SKILL.md into detected coding agents (opencode, codex, claude, pi). |
 
 ### Ordering
 
 `01 env` (everything needs `.env`) → `02 litellm` (tools need the proxy live)
 → `03a/03b/03c/03d` tools (independent, optional, any relative order) → `04 validate`
-(last, checks everything).
+(last, checks everything) → `05 skill` (companion skill into installed agents).
 
 ### Helpers (`scripts/helpers/`)
 
@@ -65,6 +66,7 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
 | `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`, `log_action`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
 | `models.sh` | 02, 04 | `MODELS` array + `MODEL_COUNT` — single source of truth for the model catalog. To add/remove a model: edit this file only. |
+| `skills.sh` | 05 | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
 
 ---
 
@@ -137,6 +139,21 @@ Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
 `--litellm-only`/`--opencode-only`/`--codex-only`/`--claude-code-only`/`--pi-only`
 (scoped), and `--skip-opencode`/`--skip-codex`/`--skip-claude-code`/`--skip-pi` (additive).
 
+### `05_skill.sh`
+
+Prompts the user to install SKILL.md as a skill/command into each detected
+coding agent. Detects which tools are installed (opencode, codex, claude, pi)
+and installs only into those present. Idempotent — skips agents that already
+have the skill.
+
+Flags: `--dry-run`, `--no-skill`, `--yes`.
+
+Skill locations:
+- opencode: `~/.config/opencode/skills/oh-my-coding-maas-gateway/SKILL.md`
+- codex: `~/.codex/skills/oh-my-coding-maas-gateway/SKILL.md`
+- pi: `~/.pi/agent/skills/oh-my-coding-maas-gateway/SKILL.md`
+- claude: `~/.claude/commands/oh-my-gateway.md` (slash command: `/oh-my-gateway`)
+
 ---
 
 ## Flags
@@ -148,6 +165,7 @@ Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
 | `--tool=VAL` | `all` (default), `litellm`, `opencode`, `codex`, `claude`, `pi`, or comma combo (e.g. `opencode,codex`). Skips the menu. |
 | `--virtual-key=sk-...` | Reuse an existing opencode virtual key, skip minting. |
 | `--dry-run` | Preview actions without modifying anything. |
+| `--no-skill` | Skip companion skill installation (step 05). |
 
 ### `01_env.sh`
 
