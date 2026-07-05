@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 # uninstall.sh — Remove oh-my-coding-maas-gateway artifacts
 #
-# Callable from any directory (resolves paths via BASH_SOURCE).
 # Usage:
-#   /path/to/scripts/uninstall.sh              # interactive menu
-#   /path/to/scripts/uninstall.sh --tool=opencode      # remove one agent
-#   /path/to/scripts/uninstall.sh --tool=opencode,codex  # remove subset
-#   /path/to/scripts/uninstall.sh --tool=all           # remove all agent configs
-#   /path/to/scripts/uninstall.sh --docker             # remove Docker stack
-#   /path/to/scripts/uninstall.sh --repo               # remove repo (incl. .env, configs)
-#   /path/to/scripts/uninstall.sh --all                # everything
-#   /path/to/scripts/uninstall.sh --dry-run            # show what would be removed
-#   /path/to/scripts/uninstall.sh --yes                # skip confirmation
+#   ./scripts/uninstall.sh                      # interactive menu
+#   ./scripts/uninstall.sh --tool=opencode      # remove one agent
+#   ./scripts/uninstall.sh --tool=opencode,codex  # remove subset
+#   ./scripts/uninstall.sh --tool=all           # remove all agent configs
+#   ./scripts/uninstall.sh --docker             # remove Docker stack
+#   ./scripts/uninstall.sh --repo               # remove repo (incl. .env, configs)
+#   ./scripts/uninstall.sh --all                # everything
+#   ./scripts/uninstall.sh --dry-run            # show what would be removed
+#   ./scripts/uninstall.sh --yes                # skip confirmation
 #
 # Order: agents → Docker → repo (repo last, can't continue after self-delete).
 
