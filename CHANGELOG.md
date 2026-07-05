@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MaaS API key validation at prompt time: invalid keys (HTTP 401/403)
+  trigger a warning and re-prompt instead of failing later. Applies to
+  both the main key and extra load-balancing keys. Unreachable endpoints
+  (transient) are accepted with a warning.
 - `scripts/uninstall.sh` — customizable uninstall: remove single agent,
   subset, all agent configs, Docker stack, or everything (including repo).
   Supports `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes`,
