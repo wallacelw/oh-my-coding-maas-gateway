@@ -57,7 +57,17 @@ for port in 4000 5432 9090 3000; do
     port_in_use=true
   fi
   if [ "$port_in_use" = true ] && [ "$DRY_RUN" != true ]; then
-    log_warn "Port $port is already in use. Docker Compose may fail."
+    # Check if the port is held by one of our own stale containers
+    stale_container=""
+    stale_container=$(docker ps --filter "publish=${port}" --format '{{.Names}}' 2>/dev/null || true)
+    if [ -n "$stale_container" ]; then
+      log_warn "Port $port held by stale container(s): $stale_container — stopping them"
+      echo "$stale_container" | while IFS= read -r c; do
+        docker rm -f "$c" 2>/dev/null || true
+      done
+    else
+      log_warn "Port $port is already in use by a non-Docker process. Docker Compose may fail."
+    fi
   fi
 done
 
