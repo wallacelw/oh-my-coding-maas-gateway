@@ -134,6 +134,32 @@ source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 LOG_TAG="bootstrap"
 
+# ── Refresh PATH for binaries installed by 03x scripts ──
+# Installers add to .bashrc, but that only takes effect on shell restart.
+# This makes opencode, bun, pi etc. findable in the current process.
+refresh_path() {
+  for dir in \
+    "$HOME/.opencode/bin" \
+    "$HOME/.bun/bin" \
+    "$HOME/.local/bin" \
+    "$HOME/.npm-global/bin" \
+    /usr/local/bin; do
+    if [ -d "$dir" ] && [[ ":$PATH:" != *":$dir:"* ]]; then
+      export PATH="$dir:$PATH"
+    fi
+  done
+  # nvm: pick the default Node version if installed
+  if [ -d "$HOME/.nvm/versions/node" ]; then
+    local nvm_dir
+    nvm_dir=$(ls -d "$HOME/.nvm/versions/node"/*/bin 2>/dev/null | tail -1 || true)
+    if [ -n "$nvm_dir" ] && [[ ":$PATH:" != *":$nvm_dir:"* ]]; then
+      export PATH="$nvm_dir:$PATH"
+    fi
+  fi
+  hash -r 2>/dev/null || true
+}
+refresh_path
+
 # ── Prevent concurrent runs (flock) ──
 exec 9>"$PROJECT_DIR/.bootstrap.lock"
 if ! flock -n 9; then
@@ -370,6 +396,7 @@ if [ "$INSTALL_OPENCODE" = true ]; then
     log_desc "Installing opencode + oh-my-opencode-slim plugin"
     "$SCRIPT_DIR/03a_opencode.sh" "${OPENCODE_ARGS[@]}"
     log_done "opencode configured — LiteLLM provider, 4 presets, 7 agents"
+    refresh_path
   fi
 else
   log_dim "(skipping opencode)"
@@ -418,6 +445,7 @@ if [ "$INSTALL_PI" = true ]; then
     log_desc "Installing Pi coding agent and configuring LiteLLM virtual key"
     "$SCRIPT_DIR/03d_pi.sh" "${PI_ARGS[@]}"
     log_done "Pi agent configured — LiteLLM virtual key minted"
+    refresh_path
   fi
 else
   log_dim "(skipping Pi agent)"
