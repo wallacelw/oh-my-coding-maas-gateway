@@ -336,8 +336,13 @@ fi
 # ── Summary ──
 echo ""
 log_ok ".env written: $ENV_FILE (chmod 600)"
+echo ""
 log_dim "HUAWEI_MAAS_API_KEY   = $(mask_key "$MAAS_API_KEY")"
+echo ""
 log_dim "MAAS API key count    = ${KEY_COUNT}"
+echo ""
 log_dim "LITELLM_MASTER_KEY    = $(mask_key "$MASTER_KEY")"
+echo ""
 log_dim "PROMETHEUS_RETENTION  = ${PROM_RETENTION}"
+echo ""
 log_dim "BIND_ADDRESS          = ${BIND_ADDRESS}"
