@@ -44,11 +44,9 @@ log_step "Step 03c — Claude Code CLI"
 
 # ── 1. Check prerequisites ──
 log_info "Checking prerequisites..."
-LOG_TAG="system"
-prereq_ensure_apt "curl" curl curl
-prereq_ensure_npm
-prereq_ensure_apt "jq" jq jq
-LOG_TAG="claude"
+prereq_ensure_apt "curl" curl curl "curl is needed to download Claude Code CLI"
+prereq_ensure_npm "Node.js + npm are needed to install and run Claude Code CLI"
+prereq_ensure_apt "jq" jq jq "jq is needed to parse Claude Code config JSON"
 
 if curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"

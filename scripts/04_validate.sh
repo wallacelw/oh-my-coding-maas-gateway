@@ -42,9 +42,8 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
-LOG_TAG="validate"
-prereq_ensure_apt "curl" curl curl
-prereq_ensure_apt "jq"   jq   jq
+prereq_ensure_apt "curl" curl curl "curl is needed for API smoke tests"
+prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse validation JSON responses"
 
 for arg in "$@"; do
   case "$arg" in

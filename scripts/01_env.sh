@@ -47,10 +47,8 @@ done
 log_step "Step 01 — Environment & secrets"
 
 # ── Prerequisites (system-level) ──
-LOG_TAG="system"
-prereq_ensure_apt "python3" python3 python3
-prereq_ensure_apt "git"     git     git
-LOG_TAG="env"
+prereq_ensure_apt "python3" python3 python3 "python3 is needed for .env generation and secret creation"
+prereq_ensure_apt "git"     git     git     "git is needed for repository operations"
 
 # ── Check env template exists ──
 if [ ! -f "$ENV_EXAMPLE" ]; then

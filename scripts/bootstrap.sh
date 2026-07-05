@@ -241,11 +241,10 @@ log_info "Project dir: $PROJECT_DIR"
 
 # ── Core prerequisites ──
 log_step "Core prerequisites"
-log_action "bootstrap" "Ensuring: git, python3, curl, jq"
-prereq_ensure_apt "git"     git     git
-prereq_ensure_apt "python3" python3 python3
-prereq_ensure_apt "curl"    curl    curl
-prereq_ensure_apt "jq"      jq     jq
+prereq_ensure_apt "git"     git     git     "git is needed to clone this repository and pull updates"
+prereq_ensure_apt "python3" python3 python3 "python3 is needed for config generation and validation scripts"
+prereq_ensure_apt "curl"    curl    curl    "curl is needed to download install scripts and make API calls"
+prereq_ensure_apt "jq"      jq      jq      "jq is needed to parse JSON from MaaS API and LiteLLM responses"
 
 # ── Tool selection (menu if --tool= not given) ──
 if [ "$TOOL_SPECIFIED" = false ] && is_interactive; then

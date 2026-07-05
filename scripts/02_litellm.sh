@@ -44,10 +44,8 @@ done
 log_step "Step 02 — LiteLLM proxy + observability"
 
 # ── Prerequisites (system-level, not LiteLLM-specific) ──
-LOG_TAG="system"
-prereq_ensure_apt "curl" curl curl
-prereq_ensure_docker
-LOG_TAG="litellm"
+prereq_ensure_apt "curl" curl curl "curl is needed for LiteLLM health checks and API calls"
+prereq_ensure_docker "Docker Engine runs the LiteLLM proxy, Prometheus, and Grafana containers"
 
 # ── Port conflict check ──
 echo ""
