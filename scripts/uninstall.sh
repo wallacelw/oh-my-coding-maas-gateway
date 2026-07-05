@@ -20,6 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 source "$SCRIPT_DIR/helpers/common.sh"
+source "$SCRIPT_DIR/helpers/skills.sh"
 LOG_TAG="uninstall"
 
 # ── Defaults ──
@@ -348,6 +349,23 @@ if [ "$REMOVE_PI" = true ]; then
     # Clean .bashrc entries for pi-node
     remove_bashrc_block "pi-node"
   fi
+fi
+
+# ── Remove companion skill from all agents ──
+if [ "$REMOVE_OPENCODE" = true ] || [ "$REMOVE_CODEX" = true ] || [ "$REMOVE_CLAUDE" = true ] || [ "$REMOVE_PI" = true ]; then
+  _skill_removed=false
+  for _tool in opencode codex claude pi; do
+    if "skill_exists_$_tool" 2>/dev/null; then
+      if [ "$DRY_RUN" = true ]; then
+        log_dim "  Would remove companion skill from $_tool"
+      else
+        "skill_uninstall_$_tool" 2>/dev/null || true
+        log_ok "Removed companion skill from $_tool"
+      fi
+      _skill_removed=true
+    fi
+  done
+  [ "$_skill_removed" = true ] && [ "$DRY_RUN" != true ] && log_dim "Companion skill removed from agents"
 fi
 
 # ── Remove Docker stack ──

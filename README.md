@@ -30,47 +30,90 @@ deepseek-v3.2
 
 ---
 
-## Quickstart (Install & Upgrade)
+## Install
 
-Same one-liner for both install and upgrade — bootstrap detects an existing
-install and pulls updates, or clones fresh if none found. Idempotent —
-preserves all secrets and data.
-
-### 👤 Human — run it yourself
-
-**1. Install or upgrade** (prompts for MaaS API key, auto-installs prerequisites):
+The bootstrap script is the only installation method. It handles
+everything — prerequisites, Docker stack, coding tools, virtual keys,
+validation, and optional companion skill.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
 ```
 
-**2. Use any coding tool:**
+Bootstrap will:
+1. Detect an existing install and offer upgrade (pull updates) or fresh install
+2. Prompt for your Huawei MaaS API key (validated at prompt time)
+3. Show an interactive menu to select which coding tools to install
+4. Auto-install prerequisites (Docker, git, curl, jq, bun, npm) with explanations
+5. Deploy the LiteLLM proxy + observability stack
+6. Install and configure each selected coding tool with its own virtual key
+7. Run end-to-end validation
+8. Offer to install the companion skill into your coding agents
+
+Estimated time: ~5 min fresh, ~2 min upgrade.
+
+### Non-interactive (flags)
+
+```bash
+# Install LiteLLM + all coding tools
+HUAWEI_MAAS_API_KEY="sk-..." curl -fsSL .../bootstrap.sh | bash -- --tool=all
+
+# Install LiteLLM only
+curl -fsSL .../bootstrap.sh | bash -- --tool=litellm
+
+# Custom combo
+curl -fsSL .../bootstrap.sh | bash -- --tool=opencode,codex
+```
+
+### After install
 
 ```bash
 opencode          # or: codex  or:  claude --bare  or:  pi
 ```
 
-**3. Monitor** (optional — Grafana dashboard):
+Monitor at `http://localhost:3000` (Grafana) or `http://localhost:4000/ui`
+(LiteLLM Admin).
+
+---
+
+## Upgrade
+
+Same command — bootstrap detects existing install, compares versions, and
+pulls updates. All secrets and data preserved.
 
 ```bash
-open http://localhost:3000
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
 ```
 
-That's it. LiteLLM proxy at `http://localhost:4000`, 6 models, 4 coding tools.
-For details, keep reading.
+After upgrade, restart any running coding tools — plugin/preset changes
+are not hot-reloaded.
 
-After upgrade, restart opencode if it's running (exit and start fresh —
-plugin/preset changes are not hot-reloaded). If the Grafana dashboard looks
-stale: `docker compose restart grafana`.
+---
 
-### 🤖 Agent
+## Companion Skill
 
-Point your agent at SKILL.md for operational guidance — installation,
-upgrades, health diagnosis, key/model management, and recovery:
+After installation, bootstrap offers to install
+[SKILL.md](./SKILL.md) as a skill into each detected coding agent. This
+gives your agents operational guidance for the gateway:
 
-```
-Fetch SKILL.md and help me manage oh-my-coding-maas-gateway:
-  https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
+- **Health diagnosis** — run validation, interpret results, check logs
+- **Key management** — rotate MaaS keys, add load-balancing keys, mint virtual keys
+- **Model management** — add/remove models via `models.sh`
+- **Debug routing** — diagnose 401s, latency, failed inference
+- **Observability** — read Grafana panels, query Prometheus metrics
+- **Recovery** — fix port conflicts, dead containers, failed health checks
+
+| Tool | Skill location | How to invoke |
+|------|---------------|---------------|
+| opencode | `~/.config/opencode/skills/oh-my-coding-maas-gateway/SKILL.md` | Automatic (agent reads skill) |
+| Codex CLI | `~/.codex/skills/oh-my-coding-maas-gateway/SKILL.md` | Automatic (agent reads skill) |
+| Pi agent | `~/.pi/agent/skills/oh-my-coding-maas-gateway/SKILL.md` | `/skill:oh-my-coding-maas-gateway` |
+| Claude Code | `~/.claude/commands/oh-my-gateway.md` | `/oh-my-gateway` (slash command) |
+
+You can also install the skill manually anytime:
+
+```bash
+./scripts/05_skill.sh --yes
 ```
 
 ---
@@ -129,8 +172,6 @@ shells (piped stdin, CI) auto-confirm.
 **Non-Debian systems** (RHEL, Alpine, Arch): Install the equivalent packages
 manually — see the prerequisite table in [INSTALLATION.md](./INSTALLATION.md).
 Docker daemon start requires systemd.
-
-See [INSTALLATION.md](./INSTALLATION.md) for the per-script prerequisite table.
 
 ---
 
@@ -215,19 +256,19 @@ group, `ufw allow from <your-ip> to any port 4000`).
 Remove all or part of the installation. Interactive menu if no flags.
 
 ```bash
-# Remove one agent's config
+# Remove one agent's config + companion skill
 ./scripts/uninstall.sh --tool=opencode
 
 # Remove a subset
 ./scripts/uninstall.sh --tool=opencode,codex
 
-# Remove all agent configs
+# Remove all agent configs + companion skills
 ./scripts/uninstall.sh --tool=all
 
 # Remove Docker stack (containers + volumes + images)
 ./scripts/uninstall.sh --docker
 
-# Remove everything (agents + Docker + this repo)
+# Remove everything (agents + skills + Docker + this repo)
 ./scripts/uninstall.sh --all
 
 # Preview without deleting
@@ -235,8 +276,8 @@ Remove all or part of the installation. Interactive menu if no flags.
 ```
 
 Binaries (opencode, codex, claude, pi), runtimes (bun, pi-node), configs,
-and `.bashrc` entries are all removed. Use `--dry-run` first to see exactly
-what would be deleted.
+companion skills, and `.bashrc` entries are all removed. Use `--dry-run`
+first to see exactly what would be deleted.
 
 ---
 
