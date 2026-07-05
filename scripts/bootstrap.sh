@@ -49,12 +49,14 @@ done
 # ── Standalone detection ──
 # If helpers/common.sh doesn't exist, we're running outside the repo
 # (e.g., curl | bash). Prompt for install dir, clone, and re-exec.
+# is_interactive checks /dev/tty (not stdin) so it works under curl|bash.
+is_interactive() { [ -c /dev/tty ] 2>/dev/null; }
 if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
   echo ""
   echo "=== $REPO_NAME — Standalone bootstrap ==="
   echo ""
   default_parent="/home"
-  if [ -t 0 ]; then
+  if is_interactive; then
     echo -n "  Where to install? [$default_parent]: "
     read -r install_parent < /dev/tty || install_parent="$default_parent"
     install_parent="${install_parent:-$default_parent}"
@@ -68,7 +70,7 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
     if ! git pull --ff-only; then
       echo ""
       echo "  git pull failed. Reset to origin/main? [y/N]: "
-      if [ -t 0 ]; then
+      if is_interactive; then
         read -r reset_choice < /dev/tty || reset_choice="n"
       else
         reset_choice="n"
@@ -148,7 +150,7 @@ current_parent="$(dirname "$PROJECT_DIR")"
 if [ "${BOOTSTRAP_STANDALONE:-}" = "1" ]; then
   # Skip prompt — already determined during standalone bootstrap
   install_parent="$current_parent"
-elif [ -t 0 ]; then
+elif is_interactive; then
   install_parent=$(prompt_input "Install directory (project will be in \$INSTALL_DIR/$REPO_NAME)" "$current_parent")
 else
   install_parent="$current_parent"
@@ -184,7 +186,7 @@ prereq_ensure_apt "curl"    curl    curl
 prereq_ensure_apt "jq"      jq     jq
 
 # ── Tool selection (menu if --tool= not given) ──
-if [ "$TOOL_SPECIFIED" = false ] && [ -t 0 ]; then
+if [ "$TOOL_SPECIFIED" = false ] && is_interactive; then
   log_step "Select installation scope"
   echo -e "  ${C_BOLD}1)${C_RESET} Default — LiteLLM + all coding tools"
   echo -e "  ${C_BOLD}2)${C_RESET} LiteLLM only"

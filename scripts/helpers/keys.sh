@@ -37,7 +37,7 @@ resolve_master_key() {
   fi
 
   # 3. Prompt if interactive, else fail
-  if [ -t 0 ]; then
+  if is_interactive; then
     echo "  LITELLM_MASTER_KEY not found in env or .env." >&2
     echo "  Enter LITELLM_MASTER_KEY (or Ctrl+C to abort):" >&2
     read -r LITELLM_MASTER_KEY < /dev/tty

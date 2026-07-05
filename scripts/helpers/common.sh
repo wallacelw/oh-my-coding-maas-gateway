@@ -157,7 +157,15 @@ log_action() {
 }
 
 # ── Prompt functions ─────────────────────────────────────────
-# All prompts auto-default on non-interactive (piped stdin / CI).
+# All prompts read from /dev/tty (not stdin) so they work under
+# `curl | bash` where stdin is the curl pipe. is_interactive checks
+# for a controlling terminal rather than stdin being a TTY.
+
+# Returns 0 if a controlling terminal is available (/dev/tty is a char device).
+# Usage: if is_interactive; then ...
+is_interactive() {
+  [ -c /dev/tty ] 2>/dev/null
+}
 
 # Yes/no prompt. Returns 0 for yes, 1 for no.
 # Usage: prompt_yesno "Use auto-generated value?" y
