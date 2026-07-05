@@ -71,7 +71,10 @@ if ! command -v opencode &>/dev/null; then
     trap 'rm -f "$TMPFILE"' EXIT
     if curl -fsSL --max-time 30 "$OPENCODE_INSTALL_URL" -o "$TMPFILE"; then
       run_filtered "opencode:installer" bash "$TMPFILE"
-      log_ok "Installed: $(opencode --version 2>/dev/null)"
+      # opencode installer adds to .bashrc but not current shell
+      [ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"
+      hash -r 2>/dev/null || true
+      log_ok "Installed: $(opencode --version 2>/dev/null || echo 'unknown')"
     else
       log_error "Failed to download opencode install script."
       rm -f "$TMPFILE"; exit 1

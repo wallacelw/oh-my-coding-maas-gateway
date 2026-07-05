@@ -61,7 +61,26 @@ if ! command -v pi &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
     log_info "Would run: curl -fsSL $PI_INSTALL_URL | sh"
   else
-    run_filtered "pi" sh -c "curl -fsSL $PI_INSTALL_URL | sh"
+    # Pi installer needs terminal access — it has interactive prompts
+    # (logo animation, may install Node.js 22+ if system version is too old)
+    if ! curl -fsSL --max-time 60 "$PI_INSTALL_URL" | sh; then
+      log_error "Pi installer failed. Ensure Node.js 22.19.0+ is available."
+      exit 1
+    fi
+    # Refresh PATH — installer may have added ~/.local/bin or updated nvm
+    hash -r 2>/dev/null || true
+    # Also check common install locations
+    for _dir in "$HOME/.local/bin" "$HOME/.npm-global/bin" "/usr/local/bin"; do
+      [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
+    done
+    # Check nvm Node versions
+    for _dir in $(ls -d "$HOME/.nvm/versions/node"/*/bin 2>/dev/null || true); do
+      [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
+    done
+    if ! command -v pi &>/dev/null; then
+      log_error "pi binary not found after install. Check PATH or run: curl -fsSL $PI_INSTALL_URL | sh"
+      exit 1
+    fi
     log_ok "Installed: $(pi --version 2>/dev/null || echo 'unknown')"
   fi
 else
@@ -170,8 +189,6 @@ else
 fi
 
 echo ""
-log_ok "Pi installation complete"
+log_ok "Pi agent installation complete"
 log_info "Provider: LiteLLM — ${#MODELS[@]} models available"
-log_info "Config: $PI_CONFIG"
-echo ""
-log_dim "Note: on first run, Pi auto-installs fd and ripgrep — this is normal."
+log_info "Run: pi"
