@@ -237,8 +237,8 @@ Remove all or part of the installation. Interactive menu if no flags.
 ./scripts/uninstall.sh --all --dry-run
 ```
 
-Binaries (opencode, codex, claude, pi) are left in place — only configs
-this project created are removed. Use `--dry-run` first to see exactly
+Binaries (opencode, codex, claude, pi), runtimes (bun, pi-node), configs,
+and `.bashrc` entries are all removed. Use `--dry-run` first to see exactly
 what would be deleted.
 
 ---

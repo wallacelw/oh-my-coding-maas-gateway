@@ -63,8 +63,8 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 |------|---------|----------|
 | `prereqs.sh` | all steps | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install labeled with `[LOG_TAG]`. |
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
-| `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, logging (`log_step`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`, `log_action`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering). |
-| `models.sh` | 02, 06 | `MODELS` array + `MODEL_COUNT` — single source of truth for the model catalog. To add/remove a model: edit this file only. |
+| `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`, `log_action`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
+| `models.sh` | 02, 04 | `MODELS` array + `MODEL_COUNT` — single source of truth for the model catalog. To add/remove a model: edit this file only. |
 
 ---
 
@@ -198,7 +198,9 @@ All other secrets (`LITELLM_SALT_KEY`, `DB_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`,
 All scripts use a shared logging system from `helpers/common.sh`:
 
 - **Colors** auto-enable on TTY, disable on piped/CI output.
-- `log_step` — bold cyan section headers (`━━━ Step 01 — ... ━━━`)
+- `log_step` — bold green box-drawing section headers (`┌── Title ──┐`)
+- `log_desc` — cyan info line before each step
+- `log_done` — green dim completion line after each step
 - `log_ok` / `log_info` / `log_warn` / `log_error` — green ✓ / blue → / yellow ⚠ / red ✗
 - `log_dim` — dim secondary text
 - `log_action "who" "msg"` — dim `[tag]` prefix showing who's acting
@@ -352,8 +354,8 @@ start fresh — plugin/preset changes are not hot-reloaded).
 | `--dry-run` | Preview without deleting |
 | `--yes` | Skip confirmation |
 
-No flags → interactive menu. Binaries (opencode, codex, claude, pi) are
-left in place — only configs this project created are removed.
+No flags → interactive menu. Binaries (opencode, codex, claude, pi),
+runtimes (bun, pi-node), configs, and `.bashrc` entries are all removed.
 
 ```bash
 ./scripts/uninstall.sh --all --dry-run   # preview

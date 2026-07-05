@@ -5,19 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-07-06
 
 ### Added
 
-- MaaS API key validation at prompt time: invalid keys (HTTP 401/403)
-  trigger a warning and re-prompt instead of failing later. Applies to
-  both the main key and extra load-balancing keys. Unreachable endpoints
-  (transient) are accepted with a warning.
-- `scripts/uninstall.sh` — customizable uninstall: remove single agent,
+- **`VERSION` file** — bootstrap reads and displays version in banner and
+  summary. Existing-install detection compares local vs installed version,
+  showing "Update available" or "up to date" with color-coded arrow.
+- **`scripts/uninstall.sh`** — customizable uninstall: remove single agent,
   subset, all agent configs, Docker stack, or everything (including repo).
   Supports `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes`,
-  and interactive menu. Binaries left in place; only project-created configs
-  removed.
+  and interactive menu. Removes binaries, runtimes (bun, pi-node), configs,
+  and `.bashrc` entries.
+- **MaaS API key validation at prompt time** — invalid keys (HTTP 401/403)
+  trigger a warning and re-prompt instead of failing later. Applies to
+  both the main key and extra load-balancing keys. Unreachable endpoints
+  (transient) are accepted with a warning. `sk-` prefix validation via
+  `prompt_password` prefix arg.
+- **`is_interactive()`** — checks `/dev/tty` (not stdin) so prompts work
+  under `curl | bash`. All prompts read from `/dev/tty`.
+- **`run_with_spinner()`** — animated spinner for long operations (Docker
+  start, apt install, bun install).
+- **`log_desc` / `log_done`** — cyan info line before each step, green dim
+  completion line after.
+- **Prereq explanations** — each prerequisite shows a reason explaining
+  what it is and why it's needed, replacing `[system] Installing...`.
+- **`refresh_path()`** — adds `~/.opencode/bin`, `~/.bun/bin`,
+  `~/.local/bin`, nvm, pi-node paths after install (compensates for
+  installers only updating `.bashrc`).
+- **Fresh install option** — existing install detection offers pull updates
+  (preserve) vs fresh install (uninstall + reclone). Default: pull updates.
+- **Port conflict handling** — `02_litellm.sh` detects and stops stale
+  containers on required ports; uninstall waits for ports to be freed.
+- **Prometheus scrape retry** — C3 check retries 3× with 5s waits.
+- **Terminal restart hint** — dim hint before Next steps commands.
+- **Conditional security disclaimer** — only shown when `KEYS_FROM_ENV=true`
+  (keys passed via env vars, not interactive prompts).
+- **Custom toggle defaults** — menu option 7 defaults to `[Y/n]` for all
+  tools.
+- **AGENTS.md CLI UX Standards** — documented all interactive prompt
+  standards, output formatting, menu design, summary sections.
+
+### Changed
+
+- **`log_step`** now draws a bold green box-drawing header (`┌── Title ──┐`)
+  instead of `━━━ Title ━━━` lines.
+- **Pi installer runs directly** (not through `run_filtered`) — needs TTY
+  for interactive Node.js 22 upgrade prompt.
+- **opencode next step** simplified to just `opencode` (not "exit any
+  running session...").
+- **Extra MaaS key prompt** shows "Extra MaaS API key #N" instead of
+  "MaaS API key #N".
+- **`mint_or_reuse_key`** deletes existing key by `key_id` (not masked
+  `key_name`) before minting — LiteLLM rejects duplicate aliases.
+- **Docker compose down** in uninstall runs directly (not `run_filtered`)
+  with fallback `docker rm -f` for lingering containers.
+- **`npm uninstall`** wrapped in `set +e` — may fail silently, fallback
+  `rm -f` all binary paths + `rm -rf` node_modules.
+- **Documentation** — README, INSTALLATION, REFERENCE, AGENTS updated for
+  `log_step` box style, `log_desc`/`log_done`, `run_with_spinner`,
+  `is_interactive`, uninstall binary removal, helper function list.
 
 ### Fixed
 
@@ -42,6 +89,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   references.
 - `configs/pi/models.json.template`: deleted (dead file, 03d generates from
   scratch).
+- `LOG_TAG="system"` for prereq installs (was leaking into filtered output).
+- Docker prompt default changed to `y` (was `n`, blocking non-interactive).
+- `log_step` box border fix (`border+=` not `border +=`).
+- `_prereq_sudo` export fix (was not exported for use in subshells).
+- Pi binary PATH search expanded to `~/.local/share/pi-node/current/bin`
+  and versioned dirs.
+- `printf %s` → `%b` for Next steps color codes.
+- Delete curl stdout leak in `mint_or_reuse_key` fixed with `&>/dev/null`.
 
 ## [0.6.0] - 2026-07-02
 
