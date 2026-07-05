@@ -11,7 +11,7 @@ set -euo pipefail
 # Outputs:       ~/.config/opencode/skills/<name>/SKILL.md
 #                ~/.codex/skills/<name>/SKILL.md
 #                ~/.pi/agent/skills/<name>/SKILL.md
-#                ~/.claude/commands/<name>.md
+#                ~/.claude/skills/<name>/SKILL.md
 # Standalone:    yes — ./scripts/05_skill.sh
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -112,7 +112,7 @@ if [ "$DRY_RUN" = true ]; then
       opencode) log_dim "  Would install: ~/.config/opencode/skills/$SKILL_NAME/SKILL.md" ;;
       codex)    log_dim "  Would install: ~/.codex/skills/$SKILL_NAME/SKILL.md" ;;
       pi)       log_dim "  Would install: ~/.pi/agent/skills/$SKILL_NAME/SKILL.md" ;;
-      claude)   log_dim "  Would install: ~/.claude/commands/$CLAUDE_CMD_NAME.md" ;;
+      claude)   log_dim "  Would install: ~/.claude/skills/$SKILL_NAME/SKILL.md" ;;
     esac
   done
   exit 0
@@ -134,7 +134,7 @@ for tool in $NEW; do
       ;;
     claude)
       dest=$(skill_install_claude)
-      log_ok "claude: $dest (slash command: /$CLAUDE_CMD_NAME)"
+      log_ok "claude: $dest"
       ;;
   esac
 done
