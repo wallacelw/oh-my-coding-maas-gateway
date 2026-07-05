@@ -25,9 +25,6 @@ CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
-LOG_TAG="litellm"
-prereq_ensure_apt "curl" curl curl
-prereq_ensure_docker
 
 # ── Parse args ──
 ROUTING_STRATEGY="simple-shuffle"
@@ -45,6 +42,12 @@ for arg in "$@"; do
 done
 
 log_step "Step 02 — LiteLLM proxy + observability"
+
+# ── Prerequisites (system-level, not LiteLLM-specific) ──
+LOG_TAG="system"
+prereq_ensure_apt "curl" curl curl
+prereq_ensure_docker
+LOG_TAG="litellm"
 
 # ── Port conflict check ──
 echo ""
