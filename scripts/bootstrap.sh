@@ -51,6 +51,15 @@ done
 # (e.g., curl | bash). Prompt for install dir, clone, and re-exec.
 # is_interactive checks /dev/tty (not stdin) so it works under curl|bash.
 is_interactive() { [ -c /dev/tty ] 2>/dev/null; }
+# Minimal color setup (common.sh not sourced yet in standalone mode)
+if [ -t 1 ]; then
+  C_RESET="\033[0m"  C_BOLD="\033[1m"  C_DIM="\033[2m"
+  C_RED="\033[31m"   C_GREEN="\033[32m" C_YELLOW="\033[33m"
+  C_BLUE="\033[34m"  C_CYAN="\033[36m"
+else
+  C_RESET="" C_BOLD="" C_DIM=""
+  C_RED="" C_GREEN="" C_YELLOW="" C_BLUE="" C_CYAN=""
+fi
 if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
   echo ""
   echo "=== $REPO_NAME — Standalone bootstrap ==="
