@@ -45,10 +45,12 @@ log_step "Step 03b — Codex CLI"
 
 # ── 1. Check prerequisites ──
 log_info "Checking prerequisites..."
+LOG_TAG="system"
 prereq_ensure_apt "curl" curl curl
 prereq_ensure_npm
 prereq_ensure_apt "jq" jq jq
 prereq_ensure_apt "bubblewrap" bwrap bubblewrap
+LOG_TAG="codex"
 
 if curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"

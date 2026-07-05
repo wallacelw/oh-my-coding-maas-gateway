@@ -31,9 +31,6 @@ trap 'rm -f "$ENV_FILE.tmp" 2>/dev/null' EXIT INT TERM
 # ── Helpers ──
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
-LOG_TAG="env"
-prereq_ensure_apt "python3" python3 python3
-prereq_ensure_apt "git"     git     git
 
 generate_secret() { python3 -c 'import secrets; print(secrets.token_urlsafe(32))'; }
 generate_master_key() { echo "sk-$(generate_secret)"; }
@@ -48,6 +45,12 @@ for arg in "$@"; do
 done
 
 log_step "Step 01 — Environment & secrets"
+
+# ── Prerequisites (system-level) ──
+LOG_TAG="system"
+prereq_ensure_apt "python3" python3 python3
+prereq_ensure_apt "git"     git     git
+LOG_TAG="env"
 
 # ── Check env template exists ──
 if [ ! -f "$ENV_EXAMPLE" ]; then
