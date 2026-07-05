@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-07-06
+
+### Added
+
+- **Companion skill installation** (`scripts/05_skill.sh`) — after
+  validation, bootstrap prompts to install SKILL.md as a skill into each
+  detected coding agent. Idempotent, skips agents that already have it.
+  `--no-skill` flag to skip.
+- **`scripts/install-skill.sh`** — install ANY skill (not just this
+  companion) into all detected coding agents. Takes `--name=` and
+  `--source=` (local path or URL). Supports `--dry-run`.
+- **`helpers/skills.sh`** — install/uninstall helpers for each agent tool.
+  All four tools use the same Agent Skills standard (SKILL.md with YAML
+  frontmatter): opencode `~/.config/opencode/skills/`, codex
+  `~/.codex/skills/`, pi `~/.pi/agent/skills/`, claude `~/.claude/skills/`.
+- **SKILL.md redesigned** — operational companion with interactive menu
+  (6 options + context-only default):
+  1) Health check  2) Validation  3) Upgrade  4) Uninstall
+  5) Install skill  6) Mint new keys  (Enter = context only)
+  Includes step-by-step instructions for adding MaaS load-balancing keys
+  and minting LiteLLM virtual keys.
+
+### Changed
+
+- **README slimmed** (292 → 107 lines) — detailed flags, per-tool usage,
+  monitoring, remote access moved to INSTALLATION.md.
+- **INSTALLATION.md expanded** — After Install section now includes
+  per-tool usage, monitoring, remote access, services table, coding tools
+  table, install modes table, companion skill table.
+- **Pipeline extended** — 01 → 02 → 03a-03d → 04 → 05 (companion skill).
+
+### Fixed
+
+- **Standalone mode unbound variable** — `version_compare` crashed when
+  `PROJECT_VERSION="unknown"` (no VERSION file in curl|bash temp dir).
+  Guarded with non-numeric check and early return in `show_version_info`.
+- **Claude skill path** — was using legacy `~/.claude/commands/` (slash
+  commands, no frontmatter). Now uses `~/.claude/skills/` (Agent Skills
+  standard with frontmatter and auto-loading), same as all other tools.
+- **curl|bash argument passing** — `bash --` → `bash -s --` in README
+  examples (need `-s` to read script from stdin).
+- **Stale docs** — uninstall now removes binaries + runtimes (not just
+  configs); `log_step` draws green box (not `━━━` lines); `models.sh`
+  used by steps 02 and 04 (not 02 and 06).
+
 ## [1.0.0] - 2026-07-06
 
 ### Added
