@@ -455,7 +455,14 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Prometheus scrape check"
   else
-    SCRAPE_COUNT=$(curl -sf -g -m 10 "http://127.0.0.1:9090/api/v1/query?query=up{job=\"litellm\"}" 2>/dev/null | jq -r '.data.result[0].value[1] // empty' 2>/dev/null || true)
+    SCRAPE_COUNT=""
+    for _attempt in 1 2 3; do
+      SCRAPE_COUNT=$(curl -sf -g -m 10 "http://127.0.0.1:9090/api/v1/query?query=up{job=\"litellm\"}" 2>/dev/null | jq -r '.data.result[0].value[1] // empty' 2>/dev/null || true)
+      if [ "$SCRAPE_COUNT" = "1" ]; then
+        break
+      fi
+      [ "$_attempt" -lt 3 ] && sleep 5
+    done
     if [ "$SCRAPE_COUNT" = "1" ]; then
       pass "Prometheus is scraping LiteLLM (up=1)"
     elif [ -n "$SCRAPE_COUNT" ]; then
