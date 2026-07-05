@@ -63,17 +63,14 @@ After upgrade, restart opencode if it's running (exit and start fresh —
 plugin/preset changes are not hot-reloaded). If the Grafana dashboard looks
 stale: `docker compose restart grafana`.
 
-### 🤖 Agent (paste this prompt)
+### 🤖 Agent
+
+Point your agent at SKILL.md for operational guidance — installation,
+upgrades, health diagnosis, key/model management, and recovery:
 
 ```
-Install or upgrade oh-my-coding-maas-gateway on this machine.
-
-Fetch and follow SKILL.md:
+Fetch SKILL.md and help me manage oh-my-coding-maas-gateway:
   https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/SKILL.md
-
-You are the supervisor and wrapper. Read the project docs first, present
-a summary, ask me install or upgrade, then run bootstrap and relay every
-prompt to me with context. After completion, give me next steps.
 ```
 
 ---
@@ -248,7 +245,7 @@ what would be deleted.
 | File | For | Description |
 |------|-----|-------------|
 | **[INSTALLATION.md](./INSTALLATION.md)** | Everyone | Install process, pipeline, per-script details, flags, env vars, prerequisites, recovery, upgrade |
-| **[SKILL.md](./SKILL.md)** | Agents | Agent procedure: run bootstrap, handle prompts, recovery |
+| **[SKILL.md](./SKILL.md)** | Agents | Operational companion: install, upgrade, diagnose, key/model management, recovery |
 | **[REFERENCE.md](./REFERENCE.md)** | Everyone | Architecture, config, env vars, tool integration, repair guide, lifecycle |
 | **[CHANGELOG.md](./CHANGELOG.md)** | Everyone | Version history |
 | **[AGENTS.md](./AGENTS.md)** | Contributors | Development rules, validation, commit conventions |
