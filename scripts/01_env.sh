@@ -152,6 +152,21 @@ fi
 
 # ── Collect MaaS API key (env var or prompt) ──
 log_step "Huawei MaaS API key"
+
+# Validate a MaaS key against the /models endpoint.
+# Returns: 0=valid, 1=invalid (401/403), 2=unreachable.
+validate_maas_key() {
+  local key="$1" base="$2"
+  local http_code
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
+    "$base/models" -H "Authorization: Bearer $key" 2>/dev/null || echo "000")
+  case "$http_code" in
+    200) return 0 ;;
+    401|403) return 1 ;;
+    *) return 2 ;;
+  esac
+}
+
 MAAS_API_KEY="${HUAWEI_MAAS_API_KEY:-}"
 if [ -z "$MAAS_API_KEY" ] && [ -n "$EXISTING_MAAS_KEY" ]; then
   MAAS_API_KEY="$EXISTING_MAAS_KEY"
@@ -161,7 +176,20 @@ if [ -n "$MAAS_API_KEY" ]; then
   log_ok "HUAWEI_MAAS_API_KEY set from environment"
 elif is_interactive; then
   echo ""
-  MAAS_API_KEY=$(prompt_input "Enter Huawei MaaS API key (region ap-southeast-1)" "")
+  while true; do
+    MAAS_API_KEY=$(prompt_input "Enter Huawei MaaS API key (region ap-southeast-1)" "")
+    if [ -z "$MAAS_API_KEY" ]; then
+      log_warn "Key cannot be empty. Please try again."
+      continue
+    fi
+    log_info "Validating key..."
+    validate_maas_key "$MAAS_API_KEY" "$MAAS_API_BASE"
+    case $? in
+      0) log_ok "Key validated."; break ;;
+      1) log_warn "Key rejected by MaaS API (invalid). Please try again."; continue ;;
+      2) log_warn "Cannot reach MaaS endpoint (may be transient). Accepting key."; break ;;
+    esac
+  done
 else
   log_error "HUAWEI_MAAS_API_KEY is required. Set it as an env var or run interactively."
   exit 1
@@ -201,8 +229,15 @@ elif is_interactive; then
     EXTRA_NUM=$(( ${#EXTRA_KEYS[@]} + 1 ))
     extra_key=$(prompt_input "MaaS API key #$EXTRA_NUM (or press Enter to finish)" "")
     [ -z "$extra_key" ] && break
+    log_info "Validating key #$EXTRA_NUM..."
+    validate_maas_key "$extra_key" "$MAAS_API_BASE"
+    case $? in
+      0) log_ok "Extra key #$EXTRA_NUM validated" ;;
+      1) log_warn "Key #$EXTRA_NUM rejected by MaaS API (invalid). Please re-enter or press Enter to skip."
+         continue ;;
+      2) log_warn "Cannot reach MaaS endpoint (may be transient). Accepting key." ;;
+    esac
     EXTRA_KEYS+=("$extra_key")
-    log_ok "Extra key #$EXTRA_NUM added"
   done
 fi
 
