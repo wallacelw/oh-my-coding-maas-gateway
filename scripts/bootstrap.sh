@@ -87,7 +87,7 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
           echo "  Uninstalling old installation..."
           cd "$target_dir"
           # Remove Docker stack + tool configs (not the repo yet)
-          ./scripts/uninstall.sh --tool=all --docker --yes 2>/dev/null || true
+          ./scripts/uninstall.sh --tool=all --docker --yes || true
           cd "$install_parent"
           rm -rf "$target_dir"
           echo "  Old installation removed."
@@ -212,7 +212,7 @@ if [ "$target_dir" != "$PROJECT_DIR" ]; then
       2)
         log_info "Uninstalling old installation..."
         cd "$target_dir"
-        ./scripts/uninstall.sh --tool=all --docker --yes 2>/dev/null || true
+        ./scripts/uninstall.sh --tool=all --docker --yes || true
         cd "$install_parent"
         rm -rf "$target_dir"
         log_ok "Old installation removed."
