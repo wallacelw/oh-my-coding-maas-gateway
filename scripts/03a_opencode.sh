@@ -143,7 +143,7 @@ mkdir -p "$OPENCODE_DIR"
 
 # Huawei MaaS API key for the direct provider (from .env, already sourced)
 HUAWEI_MAAS_API_KEY="${HUAWEI_MAAS_API_KEY:-}"
-if [ -z "$HUAWEI_MAAS_API_KEY" ] && [ -t 0 ]; then
+if [ -z "$HUAWEI_MAAS_API_KEY" ] && is_interactive; then
   HUAWEI_MAAS_API_KEY=$(prompt_input "Huawei MaaS API key (or press Enter to skip direct provider)" "")
 fi
 

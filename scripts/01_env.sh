@@ -159,7 +159,7 @@ if [ -z "$MAAS_API_KEY" ] && [ -n "$EXISTING_MAAS_KEY" ]; then
 fi
 if [ -n "$MAAS_API_KEY" ]; then
   log_ok "HUAWEI_MAAS_API_KEY set from environment"
-elif [ -t 0 ]; then
+elif is_interactive; then
   echo ""
   MAAS_API_KEY=$(prompt_input "Enter Huawei MaaS API key (region ap-southeast-1)" "")
 else
@@ -191,7 +191,7 @@ if [ -n "${HUAWEI_MAAS_API_KEY_COUNT:-}" ]; then
 elif [ ${#EXISTING_EXTRA_KEYS[@]} -gt 0 ]; then
   EXTRA_KEYS=("${EXISTING_EXTRA_KEYS[@]}")
   log_ok "${#EXTRA_KEYS[@]} extra MaaS key(s) preserved from existing .env"
-elif [ -t 0 ]; then
+elif is_interactive; then
   echo ""
   log_dim "Additional MaaS API keys for load balancing."
   log_dim "Each extra key multiplies effective RPM/TPM across all models."
