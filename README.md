@@ -216,25 +216,26 @@ group, `ufw allow from <your-ip> to any port 4000`).
 ## Uninstall
 
 Remove all or part of the installation. Interactive menu if no flags.
+Callable from any directory.
 
 ```bash
 # Remove one agent's config
-./scripts/uninstall.sh --tool=opencode
+/home/oh-my-coding-maas-gateway/scripts/uninstall.sh --tool=opencode
 
 # Remove a subset
-./scripts/uninstall.sh --tool=opencode,codex
+/home/oh-my-coding-maas-gateway/scripts/uninstall.sh --tool=opencode,codex
 
 # Remove all agent configs
-./scripts/uninstall.sh --tool=all
+/home/oh-my-coding-maas-gateway/scripts/uninstall.sh --tool=all
 
 # Remove Docker stack (containers + volumes + images)
-./scripts/uninstall.sh --docker
+/home/oh-my-coding-maas-gateway/scripts/uninstall.sh --docker
 
 # Remove everything (agents + Docker + this repo)
-./scripts/uninstall.sh --all
+/home/oh-my-coding-maas-gateway/scripts/uninstall.sh --all
 
 # Preview without deleting
-./scripts/uninstall.sh --all --dry-run
+/home/oh-my-coding-maas-gateway/scripts/uninstall.sh --all --dry-run
 ```
 
 Binaries (opencode, codex, claude, pi) are left in place — only configs
