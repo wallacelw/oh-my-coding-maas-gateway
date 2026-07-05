@@ -143,6 +143,7 @@ refresh_path() {
     "$HOME/.bun/bin" \
     "$HOME/.local/bin" \
     "$HOME/.npm-global/bin" \
+    "$HOME/.local/share/pi-node/current/bin" \
     /usr/local/bin; do
     if [ -d "$dir" ] && [[ ":$PATH:" != *":$dir:"* ]]; then
       export PATH="$dir:$PATH"
@@ -156,6 +157,12 @@ refresh_path() {
       export PATH="$nvm_dir:$PATH"
     fi
   fi
+  # pi-node: versioned dirs
+  for dir in $(ls -d "$HOME/.local/share/pi-node"/*/bin 2>/dev/null || true); do
+    if [[ ":$PATH:" != *":$dir:"* ]]; then
+      export PATH="$dir:$PATH"
+    fi
+  done
   hash -r 2>/dev/null || true
 }
 refresh_path

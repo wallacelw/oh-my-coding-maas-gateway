@@ -70,15 +70,25 @@ if ! command -v pi &>/dev/null; then
     # Refresh PATH — installer may have added ~/.local/bin or updated nvm
     hash -r 2>/dev/null || true
     # Also check common install locations
-    for _dir in "$HOME/.local/bin" "$HOME/.npm-global/bin" "/usr/local/bin"; do
+    for _dir in \
+      "$HOME/.local/bin" \
+      "$HOME/.npm-global/bin" \
+      "$HOME/.local/share/pi-node/current/bin" \
+      "/usr/local/bin"; do
       [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
     done
     # Check nvm Node versions
     for _dir in $(ls -d "$HOME/.nvm/versions/node"/*/bin 2>/dev/null || true); do
       [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
     done
+    # Check pi-node versioned dirs
+    for _dir in $(ls -d "$HOME/.local/share/pi-node"/*/bin 2>/dev/null || true); do
+      [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
+    done
     if ! command -v pi &>/dev/null; then
-      log_error "pi binary not found after install. Check PATH or run: curl -fsSL $PI_INSTALL_URL | sh"
+      log_error "pi binary not found after install."
+      log_dim "  The installer may have added a PATH entry to ~/.bashrc."
+      log_dim "  Run: exec \"\$SHELL\"  then re-run this script."
       exit 1
     fi
     log_ok "Installed: $(pi --version 2>/dev/null || echo 'unknown')"
