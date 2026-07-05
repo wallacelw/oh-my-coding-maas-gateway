@@ -273,14 +273,17 @@ if [ "$REMOVE_CODEX" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @openai/codex"
   else
+    # npm uninstall (may fail if registry out of sync — don't let set -e exit)
+    set +e
     if command -v npm &>/dev/null; then
       npm uninstall -g @openai/codex 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
     fi
-    # Fallback: npm uninstall may silently no-op if registry is out of sync
-    if command -v codex &>/dev/null; then
-      rm -f "$(command -v codex)"
-      hash -r 2>/dev/null || true
-    fi
+    set -e
+    # Force-remove binary and node_modules regardless of npm result
+    rm -f /usr/local/bin/codex /usr/bin/codex /bin/codex 2>/dev/null || true
+    rm -rf /usr/local/lib/node_modules/@openai/codex 2>/dev/null || true
+    rm -rf /usr/lib/node_modules/@openai/codex 2>/dev/null || true
+    hash -r 2>/dev/null || true
     if command -v codex &>/dev/null; then
       log_warn "codex binary still present at $(command -v codex)"
     else
@@ -298,13 +301,15 @@ if [ "$REMOVE_CLAUDE" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @anthropic-ai/claude-code"
   else
+    set +e
     if command -v npm &>/dev/null; then
       npm uninstall -g @anthropic-ai/claude-code 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
     fi
-    if command -v claude &>/dev/null; then
-      rm -f "$(command -v claude)"
-      hash -r 2>/dev/null || true
-    fi
+    set -e
+    rm -f /usr/local/bin/claude /usr/bin/claude /bin/claude 2>/dev/null || true
+    rm -rf /usr/local/lib/node_modules/@anthropic-ai/claude-code 2>/dev/null || true
+    rm -rf /usr/lib/node_modules/@anthropic-ai/claude-code 2>/dev/null || true
+    hash -r 2>/dev/null || true
     if command -v claude &>/dev/null; then
       log_warn "claude binary still present at $(command -v claude)"
     else
@@ -321,13 +326,15 @@ if [ "$REMOVE_PI" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @earendil-works/pi-coding-agent"
   else
+    set +e
     if command -v npm &>/dev/null; then
       npm uninstall -g @earendil-works/pi-coding-agent 2>&1 | while IFS= read -r line; do log_dim "  $line"; done
     fi
-    if command -v pi &>/dev/null; then
-      rm -f "$(command -v pi)"
-      hash -r 2>/dev/null || true
-    fi
+    set -e
+    rm -f /usr/local/bin/pi /usr/bin/pi /bin/pi 2>/dev/null || true
+    rm -rf /usr/local/lib/node_modules/@earendil-works/pi-coding-agent 2>/dev/null || true
+    rm -rf /usr/lib/node_modules/@earendil-works/pi-coding-agent 2>/dev/null || true
+    hash -r 2>/dev/null || true
     if command -v pi &>/dev/null; then
       log_warn "pi binary still present at $(command -v pi)"
     else
