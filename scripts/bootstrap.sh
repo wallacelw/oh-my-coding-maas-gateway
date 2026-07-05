@@ -307,11 +307,21 @@ printf "    ${C_DIM}%-14s %s${C_RESET}\n" "docker"       "— litellm"
 [ -n "$NPM_TOOLS" ]               && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "npm/node"   "— $NPM_TOOLS"
 [ "$INSTALL_CODEX" = true ]       && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bubblewrap" "— codex"
 
+# ── Confirm selection before proceeding ──
+if [ "$DRY_RUN" = false ] && is_interactive; then
+  echo ""
+  if ! prompt_yesno "Proceed with this selection?" y; then
+    log_info "Aborted by user."
+    exit 0
+  fi
+fi
+echo ""
+
 # ── Helper to run a step ──
 run_step() {
   local step_name="$1"; shift
-  log_step "$step_name"
   if [ "$DRY_RUN" = true ]; then
+    log_step "$step_name"
     log_dim "Would run: $(echo "$*" | sed "s|$SCRIPT_DIR/|scripts/|g")"
   else
     "$@"
@@ -323,7 +333,6 @@ if [ "$DRY_RUN" = true ]; then
   log_step "Step 01: Environment & secrets"
   log_dim "Would run: scripts/01_env.sh"
 else
-  log_step "Step 01: Environment & secrets"
   "$SCRIPT_DIR/01_env.sh"
 fi
 
