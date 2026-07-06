@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-07-06
+
+### Changed
+
+- **Standalone bootstrap pre-flight summary** — `curl | bash` opening
+  now shows what will be installed, prerequisites, and bound ports
+  (4000/9090/3000/5432) before prompting for an install directory.
+  Previously showed only a bare header with no context.
+
+### Fixed
+
+- **Helper library output consistency** — `keys.sh` and `prereqs.sh`
+  used raw `echo "ERROR:..."` for status output, inconsistent with the
+  `log_*` functions used everywhere else. Replaced with
+  `log_error`/`log_warn`/`log_info`/`log_dim`. Added `common.sh` source
+  guard for standalone robustness. Removed erroneous `set -euo pipefail`
+  from `prereqs.sh` (helpers are sourced, not executed).
+- **Documentation accuracy** — REFERENCE.md: "Three" → "Four" virtual
+  keys (table lists 4). INSTALLATION.md: pipeline "01–06" → "01–05"
+  (no step 06); dropped "+ observability" (it is section C). SKILL.md:
+  added missing `--virtual-key=`, `--xxx-only`, `--routing-strategy=`
+  flags. AGENTS.md: `configs/claude-code/` label → ".env template"
+  (no config template exists there).
+- **CHANGELOG de-duplication** — removed companion-skill claims
+  duplicated between v1.0.0 and v1.1.0 (git history confirms they
+  shipped in v1.1.0).
+
 ## [1.1.0] - 2026-07-06
 
 ### Added
