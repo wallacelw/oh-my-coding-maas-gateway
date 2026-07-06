@@ -130,8 +130,8 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | Name | Input/Output | RPM | Cost (in/out per token) |
 |------|-------------|-----|------------------------|
 | `glm-5.2` | 192K/128K | 100 | $1.400 / $4.400 × 10⁻⁶ |
-| `glm-5.1` | 192K/128K | 30 | $1.078 / $3.774 × 10⁻⁶ |
-| `glm-5` | 192K/64K | 30 | $0.809 / $2.965 × 10⁻⁶ |
+| `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ |
+| `glm-5` | 192K/64K | 100 | $0.809 / $2.965 × 10⁻⁶ |
 | `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ |
 | `deepseek-v4-flash` | 1M/128K | 3 | $0.135 / $0.270 × 10⁻⁶ |
 | `deepseek-v3.2` | 128K/32K | 700 | $0.270 / $0.404 × 10⁻⁶ |
@@ -164,7 +164,7 @@ model_list:
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       use_chat_completions_api: true       # bridge Responses → Chat Completions
-      tpm: 198000
+      tpm: 1000000
       rpm: 100
     model_info:
       max_tokens: 198000
@@ -179,7 +179,7 @@ model_list:
       model: anthropic/glm-5.2             # provider prefix
       api_base: os.environ/HUAWEI_MAAS_ANTHROPIC_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
-      tpm: 198000
+      tpm: 1000000
       rpm: 100
     model_info:
       max_tokens: 198000
