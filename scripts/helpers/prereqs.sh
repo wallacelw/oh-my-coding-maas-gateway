@@ -13,13 +13,16 @@
 #
 # All functions are idempotent: safe to call multiple times.
 
-set -euo pipefail
+# Ensure logging helpers are available
+if ! declare -F log_error >/dev/null 2>&1; then
+  source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+fi
 
 # ---------------------------------------------------------------------------
 # Sudo availability guard (checked once at source time)
 # ---------------------------------------------------------------------------
 if [ "$(id -u)" -ne 0 ] && ! command -v sudo &>/dev/null; then
-  echo "ERROR: sudo is required when not running as root. Install it or run as root." >&2
+  log_error "sudo is required when not running as root. Install it or run as root."
   exit 1
 fi
 
@@ -50,7 +53,8 @@ _prereq_apt_update_once() {
 # Exit 1 with an install hint
 _prereq_fail() {
   local name="$1"
-  echo "ERROR: Required prerequisite '$name' is not available and could not be installed." >&2
+  log_error "Required prerequisite '$name' is not available and could not be installed."
+  log_dim "Install it manually or check your package manager."
   exit 1
 }
 

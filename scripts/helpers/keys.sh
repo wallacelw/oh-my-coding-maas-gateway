@@ -16,6 +16,11 @@
 #       otherwise mints a new one. Prints the key (sk-...) to stdout.
 #       Returns 1 on failure. Requires LITELLM_MASTER_KEY to be set.
 
+# Ensure logging helpers are available
+if ! declare -F log_error >/dev/null 2>&1; then
+  source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+fi
+
 # Resolve LITELLM_MASTER_KEY from environment, .env, or interactive prompt.
 resolve_master_key() {
   local project_dir="$1"
@@ -38,18 +43,18 @@ resolve_master_key() {
 
   # 3. Prompt if interactive, else fail
   if is_interactive; then
-    echo "  LITELLM_MASTER_KEY not found in env or .env." >&2
-    echo "  Enter LITELLM_MASTER_KEY (or Ctrl+C to abort):" >&2
+    log_warn "LITELLM_MASTER_KEY not found in env or .env."
+    log_info "Enter LITELLM_MASTER_KEY (or Ctrl+C to abort):"
     read -r LITELLM_MASTER_KEY < /dev/tty
     if [ -z "$LITELLM_MASTER_KEY" ]; then
-      echo "ERROR: LITELLM_MASTER_KEY is required to mint virtual keys." >&2
+      log_error "LITELLM_MASTER_KEY is required to mint virtual keys."
       return 1
     fi
     export LITELLM_MASTER_KEY
     return 0
   fi
 
-  echo "ERROR: LITELLM_MASTER_KEY not found. Set it in .env or environment." >&2
+  log_error "LITELLM_MASTER_KEY not found. Set it in .env or environment."
   return 1
 }
 
@@ -69,7 +74,7 @@ mint_or_reuse_key() {
   done
 
   if [ -z "${LITELLM_MASTER_KEY:-}" ]; then
-    echo "ERROR: LITELLM_MASTER_KEY not set. Call resolve_master_key first." >&2
+    log_error "LITELLM_MASTER_KEY not set. Call resolve_master_key first."
     return 1
   fi
 
@@ -112,7 +117,7 @@ mint_or_reuse_key() {
     local key_id key_info found_alias
     for key_id in $(echo "$key_list" | jq -r '.keys[]' 2>/dev/null); do
       if [ "$key_lookup_count" -ge 50 ]; then
-        echo "  WARNING: Key lookup capped at 50 keys. If alias '$alias' exists beyond #50, a new key will be minted." >&2
+        log_warn "Key lookup capped at 50 keys. If alias '$alias' exists beyond #50, a new key will be minted."
         break
       fi
       key_lookup_count=$((key_lookup_count + 1))
@@ -131,7 +136,7 @@ mint_or_reuse_key() {
 
   if [ -n "$existing_key_id" ]; then
     # Delete the existing key (by ID) so we can reuse the alias
-    echo "  Deleting existing key with alias '$alias'." >&2
+    log_info "Deleting existing key with alias '$alias'."
     curl -sf -m 10 -X POST "$litellm_url/key/delete" \
       -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
       -H "Content-Type: application/json" \
@@ -147,11 +152,11 @@ mint_or_reuse_key() {
       -d "$body" 2>/dev/null) && break
     if [ "$attempt" -lt $max_attempts ]; then
       local delay=$((attempt * 5))
-      echo "  Attempt $attempt failed. Retrying in ${delay}s..." >&2
+      log_info "Attempt $attempt failed. Retrying in ${delay}s..."
       sleep "$delay"
     else
-      echo "ERROR: Failed to mint virtual key after $max_attempts attempts." >&2
-      echo "  Check that LiteLLM is healthy and LITELLM_MASTER_KEY is correct." >&2
+      log_error "Failed to mint virtual key after $max_attempts attempts."
+      log_dim "Check that LiteLLM is healthy and LITELLM_MASTER_KEY is correct."
       return 1
     fi
   done
@@ -159,8 +164,8 @@ mint_or_reuse_key() {
   local key
   key=$(echo "$response" | jq -r '.key')
   if [ -z "$key" ] || [ "$key" = "null" ]; then
-    echo "ERROR: Failed to mint virtual key." >&2
-    echo "Response: $response" >&2
+    log_error "Failed to mint virtual key."
+    log_dim "Response: $response"
     return 1
   fi
 
