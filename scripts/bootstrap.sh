@@ -112,9 +112,31 @@ else
   C_RED="" C_GREEN="" C_YELLOW="" C_BLUE="" C_CYAN=""
 fi
 if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
+  # ── Dynamic banner (matches in-repo ╔═╗ style) ──
+  _sa_text="$REPO_NAME — Standalone bootstrap"
+  _sa_width=$(( ${#_sa_text} + 4 ))
+  _sa_border=""
+  for _i in $(seq 1 $_sa_width); do _sa_border+="═"; done
   echo ""
-  echo "=== $REPO_NAME — Standalone bootstrap ==="
+  echo -e "${C_BOLD}${C_CYAN}╔${_sa_border}╗${C_RESET}"
+  echo -e "${C_BOLD}${C_CYAN}║  ${_sa_text}  ║${C_RESET}"
+  echo -e "${C_BOLD}${C_CYAN}╚${_sa_border}╝${C_RESET}"
   echo ""
+
+  # ── Pre-flight summary (before first prompt) ──
+  echo -e "  ${C_BOLD}What:${C_RESET}  LiteLLM proxy stack fronting Huawei MaaS models for coding agents"
+  echo ""
+  echo -e "  ${C_BOLD}Installs:${C_RESET}"
+  echo -e "    ${C_DIM}•${C_RESET} LiteLLM proxy + Prometheus + Grafana + Postgres"
+  echo -e "    ${C_DIM}•${C_RESET} Coding agents: opencode, Codex, Claude Code, Pi"
+  echo ""
+  echo -e "  ${C_BOLD}Prerequisites:${C_RESET}"
+  echo -e "    ${C_DIM}•${C_RESET} Docker + docker compose, bash 4.2+  ${C_DIM}(required)${C_RESET}"
+  echo -e "    ${C_DIM}•${C_RESET} Huawei MaaS API key               ${C_DIM}(prompted if not in env)${C_RESET}"
+  echo ""
+  echo -e "  ${C_BOLD}Ports:${C_RESET}     4000 (LiteLLM)  9090 (Prometheus)  3000 (Grafana)  5432 (Postgres, internal)"
+  echo ""
+
   default_parent="/home"
   if is_interactive; then
     echo -n "  Where to install? [$default_parent]: "
