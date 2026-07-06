@@ -265,7 +265,7 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 
 ### Virtual Keys
 
-Three virtual keys, all minted via `helpers/keys.sh` and tied to
+Four virtual keys, all minted via `helpers/keys.sh` and tied to
 `LITELLM_MASTER_KEY`. Changing the master key invalidates all virtual keys.
 
 | Alias | Minted by | Stored in | Budget | Scope |

@@ -42,12 +42,12 @@ cd ~/oh-my-coding-maas-gateway
 
 | Script | Purpose | Key flags |
 |--------|---------|-----------|
-| `scripts/bootstrap.sh` | Install or upgrade the entire stack | `--tool=`, `--dry-run`, `--no-skill` |
-| `scripts/04_validate.sh` | End-to-end validation (run anytime) | `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--dry-run` |
+| `scripts/bootstrap.sh` | Install or upgrade the entire stack | `--tool=`, `--virtual-key=`, `--dry-run`, `--no-skill` |
+| `scripts/04_validate.sh` | End-to-end validation (run anytime) | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--dry-run` |
 | `scripts/05_skill.sh` | Install THIS companion skill into agents | `--yes`, `--dry-run`, `--no-skill` |
 | `scripts/install-skill.sh` | Install ANY skill into all detected agents | `--name=`, `--source=`, `--dry-run` |
 | `scripts/uninstall.sh` | Remove all or part of the gateway | `--tool=`, `--docker`, `--all`, `--dry-run`, `--yes` |
-| `scripts/02_litellm.sh` | Regenerate LiteLLM config + restart (after editing `.env` or `models.sh`) | `--dry-run` |
+| `scripts/02_litellm.sh` | Regenerate LiteLLM config + restart (after editing `.env` or `models.sh`) | `--routing-strategy=`, `--dry-run` |
 | `scripts/01_env.sh` | Regenerate `.env` (after key changes) | `--force` |
 
 ## Services
