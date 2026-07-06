@@ -59,19 +59,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Companion skill installation** (`scripts/05_skill.sh`) — after
-  validation, bootstrap prompts to install SKILL.md as a skill into each
-  detected coding agent. Idempotent, skips agents that already have it.
-  Skill locations: opencode `~/.config/opencode/skills/`, codex
-  `~/.codex/skills/`, pi `~/.pi/agent/skills/`, claude
-  `~/.claude/skills/`. `--no-skill` flag to skip.
-- **`helpers/skills.sh`** — install/uninstall helpers for each agent tool.
-  All four tools use the same Agent Skills standard (SKILL.md with YAML
-  frontmatter). Claude uses `~/.claude/skills/` (not legacy `commands/`).
-- **SKILL.md redesigned** — operational companion for post-install
-  operations (health diagnosis, key/model management, debug routing,
-  observability, recovery). No longer an agent-as-supervisor install
-  procedure. Bootstrap is the only installation method.
 - **`VERSION` file** — bootstrap reads and displays version in banner and
   summary. Existing-install detection compares local vs installed version,
   showing "Update available" or "up to date" with color-coded arrow.

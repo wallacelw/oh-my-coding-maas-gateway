@@ -188,7 +188,7 @@ configs/prometheus/ — Prometheus config
 configs/grafana/   — Grafana dashboards and provisioning
 configs/opencode/  — opencode + slim plugin templates
 configs/codex/     — Codex CLI config template + model catalog
-configs/claude-code/ — Claude Code CLI config template
+configs/claude-code/ — Claude Code CLI .env template
 root              — INSTALLATION.md, SKILL.md, REFERENCE.md, README.md, CHANGELOG.md, AGENTS.md
 ```
 

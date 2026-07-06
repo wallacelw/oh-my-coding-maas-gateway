@@ -80,7 +80,7 @@ detected), clones the repo to the target location and re-execs. Parses
 `--tool=`, `--virtual-key=`, `--dry-run`. Ensures core prerequisites (git,
 python3, curl, jq). Shows a colored tool-selection menu if `--tool=` is not
 given. Prints a prerequisite→tools mapping for customer validation. Dispatches
-steps 01–06. Prints a colored summary with service URLs, config file paths,
+steps 01–05. Prints a colored summary with service URLs, config file paths,
 masked virtual keys, a security warning, and advice to restart the shell.
 
 ### `01_env.sh`
@@ -133,7 +133,7 @@ pointing to the proxy via OpenAI Chat Completions API). Supports `--dry-run`.
 
 ### `04_validate.sh`
 
-Validates all installed components in sections A–F + observability:
+Validates all installed components in sections A–F:
 `.env` completeness, Docker services, LiteLLM health + config, Prometheus +
 Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
 `--litellm-only`/`--opencode-only`/`--codex-only`/`--claude-code-only`/`--pi-only`
