@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-07-06
+
+### Changed
+
+- **GLM model rate limits updated** — `glm-5`, `glm-5.1`, and `glm-5.2` now
+  all use 100 RPM and 1M TPM (was 30 RPM / 500K TPM for glm-5 and glm-5.1,
+  and 198K TPM for glm-5.2). Prices and context windows unchanged. Updated
+  `helpers/models.sh`, `configs/litellm/config.yaml.template`, and the
+  REFERENCE.md model table + config example. (Committed after the v1.1.0
+  tag; first shipped in v1.1.1. Moved from v1.1.0 changelog for correct
+  attribution.)
+
 ## [1.1.1] - 2026-07-06
 
 ### Changed
@@ -56,11 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **GLM model rate limits updated** — `glm-5`, `glm-5.1`, and `glm-5.2` now
-  all use 100 RPM and 1M TPM (was 30 RPM / 500K TPM for glm-5 and glm-5.1,
-  and 198K TPM for glm-5.2). Prices and context windows unchanged. Updated
-  `helpers/models.sh`, `configs/litellm/config.yaml.template`, and the
-  REFERENCE.md model table + config example.
 - **README slimmed** (292 → 107 lines) — detailed flags, per-tool usage,
   monitoring, remote access moved to INSTALLATION.md.
 - **INSTALLATION.md expanded** — After Install section now includes
