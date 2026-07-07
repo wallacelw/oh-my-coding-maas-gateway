@@ -136,7 +136,7 @@ mint_or_reuse_key() {
 
   if [ -n "$existing_key_id" ]; then
     # Delete the existing key (by ID) so we can reuse the alias
-    log_info "Deleting existing key with alias '$alias'."
+    log_info "Deleting existing key with alias '$alias'." >&2
     curl -sf -m 10 -X POST "$litellm_url/key/delete" \
       -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
       -H "Content-Type: application/json" \
@@ -152,11 +152,11 @@ mint_or_reuse_key() {
       -d "$body" 2>/dev/null) && break
     if [ "$attempt" -lt $max_attempts ]; then
       local delay=$((attempt * 5))
-      log_info "Attempt $attempt failed. Retrying in ${delay}s..."
+      log_info "Attempt $attempt failed. Retrying in ${delay}s..." >&2
       sleep "$delay"
     else
       log_error "Failed to mint virtual key after $max_attempts attempts."
-      log_dim "Check that LiteLLM is healthy and LITELLM_MASTER_KEY is correct."
+      log_dim "Check that LiteLLM is healthy and LITELLM_MASTER_KEY is correct." >&2
       return 1
     fi
   done
@@ -165,7 +165,7 @@ mint_or_reuse_key() {
   key=$(echo "$response" | jq -r '.key')
   if [ -z "$key" ] || [ "$key" = "null" ]; then
     log_error "Failed to mint virtual key."
-    log_dim "Response: $response"
+    log_dim "Response: $response" >&2
     return 1
   fi
 
