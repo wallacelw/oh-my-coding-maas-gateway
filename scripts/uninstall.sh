@@ -351,22 +351,27 @@ if [ "$REMOVE_PI" = true ]; then
   fi
 fi
 
-# ── Remove companion skill from all agents ──
-if [ "$REMOVE_OPENCODE" = true ] || [ "$REMOVE_CODEX" = true ] || [ "$REMOVE_CLAUDE" = true ] || [ "$REMOVE_PI" = true ]; then
-  _skill_removed=false
-  for _tool in opencode codex claude pi; do
-    if "skill_exists_$_tool" 2>/dev/null; then
-      if [ "$DRY_RUN" = true ]; then
-        log_dim "  Would remove companion skill from $_tool"
-      else
-        "skill_uninstall_$_tool" 2>/dev/null || true
-        log_ok "Removed companion skill from $_tool"
-      fi
-      _skill_removed=true
+# ── Remove companion skill from uninstalled agents only ──
+# Scope: only the agents being removed. Don't strip the skill from
+# agents that stay installed — they still need it.
+_skill_removed=false
+REMOVE_TOOLS=""
+[ "$REMOVE_OPENCODE" = true ] && REMOVE_TOOLS="$REMOVE_TOOLS opencode"
+[ "$REMOVE_CODEX" = true ]    && REMOVE_TOOLS="$REMOVE_TOOLS codex"
+[ "$REMOVE_CLAUDE" = true ]   && REMOVE_TOOLS="$REMOVE_TOOLS claude"
+[ "$REMOVE_PI" = true ]       && REMOVE_TOOLS="$REMOVE_TOOLS pi"
+for _tool in $REMOVE_TOOLS; do
+  if "skill_exists_$_tool" 2>/dev/null; then
+    if [ "$DRY_RUN" = true ]; then
+      log_dim "  Would remove companion skill from $_tool"
+    else
+      "skill_uninstall_$_tool" 2>/dev/null || true
+      log_ok "Removed companion skill from $_tool"
     fi
-  done
-  [ "$_skill_removed" = true ] && [ "$DRY_RUN" != true ] && log_dim "Companion skill removed from agents"
-fi
+    _skill_removed=true
+  fi
+done
+[ "$_skill_removed" = true ] && [ "$DRY_RUN" != true ] && log_dim "Companion skill removed from uninstalled agent(s)"
 
 # ── Remove Docker stack ──
 if [ "$REMOVE_DOCKER" = true ]; then
