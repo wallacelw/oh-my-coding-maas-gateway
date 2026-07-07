@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-07-06
+
+### Fixed
+
+- **Uninstall skill scoping** — `uninstall.sh --tool=claude` (or any
+  single agent) no longer removes the companion skill from the other
+  agents. Skill removal is now scoped to only the agent(s) being
+  uninstalled. Previously uninstalling one agent stripped the skill
+  from all four.
+- **Key-mint stdout pollution** — `mint_or_reuse_key` diagnostics
+  (`log_info`/`log_dim`) were going to stdout, polluting the captured
+  return value in `VIRTUAL_KEY=$(mint_or_reuse_key ...)` and causing
+  key minting to fail in steps 03a–03d. Redirected diagnostics to
+  stderr, restoring the documented contract (key on stdout, logs on
+  stderr). Regression from v1.1.1 helper-output refactor.
+
 ## [1.1.2] - 2026-07-06
 
 ### Changed
