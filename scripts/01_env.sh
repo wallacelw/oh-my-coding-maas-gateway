@@ -69,16 +69,16 @@ EXISTING_MAAS_KEY=""
 EXISTING_KEY_COUNT=""
 EXISTING_EXTRA_KEYS=()
 if [ -f "$ENV_FILE" ]; then
-  EXISTING_MASTER_KEY="$(grep -oP '^LITELLM_MASTER_KEY="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_SALT_KEY="$(grep -oP '^LITELLM_SALT_KEY="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_DB_PASSWORD="$(grep -oP '^DB_PASSWORD="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_GRAFANA_PASSWORD="$(grep -oP '^GRAFANA_ADMIN_PASSWORD="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_PROM_RETENTION="$(grep -oP '^PROMETHEUS_RETENTION="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_MAAS_BASE="$(grep -oP '^HUAWEI_MAAS_API_BASE="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_MAAS_ANTHROPIC_BASE="$(grep -oP '^HUAWEI_MAAS_ANTHROPIC_API_BASE="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_BIND_ADDRESS="$(grep -oP '^BIND_ADDRESS="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_MAAS_KEY="$(grep -oP '^HUAWEI_MAAS_API_KEY="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
-  EXISTING_KEY_COUNT="$(grep -oP '^HUAWEI_MAAS_API_KEY_COUNT="?\K[^"]+' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_MASTER_KEY="$(sed -n 's/^LITELLM_MASTER_KEY="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_SALT_KEY="$(sed -n 's/^LITELLM_SALT_KEY="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_DB_PASSWORD="$(sed -n 's/^DB_PASSWORD="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_GRAFANA_PASSWORD="$(sed -n 's/^GRAFANA_ADMIN_PASSWORD="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_PROM_RETENTION="$(sed -n 's/^PROMETHEUS_RETENTION="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_MAAS_BASE="$(sed -n 's/^HUAWEI_MAAS_API_BASE="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_MAAS_ANTHROPIC_BASE="$(sed -n 's/^HUAWEI_MAAS_ANTHROPIC_API_BASE="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_BIND_ADDRESS="$(sed -n 's/^BIND_ADDRESS="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_MAAS_KEY="$(sed -n 's/^HUAWEI_MAAS_API_KEY="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_KEY_COUNT="$(sed -n 's/^HUAWEI_MAAS_API_KEY_COUNT="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
   # Read existing extra keys (R2: validate numeric before comparison)
   if [ -n "$EXISTING_KEY_COUNT" ]; then
     if [[ ! "$EXISTING_KEY_COUNT" =~ ^[0-9]+$ ]]; then
@@ -88,7 +88,7 @@ if [ -f "$ENV_FILE" ]; then
     if [ "$EXISTING_KEY_COUNT" -gt 1 ]; then
       for i in $(seq 1 $((EXISTING_KEY_COUNT - 1))); do
         VAR="HUAWEI_MAAS_API_KEY_$i"
-        VAL="$(grep -oP "^${VAR}=\"?\K[^\"]+" "$ENV_FILE" 2>/dev/null || true)"
+        VAL="$(sed -n "s/^${VAR}=\"*\([^\"]*\).*/\1/p" "$ENV_FILE" 2>/dev/null || true)"
         [ -n "$VAL" ] && EXISTING_EXTRA_KEYS+=("$VAL")
       done
     fi

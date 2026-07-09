@@ -530,18 +530,18 @@ if [ "$RUN_CODEX" = true ]; then
     else
       fail "model provider base_url not pointing to LiteLLM proxy"
     fi
-    if grep -qP 'env_key\s*=\s*"LITELLM_CODEX_API_KEY"' "$CODEX_CONFIG"; then
+    if grep -qE 'env_key[[:space:]]*=[[:space:]]*"LITELLM_CODEX_API_KEY"' "$CODEX_CONFIG"; then
       pass "env_key set to LITELLM_CODEX_API_KEY"
     else
       fail "env_key not set to LITELLM_CODEX_API_KEY"
     fi
-    if grep -qP 'wire_api\s*=\s*"responses"' "$CODEX_CONFIG"; then
+    if grep -qE 'wire_api[[:space:]]*=[[:space:]]*"responses"' "$CODEX_CONFIG"; then
       pass "wire_api set to responses (HTTP SSE)"
     else
       fail "wire_api not set to responses"
     fi
-    if grep -qP '^model\s*=\s*"\S+"' "$CODEX_CONFIG"; then
-      CODEX_MODEL=$(grep -oP '^model\s*=\s*"\K[^"]+' "$CODEX_CONFIG" 2>/dev/null || true)
+    if grep -qE '^model[[:space:]]*=[[:space:]]*"[^[:space:]]+"' "$CODEX_CONFIG"; then
+      CODEX_MODEL=$(sed -n 's/^model[[:space:]]*=[[:space:]]*"\([^"]*\).*/\1/p' "$CODEX_CONFIG" 2>/dev/null || true)
       pass "default model set: $CODEX_MODEL"
     else
       fail "default model not set"
@@ -560,7 +560,7 @@ if [ "$RUN_CODEX" = true ]; then
   log_info "D4. Responses API smoke test"
   CODEX_VK=""
   if [ -f "$HOME/.codex/.env" ]; then
-    CODEX_VK=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$HOME/.codex/.env" 2>/dev/null || true)
+    CODEX_VK=$(sed -n 's/^LITELLM_CODEX_API_KEY=\(.*\)/\1/p' "$HOME/.codex/.env" 2>/dev/null || true)
   fi
   if [ -z "$CODEX_VK" ] && [ -n "${LITELLM_CODEX_API_KEY:-}" ]; then
     CODEX_VK="$LITELLM_CODEX_API_KEY"
