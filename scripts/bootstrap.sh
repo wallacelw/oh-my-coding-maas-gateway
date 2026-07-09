@@ -610,7 +610,7 @@ if [ "$INSTALL_OPENCODE" = true ] && [ -f "$HOME/.config/opencode/opencode.json"
 fi
 if [ "$INSTALL_CODEX" = true ] && [ -f "$HOME/.codex/.env" ]; then
   printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Codex CLI config:"   "~/.codex/config.toml"
-  CODEX_VK=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$HOME/.codex/.env" 2>/dev/null || true)
+  CODEX_VK=$(sed -n 's/^LITELLM_CODEX_API_KEY=\(.*\)/\1/p' "$HOME/.codex/.env" 2>/dev/null || true)
   [ -n "$CODEX_VK" ] && printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Codex CLI key:"      "$(mask_key "$CODEX_VK")"
 fi
 if [ "$INSTALL_CLAUDE_CODE" = true ] && [ -f "$HOME/.claude/settings.json" ]; then

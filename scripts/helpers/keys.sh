@@ -33,7 +33,7 @@ resolve_master_key() {
   # 2. Read from .env
   if [ -f "$project_dir/.env" ]; then
     local found_key
-    found_key="$(grep -oP '^LITELLM_MASTER_KEY="?\K[^"]+' "$project_dir/.env" 2>/dev/null || true)"
+    found_key="$(sed -n 's/^LITELLM_MASTER_KEY="*\([^"]*\).*/\1/p' "$project_dir/.env" 2>/dev/null || true)"
     if [ -n "$found_key" ]; then
       LITELLM_MASTER_KEY="$found_key"
       export LITELLM_MASTER_KEY
@@ -44,7 +44,7 @@ resolve_master_key() {
   # 3. Prompt if interactive, else fail
   if is_interactive; then
     log_warn "LITELLM_MASTER_KEY not found in env or .env."
-    log_info "Enter LITELLM_MASTER_KEY (or Ctrl+C to abort):"
+    log_info "Enter LITELLM_MASTER_KEY (or Ctrl+C to abort):" >&2
     read -r LITELLM_MASTER_KEY < /dev/tty
     if [ -z "$LITELLM_MASTER_KEY" ]; then
       log_error "LITELLM_MASTER_KEY is required to mint virtual keys."

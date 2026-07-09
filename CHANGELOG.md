@@ -5,7 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.3] - 2026-07-06
+## [1.1.4] - 2026-07-07
+
+### Changed
+
+- **macOS/BSD portability** — replaced all `grep -oP`/`grep -qP` (GNU
+  PCRE, breaks on macOS/BSD) with portable `sed`/`grep -E` equivalents.
+  No impact on Linux compatibility — POSIX `sed` and ERE are universally
+  supported.
+
+### Fixed
+
+- **CHANGELOG corrections** — fixed [1.1.3] date (was 2026-07-06,
+  should be 2026-07-07). Moved GLM rate-limit entry from [1.1.2] to
+  [1.1.1] where it actually shipped (v1.1.2 had no code changes).
+- **`resolve_master_key` diagnostic on stdout** — `keys.sh:47`
+  `log_info` was going to stdout (regression from v1.1.1). Added `>&2`
+  to match the documented contract. No functional impact (no caller
+  captures via `$(...)`), but prevents future regressions.
+
+## [1.1.3] - 2026-07-07
 
 ### Fixed
 
@@ -25,18 +44,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **GLM model rate limits updated** — `glm-5`, `glm-5.1`, and `glm-5.2` now
-  all use 100 RPM and 1M TPM (was 30 RPM / 500K TPM for glm-5 and glm-5.1,
-  and 198K TPM for glm-5.2). Prices and context windows unchanged. Updated
-  `helpers/models.sh`, `configs/litellm/config.yaml.template`, and the
-  REFERENCE.md model table + config example. (Committed after the v1.1.0
-  tag; first shipped in v1.1.1. Moved from v1.1.0 changelog for correct
-  attribution.)
+- **CHANGELOG attribution correction** — moved the GLM rate-limit
+  entry from v1.1.0 (where it was incorrectly attributed — the commit
+  postdated the v1.1.0 tag) to v1.1.1 (where it first shipped). No
+  code changes in this release.
 
 ## [1.1.1] - 2026-07-06
 
 ### Changed
 
+- **GLM model rate limits updated** — `glm-5`, `glm-5.1`, and `glm-5.2`
+  now all use 100 RPM and 1M TPM (was 30 RPM / 500K TPM for glm-5 and
+  glm-5.1, and 198K TPM for glm-5.2). Prices and context windows
+  unchanged. Updated `helpers/models.sh`,
+  `configs/litellm/config.yaml.template`, and REFERENCE.md model table.
 - **Standalone bootstrap pre-flight summary** — `curl | bash` opening
   now shows what will be installed, prerequisites, and bound ports
   (4000/9090/3000/5432) before prompting for an install directory.

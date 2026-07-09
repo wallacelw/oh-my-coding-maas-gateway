@@ -74,7 +74,7 @@ fi
 log_info "Configuring LiteLLM virtual key..."
 
 if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
-  EXISTING_KEY=$(grep -oP '^LITELLM_CODEX_API_KEY=\K.*' "$CODEX_DIR/.env" 2>/dev/null || true)
+  EXISTING_KEY=$(sed -n 's/^LITELLM_CODEX_API_KEY=\(.*\)/\1/p' "$CODEX_DIR/.env" 2>/dev/null || true)
   if [ -n "$EXISTING_KEY" ] && [[ "$EXISTING_KEY" == sk-* ]]; then
     if [ "$DRY_RUN" = true ]; then
       VIRTUAL_KEY="$EXISTING_KEY"
