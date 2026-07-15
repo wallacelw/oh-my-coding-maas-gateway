@@ -304,6 +304,14 @@ echo -e "${C_BOLD}${C_CYAN}║  ${_banner_text}  ║${C_RESET}"
 echo -e "${C_BOLD}${C_CYAN}╚${_banner_border}╝${C_RESET}"
 echo ""
 
+# ── Non-root warning ──
+if [ "$(id -u)" -ne 0 ]; then
+  log_warn "Not running as root. Some steps (apt-get, npm install -g, Docker) may fail."
+  log_dim "  Recommended: run the oneliner with sudo:"
+  log_dim "    curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | sudo bash"
+  echo ""
+fi
+
 # ── Install directory prompt ──
 current_parent="$(dirname "$PROJECT_DIR")"
 if [ "${BOOTSTRAP_STANDALONE:-}" = "1" ]; then
