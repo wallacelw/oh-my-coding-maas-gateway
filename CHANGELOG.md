@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-07-09
+
+### Fixed
+
+- **bun install fails without unzip** — the bun installer
+  (`bun.sh/install`) requires `unzip` to extract the binary, but it was
+  never checked. On systems without `unzip`, `prereq_ensure_bun` would
+  abort with a cryptic error. Now auto-installs `unzip` via
+  `prereq_ensure_apt` before running the bun installer.
+
 ## [1.1.4] - 2026-07-07
 
 ### Changed

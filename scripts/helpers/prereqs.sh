@@ -120,6 +120,11 @@ prereq_ensure_bun() {
     _prereq_fail "bun"
   fi
 
+  # bun installer (bun.sh/install) requires unzip to extract the binary
+  if ! command -v unzip &>/dev/null; then
+    prereq_ensure_apt "unzip" "unzip" "unzip" "unzip is required to install bun"
+  fi
+
   if ! run_with_spinner "Installing bun" bash -c 'curl -fsSL --max-time 60 https://bun.sh/install | bash'; then
     _prereq_fail "bun"
   fi
