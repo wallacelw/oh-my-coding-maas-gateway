@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2026-07-22
+
+### Changed
+
+- **New Cache section** — separated cache panels from Tokens into their
+  own section. Tokens now shows only Input, Cached input, Output, and
+  Reasoning tokens. The Cache section contains Provider cache reads
+  (timeseries), Cache misses/min (timeseries), and Cache hit ratio
+  (stat, full-width line of per-model values).
+- **Cache hit ratio panel type** — converted from `gauge` (not
+  rendering in Grafana 11.5.2) to `stat` with area graph and threshold
+  coloring. Shows one colored value per model in a horizontal row.
+
 ## [1.2.6] - 2026-07-22
 
 ### Fixed

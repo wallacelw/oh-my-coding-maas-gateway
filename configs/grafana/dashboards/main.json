@@ -1436,7 +1436,7 @@
       "id": 24,
       "type": "row",
       "title": "Tokens",
-      "description": "Token usage broken down by type: input (prompt), output (completion), and reasoning (thinking). Use these to understand cost drivers and model behavior.",
+      "description": "Token usage broken down by type: input (prompt), cached input, output (completion), and reasoning (thinking). Use these to understand cost drivers and optimize prompts.",
       "gridPos": {
         "x": 0,
         "y": 62,
@@ -1618,7 +1618,7 @@
       "description": "Spend accumulation and rate per model. Use these to track cost trends and spot runaway spending in real time.",
       "gridPos": {
         "x": 0,
-        "y": 95,
+        "y": 94,
         "w": 24,
         "h": 1
       },
@@ -1632,7 +1632,7 @@
       "description": "Cumulative USD spent across all models since the proxy started, from litellm_spend_metric_total. This is a lifetime counter — use it for budget tracking.\n\nGOOD: Within budget.\nBAD: Approaching or exceeding budget — check Spend rate panel for real-time cost trajectory.",
       "gridPos": {
         "x": 0,
-        "y": 96,
+        "y": 95,
         "w": 6,
         "h": 8
       },
@@ -1698,7 +1698,7 @@
       "description": "Cumulative USD spend over time per model. Each line shows the running total for one model. Use this to identify which models cost the most over time.\n\nGOOD: Linear growth at expected rate.\nBAD: Sudden steep slope — runaway costs on a model; check for expensive model selection or excessive usage.",
       "gridPos": {
         "x": 6,
-        "y": 96,
+        "y": 95,
         "w": 12,
         "h": 8
       },
@@ -1753,7 +1753,7 @@
       "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate. Use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
       "gridPos": {
         "x": 18,
-        "y": 96,
+        "y": 95,
         "w": 6,
         "h": 8
       },
@@ -1808,7 +1808,7 @@
       "description": "Cache misses per minute per model. Each miss means the request was not served from LiteLLM's cache and had to go to the upstream provider. Lower is better — high miss rates suggest cache TTL is too short or requests are too varied to benefit from caching.",
       "gridPos": {
         "x": 12,
-        "y": 75,
+        "y": 76,
         "w": 12,
         "h": 12
       },
@@ -1918,7 +1918,7 @@
       "description": "Input tokens read from provider-side prompt caching per minute per model (e.g. Anthropic prompt cache, GLM context caching). These are tokens the upstream provider cached internally, avoiding re-processing charges. Higher is better.",
       "gridPos": {
         "x": 0,
-        "y": 75,
+        "y": 76,
         "w": 12,
         "h": 12
       },
@@ -1968,14 +1968,14 @@
     },
     {
       "id": 46,
-      "type": "gauge",
+      "type": "stat",
       "title": "Cache hit ratio",
       "description": "Percentage of requests served from cache (1 - cache_misses / total_requests). Higher is better — 100% means every request was cached, 0% means no caching benefit. Compare across models to identify which models benefit most from caching.",
       "gridPos": {
         "x": 0,
-        "y": 87,
+        "y": 88,
         "w": 24,
-        "h": 8
+        "h": 6
       },
       "targets": [
         {
@@ -2038,10 +2038,25 @@
           "values": false
         },
         "orientation": "horizontal",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "textMode": "auto"
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
       }
+    },
+    {
+      "id": 47,
+      "type": "row",
+      "title": "Cache",
+      "description": "Cache hit/miss metrics from LiteLLM. Shows how effectively the proxy cache and provider-side prompt caching are reducing upstream calls and token processing.",
+      "gridPos": {
+        "x": 0,
+        "y": 75,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
     }
   ],
   "fiscalYearStartMonth": 0,
