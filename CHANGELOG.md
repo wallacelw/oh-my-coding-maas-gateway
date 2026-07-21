@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-07-22
+
+### Fixed
+
+- **Cache hit ratio panel showing no data** — the PromQL divided two
+  metrics with incompatible label sets, causing vector matching to
+  fail. Fixed by aggregating both numerator and denominator with
+  `sum by (model)` before division.
+
 ## [1.2.1] - 2026-07-22
 
 ### Fixed
