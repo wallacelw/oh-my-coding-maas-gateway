@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2026-07-22
+
+### Fixed
+
+- **Cache hit ratio gauge showing "010.10"** — threshold labels were
+  enabled, causing threshold values to overlap on the gauge display.
+  Disabled `showThresholdLabels`.
+
+### Changed
+
+- **Cache hit ratio gauge layout** — moved to its own full-width row
+  (w=24) so the per-model gauges arrange in a 2-column grid instead of
+  a single cramped column. Provider cache reads and Cache misses/min
+  panels widened to w=12 each.
+
 ## [1.2.5] - 2026-07-22
 
 ### Changed
