@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.8] - 2026-07-22
+
+### Fixed
+
+- **Cache hit ratio gauge not rendering** — the `mappings` and `noValue`
+  fields added in v1.2.5 were incompatible with the gauge panel type
+  in Grafana 11.5.2, causing the panel to render blank. Removed both
+  fields and replaced the "No hits" indicator with a threshold step
+  (blue at 0). Gauge now renders correctly.
+
 ## [1.2.7] - 2026-07-22
 
 ### Changed
