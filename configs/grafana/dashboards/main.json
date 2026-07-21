@@ -1935,7 +1935,7 @@
       },
       "targets": [
         {
-          "expr": "1 - (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window]) / rate(litellm_requests_metric_total{model=~\"$model\"}[$window]))",
+          "expr": "1 - (sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) / sum by (model) (rate(litellm_requests_metric_total{model=~\"$model\"}[$window])))",
           "refId": "A",
           "legendFormat": "{{model}}",
           "hide": false,
