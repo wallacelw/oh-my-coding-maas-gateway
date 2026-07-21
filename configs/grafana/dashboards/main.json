@@ -1069,9 +1069,9 @@
     },
     {
       "id": 17,
-      "type": "timeseries",
+      "type": "state-timeline",
       "title": "Deployment state",
-      "description": "Deployment health state per model over time, from litellm_deployment_state. Values: 0=healthy, 1=partial degradation (some deployments down), 2=outage (all deployments down). Each line represents a model's current health state.\n\nGOOD: All lines at 0 — all models fully healthy.\nBAD: Any line at 1 (partial — some deployments degraded) or 2 (outage — model is down).",
+      "description": "Deployment health state per model over time, from litellm_deployment_state. Colored blocks show each model's health: green=healthy (0), orange=partial degradation (1), red=outage (2).\n\nGOOD: All blocks green — all models fully healthy.\nBAD: Any orange (partial — some deployments degraded) or red (outage — model is down).",
       "gridPos": {
         "x": 18,
         "y": 35,
@@ -1096,30 +1096,34 @@
         "defaults": {
           "unit": "short",
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed"
           },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Healthy",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "Degraded",
+                  "color": "orange"
+                },
+                "2": {
+                  "text": "Outage",
+                  "color": "red"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
+        "rowHeight": 0.9,
+        "showValue": "auto",
+        "mergeValues": true
       }
     },
     {
