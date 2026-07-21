@@ -1975,7 +1975,7 @@
         "x": 0,
         "y": 88,
         "w": 24,
-        "h": 6
+        "h": 8
       },
       "targets": [
         {
@@ -2001,12 +2001,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
-                "value": null
-              },
-              {
                 "color": "red",
-                "value": 0.001
+                "value": null
               },
               {
                 "color": "yellow",
