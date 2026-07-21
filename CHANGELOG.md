@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2026-07-22
+
+### Changed
+
+- **Cache hit ratio gauge thresholds** — lowered green threshold from
+  80% to 30% and yellow from 50% to 10%. Production cache hit ratios
+  are typically 10–30%, so 80% green was unrealistic.
+- **Cache hit ratio no-data indicator** — value 0 now shows "No hits"
+  in blue (distinct from the red/yellow/green threshold scale). Empty
+  data shows "No cache activity".
+
 ## [1.2.4] - 2026-07-22
 
 ### Changed

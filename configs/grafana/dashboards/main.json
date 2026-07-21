@@ -2006,14 +2006,26 @@
               },
               {
                 "color": "yellow",
-                "value": 0.5
+                "value": 0.1
               },
               {
                 "color": "green",
-                "value": 0.8
+                "value": 0.3
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "No hits",
+                  "color": "blue"
+                }
+              }
+            }
+          ],
+          "noValue": "No cache activity"
         },
         "overrides": []
       },
@@ -2026,7 +2038,7 @@
           "values": false
         },
         "orientation": "horizontal",
-        "showThresholdLabels": false,
+        "showThresholdLabels": true,
         "showThresholdMarkers": true,
         "textMode": "auto"
       }
