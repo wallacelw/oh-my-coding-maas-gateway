@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.9] - 2026-07-22
+
+### Changed
+
+- **Cache hit ratio gauge** — removed "No hits" blue threshold step
+  (user request). Restored simple red → yellow(10%) → green(30%)
+  thresholds. Gauges distributed horizontally, one per model.
+
 ## [1.2.8] - 2026-07-22
 
 ### Fixed
