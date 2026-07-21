@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-07-22
+
+### Fixed
+
+- **Cache dashboard panels not rendering** — `legendFormat` had escaped
+  braces (`\{\{model\}\}`) instead of `{{model}}`, causing Grafana to
+  show the literal template instead of the model name. Fixed on all 4
+  cache panels.
+
+### Changed
+
+- **Merged cache panels into Tokens section** — removed the separate
+  "Cache" row. The Tokens section now shows Input tokens, Cached input
+  tokens, Output tokens, and Reasoning tokens in one row, with Provider
+  cache reads/s, Cache miss rate, and Cache hit ratio in a second row.
+  This lets users compare cached vs uncached tokens at a glance.
+
 ## [1.2.0] - 2026-07-21
 
 ### Added
