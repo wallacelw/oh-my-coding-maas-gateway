@@ -301,7 +301,7 @@ sections, default 1h time window, 30s refresh:
 2. **Latency** — TTFT by model, TPOT by model, End-to-end latency, LLM API latency, Proxy overhead, Queue wait (6 timeseries)
 3. **Errors & Health** — Errors by model, Error status codes (pie), Deployment state (3 panels)
 4. **Throughput & Capacity** — Total/Successful/Failed Requests (window), RPM by model, TPM by model (5 panels)
-5. **Tokens** — Input tokens, Cached input tokens, Output tokens, Reasoning tokens, Provider cache reads/s, Cache miss rate, Cache hit ratio (7 panels)
+5. **Tokens** — Input tokens, Cached input tokens, Output tokens, Reasoning tokens, Provider cache reads, Cache misses/min, Cache hit ratio (gauge) (7 panels)
 6. **Cost** — Total cost, Cost per model, Spend rate (3 panels)
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
