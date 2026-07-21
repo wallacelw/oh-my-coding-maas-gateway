@@ -294,7 +294,7 @@ dashboard.
 Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
 (default: `30d`).
 
-**Dashboard** (`configs/grafana/dashboards/main.json`) — 28 panels across 6
+**Dashboard** (`configs/grafana/dashboards/main.json`) — 39 panels across 7
 sections, default 1h time window, 30s refresh:
 
 1. **At-a-glance** — Active Requests, RPS, RPM, Error %, TPS, TPM, Models Healthy, Spend (8 stat panels)
@@ -303,6 +303,7 @@ sections, default 1h time window, 30s refresh:
 4. **Throughput & Capacity** — Total/Successful/Failed Requests (window), RPM by model, TPM by model (5 panels)
 5. **Tokens** — Input tokens, Output tokens, Reasoning tokens (3 timeseries)
 6. **Cost** — Total cost, Cost per model, Spend rate (3 panels)
+7. **Cache** — Cache miss rate, Cached tokens/s, Provider cache reads/s, Cache hit ratio (4 panels)
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
 `$window` (rate window: 1m/5m/15m/1h, default 15m).
@@ -333,7 +334,7 @@ determines routing.
 
 ### Plugin: oh-my-opencode-slim
 
-`oh-my-opencode-slim` (v2.0.5) installed via `bunx`. Provides:
+`oh-my-opencode-slim` (v2.2.5) installed via `bunx`. Provides:
 
 - **4 presets** — control routing (proxy vs direct) and model selection
 - **7 agents** (1 disabled) — orchestrator, oracle, council, librarian, explorer, designer, fixer (observer disabled)

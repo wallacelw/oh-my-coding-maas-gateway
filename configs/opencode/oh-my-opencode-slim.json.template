@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/oh-my-opencode-slim@2.0.5/oh-my-opencode-slim.schema.json",
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@2.2.5/oh-my-opencode-slim.schema.json",
   "preset": "LiteLLM-Huawei-MaaS-Full",
   "disabled_agents": ["observer"],
   "presets": {
