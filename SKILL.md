@@ -249,7 +249,7 @@ curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_spend' | jq .
 curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_total_errors[5m])' | jq .
 ```
 
-Grafana: `http://127.0.0.1:3000` — 28-panel dashboard.
+Grafana: `http://127.0.0.1:3000` — 39-panel dashboard.
 
 ---
 
