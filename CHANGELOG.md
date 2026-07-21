@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-07-22
+
+### Consolidated release — dashboard overhaul, cache panels, plugin upgrade
+
+Consolidates all changes from v1.2.0–v1.3.0 into a single validated
+release. All 38 Grafana panels verified: queries return data,
+descriptions match, units consistent, no bugs.
+
+### Added
+
+- **Cache section** — new Grafana dashboard section with 3 panels:
+  Provider cache reads (timeseries, tok/min), Cache misses/min
+  (timeseries, req/min), Cache hit ratio (stat with threshold
+  coloring, one per model).
+- **Cache hit ratio panel** — `1 - (sum by (model) (rate(cache_misses)) / sum by (model) (rate(total_requests)))`. Thresholds: red → yellow(10%) → green(30%).
+
+### Changed
+
+- **oh-my-opencode-slim plugin upgraded v2.0.5 → v2.2.5** — custom
+  subagent permissions, project-local customization, native
+  cmux/kitty multiplexer, Windows path normalization, flatten council
+  dispatch, task rejection contracts. No breaking changes.
+- **Deployment state panel** — timeseries → state-timeline (colored
+  blocks). 0=Healthy (green), 1=Degraded (orange), 2=Outage (red).
+- **Cache panel queries** — added `sum by (model)` + `* 60` to match
+  token panel pattern (per-minute, grouped by model).
+- **Cache panel units** — `short` → `tok/min` / `req/min`.
+- **Stat panel thresholds** — added yellow/red to RPS, RPM, TPS, TPM,
+  Total cost.
+- **Tokens section** — Input, Cached input, Output, Reasoning (4
+  panels in one row).
+- **Dashboard layout** — 39 panels across 7 sections.
+- **Documentation** — INSTALLATION.md, SKILL.md, REFERENCE.md synced
+  with 39-panel / 7-section layout.
+
+### Fixed
+
+- **Total Requests undercounting** — query only counted success.
+  Fixed to sum success + failure.
+- **Cache hit ratio label mismatch** — divided metrics with
+  incompatible label sets. Fixed with `sum by (model)` aggregation.
+- **Cache panel legendFormat** — escaped braces → `{{model}}`.
+- **Gauge panel not rendering** — gauge/bargauge types don't render
+  in Grafana 11.5.2. Settled on `stat` with area graph.
+
 ## [1.3.0] - 2026-07-22
 
 ### Changed
