@@ -302,7 +302,7 @@ sections, default 1h time window, 30s refresh:
 3. **Errors & Health** — Errors by model, Error status codes (pie), Deployment state (state-timeline) (3 panels)
 4. **Throughput & Capacity** — Total/Successful/Failed Requests (window), RPM by model, TPM by model (5 panels)
 5. **Tokens** — Input tokens, Cached input tokens, Output tokens, Reasoning tokens (4 timeseries)
-6. **Cache** — Provider cache reads, Cache misses/min, Cache hit ratio (stat) (3 panels)
+6. **Cache** — Provider cache reads, Cache misses/min, Cache hit ratio (gauge) (3 panels)
 7. **Cost** — Total cost, Cost per model, Spend rate (3 panels)
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
