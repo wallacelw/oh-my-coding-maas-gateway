@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-22
+
+### Changed
+
+- **Cache hit ratio panel** — settled on `stat` type with area graph
+  and threshold coloring. Gauge and bargauge panel types do not render
+  in Grafana 11.5.2 (only model names appear, no visual dial/bars).
+  The stat panel shows one colored value per model (red → yellow 10% →
+  green 30%) with a mini sparkline, distributed horizontally.
+
 ## [1.2.9] - 2026-07-22
 
 ### Changed

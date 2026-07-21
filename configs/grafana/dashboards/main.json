@@ -1968,7 +1968,7 @@
     },
     {
       "id": 46,
-      "type": "gauge",
+      "type": "stat",
       "title": "Cache hit ratio",
       "description": "Percentage of requests served from cache (1 - cache_misses / total_requests). Higher is better — 100% means every request was cached, 0% means no caching benefit. Compare across models to identify which models benefit most from caching.",
       "gridPos": {
@@ -2026,8 +2026,10 @@
           "values": false
         },
         "orientation": "horizontal",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
       }
     },
     {
