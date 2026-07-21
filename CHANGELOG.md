@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-07-21
+
+### Added
+
+- **Cache hit dashboard panels** — new "Cache" section in the Grafana
+  dashboard with 4 panels: Cache miss rate, Cached tokens/s, Provider
+  cache reads/s, and Cache hit ratio. Visualizes LiteLLM proxy cache
+  and provider-side prompt caching effectiveness per model.
+
+### Changed
+
+- **oh-my-opencode-slim plugin upgraded from v2.0.5 to v2.2.5** —
+  brings custom subagent permissions, project-local customization,
+  native cmux/kitty multiplexer support, Windows path normalization,
+  flatten council dispatch, and task rejection contracts. No breaking
+  changes for our config template (already uses modern `multiplexer`
+  format, no deprecated `fallback.chains` or `council.master*` keys).
+
 ## [1.1.6] - 2026-07-16
 
 ### Added
