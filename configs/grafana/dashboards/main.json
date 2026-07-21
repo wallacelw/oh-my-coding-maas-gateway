@@ -203,6 +203,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
               }
             ]
           }
@@ -261,6 +269,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 600
+              },
+              {
+                "color": "red",
+                "value": 3000
               }
             ]
           }
@@ -385,6 +401,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "red",
+                "value": 500
               }
             ]
           }
@@ -443,6 +467,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 6000
+              },
+              {
+                "color": "red",
+                "value": 30000
               }
             ]
           }
@@ -1108,7 +1140,7 @@
       "id": 36,
       "type": "stat",
       "title": "Total Requests (window)",
-      "description": "Absolute count of all requests (successful + failed) across all deployments. Count of all requests (successful + failed) in the selected Grafana time range, using increase() over $__range.\n\nGOOD: Increases steadily, with failures being a small fraction.\nBAD: Stagnant (no traffic) or failures dominate the count.",
+      "description": "Absolute count of all requests (successful + failed) across all deployments in the selected Grafana time range. Should equal Successful Requests + Failed Requests.",
       "gridPos": {
         "x": 0,
         "y": 47,
@@ -1626,6 +1658,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
               }
             ]
           }
@@ -1760,8 +1800,8 @@
     {
       "id": 43,
       "type": "timeseries",
-      "title": "Cache miss rate",
-      "description": "Rate of cache misses per model. Each miss means the request was not served from LiteLLM's cache and had to go to the upstream provider. Lower is better — high miss rates suggest cache TTL is too short or requests are too varied to benefit from caching.",
+      "title": "Cache misses/min",
+      "description": "Cache misses per minute per model. Each miss means the request was not served from LiteLLM's cache and had to go to the upstream provider. Lower is better — high miss rates suggest cache TTL is too short or requests are too varied to benefit from caching.",
       "gridPos": {
         "x": 8,
         "y": 75,
@@ -1770,7 +1810,7 @@
       },
       "targets": [
         {
-          "expr": "rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])",
+          "expr": "sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) * 60",
           "refId": "A",
           "legendFormat": "{{model}}",
           "hide": false,
@@ -1784,7 +1824,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "req/min",
           "color": {
             "mode": "palette-classic"
           },
@@ -1816,7 +1856,7 @@
       "id": 44,
       "type": "timeseries",
       "title": "Cached input tokens",
-      "description": "Rate of input tokens served from LiteLLM's proxy cache. These tokens did not need to be reprocessed by the upstream model, reducing latency and cost. Higher is better.",
+      "description": "Input tokens served from LiteLLM's proxy cache per minute per model. These tokens did not need to be reprocessed by the upstream model, reducing latency and cost. Compare with Input tokens to see what fraction of input tokens are cached. Higher is better.",
       "gridPos": {
         "x": 6,
         "y": 63,
@@ -1825,7 +1865,7 @@
       },
       "targets": [
         {
-          "expr": "rate(litellm_input_cached_tokens_metric_total{model=~\"$model\"}[$window])",
+          "expr": "sum by (model) (rate(litellm_input_cached_tokens_metric_total{model=~\"$model\"}[$window])) * 60",
           "refId": "A",
           "legendFormat": "{{model}}",
           "hide": false,
@@ -1839,7 +1879,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "tok/min",
           "color": {
             "mode": "palette-classic"
           },
@@ -1870,8 +1910,8 @@
     {
       "id": 45,
       "type": "timeseries",
-      "title": "Provider cache reads/s",
-      "description": "Rate of input tokens read from provider-side prompt caching (e.g. Anthropic prompt cache, GLM context caching). These are tokens the upstream provider cached internally, avoiding re-processing charges. Higher is better.",
+      "title": "Provider cache reads",
+      "description": "Input tokens read from provider-side prompt caching per minute per model (e.g. Anthropic prompt cache, GLM context caching). These are tokens the upstream provider cached internally, avoiding re-processing charges. Higher is better.",
       "gridPos": {
         "x": 0,
         "y": 75,
@@ -1880,7 +1920,7 @@
       },
       "targets": [
         {
-          "expr": "rate(litellm_provider_cache_read_input_tokens_metric_total{model=~\"$model\"}[$window])",
+          "expr": "sum by (model) (rate(litellm_provider_cache_read_input_tokens_metric_total{model=~\"$model\"}[$window])) * 60",
           "refId": "A",
           "legendFormat": "{{model}}",
           "hide": false,
@@ -1894,7 +1934,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "tok/min",
           "color": {
             "mode": "palette-classic"
           },
@@ -1924,7 +1964,7 @@
     },
     {
       "id": 46,
-      "type": "stat",
+      "type": "gauge",
       "title": "Cache hit ratio",
       "description": "Percentage of requests served from cache (1 - cache_misses / total_requests). Higher is better — 100% means every request was cached, 0% means no caching benefit. Compare across models to identify which models benefit most from caching.",
       "gridPos": {
@@ -1982,10 +2022,9 @@
           "values": false
         },
         "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "textMode": "auto"
       }
     }
   ],

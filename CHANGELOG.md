@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-07-22
+
+### Fixed
+
+- **Cache panel query inconsistency** — cached input tokens, provider
+  cache reads, and cache misses were missing `sum by (model)` wrapper
+  and `* 60` scaling. Now match the pattern used by Input/Output/
+  Reasoning token panels (per-minute, grouped by model).
+- **Total Requests panel undercounting** — query only counted
+  successful responses. Fixed to sum success + failure responses.
+- **Cache panel units** — Cached input tokens and Provider cache reads
+  changed from `short` to `tok/min`. Cache misses changed from
+  `short` to `req/min`.
+
+### Changed
+
+- **Cache hit ratio panel** — converted from `stat` to `gauge` type
+  for better visual communication of percentage.
+- **Cache panel titles** — "Provider cache reads/s" → "Provider cache
+  reads", "Cache miss rate" → "Cache misses/min" (now per-minute).
+- **Stat panel thresholds** — added yellow/red thresholds to RPS,
+  RPM, TPS, TPM, and Total cost panels for at-a-glance severity
+  indication.
+
 ## [1.2.2] - 2026-07-22
 
 ### Fixed
