@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-04
+
+### Changed
+
+- **Prometheus upgraded v3.2.1 → v3.13.2 (LTS)** — security fixes
+  (CVE-2025-4673, CVE-2023-45289), 2x faster case-insensitive regex
+  matching, 50% reduced heap allocations for WAL decoder, XOR2 encoding
+  for better disk compression, native histogram support, experimental
+  search API for metric/label discovery. v3.13 is a Long Term Support
+  release. Project config fully compatible — no breaking changes apply.
+
 ## [1.3.1] - 2026-07-22
 
 ### Consolidated release — dashboard overhaul, cache panels, plugin upgrade
