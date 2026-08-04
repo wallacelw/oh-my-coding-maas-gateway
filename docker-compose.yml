@@ -93,7 +93,7 @@ services:
 
   grafana:
     <<: *default
-    image: grafana/grafana:11.5.2
+    image: grafana/grafana:13.1.2
     container_name: litellm_grafana
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:3000:3000"

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2026-08-04
+
+### Changed
+
+- **Grafana upgraded 11.5.2 → 13.1.2** — two major version jump. Dynamic
+  dashboards, Git Sync, Grafana Assistant, revamped gauge visualization,
+  quick filters, data grouping. File-based provisioning, anonymous auth,
+  and Prometheus datasource all work without changes. Health check
+  (`/api/health`) still functional despite `/api` path deprecation.
+
 ## [1.4.2] - 2026-08-04
 
 ### Changed
