@@ -416,7 +416,7 @@ wire_api = "responses"
 Why a custom provider:
 - Codex CLI rejects overriding the reserved `openai` provider name.
 - The built-in `openai` provider defaults to `wire_api = "responses_websocket"`
-  (WebSocket), which has a bug in LiteLLM v1.89.3 when bridging to Chat
+  (WebSocket), which had a bug in LiteLLM v1.89.3 when bridging to Chat
   Completions. Setting `wire_api = "responses"` forces HTTP SSE instead.
 - The `env_key` field lets Codex CLI read the API key from `~/.codex/.env`
   automatically (via dotenvy), no shell exports needed.

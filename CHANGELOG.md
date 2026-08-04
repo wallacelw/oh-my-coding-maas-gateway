@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-08-04
+
+### Changed
+
+- **LiteLLM upgraded v1.89.3 → v1.95.0** — Claude Opus 5 support, Rust
+  backend for Anthropic messages API, shadcn UI migration, SAML 2.0 SSO,
+  cost optimization page, enhanced MCP support, atomic cache increments,
+  improved streaming performance. Validation improved from 82/84 to
+  83/84 (unhealthy_count warning resolved). WebSocket bridging bug
+  workaround retained (uses HTTP SSE via `wire_api = "responses"`).
+
 ## [1.4.1] - 2026-08-04
 
 ### Changed

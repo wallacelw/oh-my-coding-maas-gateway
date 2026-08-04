@@ -7,7 +7,7 @@
 #
 # A custom model provider is used instead of the built-in openai provider to
 # set wire_api = "responses" (HTTP SSE). The built-in openai provider defaults
-# to WebSocket (responses_websocket) which has a bug in LiteLLM v1.89.3 when
+# to WebSocket (responses_websocket) which had a bug in LiteLLM v1.89.3 when
 # bridging to Chat Completions. Codex CLI rejects overriding the reserved
 # openai provider, so we use a custom provider with env_key instead.
 #
