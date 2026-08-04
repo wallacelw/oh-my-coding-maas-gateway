@@ -402,12 +402,12 @@ opencode          # or:  codex  or:  claude --bare  or:  pi
 
 ```bash
 opencode
-# Switch preset: /preset LiteLLM-Huawei-MaaS-Core
+# Switch preset: /preset LiteLLM-Extended
 # Available presets:
-#   LiteLLM-Huawei-MaaS-Full  (default, all 4 models via proxy)
-#   LiteLLM-Huawei-MaaS-Core  (2 models, no v4-pro/v4-flash)
-#   Huawei-MaaS-Full          (direct, bypass proxy)
-#   Huawei-MaaS-Core          (direct, bypass proxy)
+#   LiteLLM-Default   (default, GLM only — glm-5.2, glm-5.1)
+#   LiteLLM-Extended   (GLM + deepseek-v4-flash — faster, lower RPM)
+#   Huawei-MaaS-Default           (direct, GLM only)
+#   Huawei-MaaS-Extended           (direct, GLM + deepseek-v4-flash)
 ```
 
 If opencode was already running, exit it first (`/exit` or Ctrl+C).

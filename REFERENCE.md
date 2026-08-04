@@ -55,7 +55,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
   Claude Code ──→ /v1/messages         ──→ anthropic/ provider ──→ /anthropic/v1/messages
   Pi agent    ──→ /v1/chat/completions ──→ openai/ provider    ──→ /openai/v1/chat/completions
 
-  opencode: 7 agents (1 disabled), 4 presets (LiteLLM-Huawei-MaaS-Full default)
+  opencode: 7 agents (1 disabled), 4 presets (LiteLLM-Default default)
   Codex CLI: Responses API bridged to Chat Completions by LiteLLM
   Claude Code: Anthropic Messages API forwarded to MaaS Anthropic endpoint
   Pi agent: OpenAI Chat Completions API, all models from models.sh
@@ -343,27 +343,27 @@ determines routing.
 
 | Preset | Route | Models |
 |--------|-------|--------|
-| **LiteLLM-Huawei-MaaS-Full** (default) | Proxy → MaaS | All 6 |
-| **LiteLLM-Huawei-MaaS-Core** | Proxy → MaaS | 4 (no v4-pro/v4-flash) |
-| **Huawei-MaaS-Full** | Direct → MaaS | All 6 |
-| **Huawei-MaaS-Core** | Direct → MaaS | 4 (no v4-pro/v4-flash) |
+| **LiteLLM-Default** (default) | Proxy → MaaS | GLM only (glm-5.2, glm-5.1) |
+| **LiteLLM-Extended** | Proxy → MaaS | GLM + deepseek-v4-flash |
+| **Huawei-MaaS-Default** | Direct → MaaS | GLM only (glm-5.2, glm-5.1) |
+| **Huawei-MaaS-Extended** | Direct → MaaS | GLM + deepseek-v4-flash |
 
-Switch at runtime: `/preset LiteLLM-Huawei-MaaS-Core`
+Switch at runtime: `/preset LiteLLM-Extended`
 
 ### Agent → Model Mapping
 
 `A → B` = fallback chain. `(variant)` = reasoning effort. Model names omit
 the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 
-| Agent | LiteLLM-Full | LiteLLM-Core | MaaS-Full | MaaS-Core |
-|-------|-------------|-------------|-----------|-----------|
+| Agent | LiteLLM-Default | LiteLLM-Extended | MaaS-Default | MaaS-Extended |
+|-------|-----------------|------------------|--------------|---------------|
 | orchestrator | `glm-5.2` (high) | `glm-5.2` (high) | `glm-5.2` (high) | `glm-5.2` (high) |
-| oracle | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
-| council | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
-| librarian | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) |
-| explorer | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) |
-| designer | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) |
-| fixer | `deepseek-v4-flash` (high) | `deepseek-v4-flash` (high) | `deepseek-v4-flash` (high) | `deepseek-v4-flash` (high) |
+| oracle | `glm-5.2` → `glm-5.1` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `glm-5.1` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
+| council | `glm-5.2` → `glm-5.1` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `glm-5.1` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
+| librarian | `glm-5.1` (low) | `deepseek-v4-flash` (low) | `glm-5.1` (low) | `deepseek-v4-flash` (low) |
+| explorer | `glm-5.1` (low) | `deepseek-v4-flash` (low) | `glm-5.1` (low) | `deepseek-v4-flash` (low) |
+| designer | `glm-5.1` → `glm-5.2` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `glm-5.2` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) |
+| fixer | `glm-5.1` (high) | `deepseek-v4-flash` → `glm-5.1` (high) | `glm-5.1` (high) | `deepseek-v4-flash` → `glm-5.1` (high) |
 
 ### Council
 
