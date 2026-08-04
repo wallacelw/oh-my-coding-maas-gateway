@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2026-08-05
+
+### Changed
+
+- **Renamed presets to Default/Extended based on model composition** —
+  clearer naming that reflects what models each preset uses
+- `LiteLLM-Huawei-MaaS-Full` → `LiteLLM-Default` (GLM only: glm-5.2, glm-5.1)
+- `LiteLLM-Huawei-MaaS-Core` → `LiteLLM-Extended` (GLM + deepseek-v4-flash)
+- `Huawei-MaaS-Full` → `Huawei-MaaS-Default` (direct, GLM only)
+- `Huawei-MaaS-Core` → `Huawei-MaaS-Extended` (direct, GLM + deepseek-v4-flash)
+- Default preset prioritizes GLM models (RPM=100, TPM=1M) for reliability
+- Extended preset adds deepseek-v4-flash for faster exploration/librarian tasks
+- Oracle/council fallback: glm-5.1 (Default) or deepseek-v4-flash (Extended)
+- Librarian/explorer: glm-5.1 (Default) or deepseek-v4-flash (Extended)
+- Fixer: glm-5.1 (Default) or deepseek-v4-flash → glm-5.1 (Extended)
+- `deepseek-v4-pro` removed from all presets (too expensive, RPM=3)
+
+### Updated
+
+- REFERENCE.md preset table and agent→model mapping table
+- INSTALLATION.md preset descriptions
+- scripts/04_validate.sh preset name checks
+- scripts/03a_opencode.sh preset description
+
 ## [1.4.4] - 2026-08-05
 
 ### Changed

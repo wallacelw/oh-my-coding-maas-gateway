@@ -343,18 +343,18 @@ if [ "$RUN_OPENCODE" = true ]; then
   if [ -n "$SLIM_CONFIG" ]; then
     CLEAN_SLIM=$(strip_jsonc "$SLIM_CONFIG")
     check_jq "$CLEAN_SLIM" \
-      "LiteLLM-Huawei-MaaS-Full preset" '.presets["LiteLLM-Huawei-MaaS-Full"]' \
-      "LiteLLM-Huawei-MaaS-Core preset" '.presets["LiteLLM-Huawei-MaaS-Core"]' \
-      "Huawei-MaaS-Full direct preset" '.presets["Huawei-MaaS-Full"]' \
-      "Huawei-MaaS-Core direct preset" '.presets["Huawei-MaaS-Core"]' \
-      "Default is LiteLLM-Huawei-MaaS-Full" '.preset == "LiteLLM-Huawei-MaaS-Full"' \
-      "Orchestrator model set" '.presets["LiteLLM-Huawei-MaaS-Full"].orchestrator.model' \
-      "Oracle model set (array for fallback)" '.presets["LiteLLM-Huawei-MaaS-Full"].oracle.model' \
-      "Council model set (array for fallback)" '.presets["LiteLLM-Huawei-MaaS-Full"].council.model' \
-      "Librarian model set" '.presets["LiteLLM-Huawei-MaaS-Full"].librarian.model' \
-      "Explorer model set" '.presets["LiteLLM-Huawei-MaaS-Full"].explorer.model' \
-      "Designer model set" '.presets["LiteLLM-Huawei-MaaS-Full"].designer.model' \
-      "Fixer model set (array for fallback)" '.presets["LiteLLM-Huawei-MaaS-Full"].fixer.model' \
+      "LiteLLM-Default preset" '.presets["LiteLLM-Default"]' \
+      "LiteLLM-Extended preset" '.presets["LiteLLM-Extended"]' \
+      "Huawei-MaaS-Default direct preset" '.presets["Huawei-MaaS-Default"]' \
+      "Huawei-MaaS-Extended direct preset" '.presets["Huawei-MaaS-Extended"]' \
+      "Default is LiteLLM-Default" '.preset == "LiteLLM-Default"' \
+      "Orchestrator model set" '.presets["LiteLLM-Default"].orchestrator.model' \
+      "Oracle model set (array for fallback)" '.presets["LiteLLM-Default"].oracle.model' \
+      "Council model set (array for fallback)" '.presets["LiteLLM-Default"].council.model' \
+      "Librarian model set" '.presets["LiteLLM-Default"].librarian.model' \
+      "Explorer model set" '.presets["LiteLLM-Default"].explorer.model' \
+      "Designer model set" '.presets["LiteLLM-Default"].designer.model' \
+      "Fixer model set (array for fallback)" '.presets["LiteLLM-Default"].fixer.model' \
       "Observer disabled" '.disabled_agents | index("observer")' \
       "Fallback enabled" '.fallback.enabled == true' \
       "Fallback has no chains (v2 format)" '(.fallback.chains // null) == null' \
@@ -363,8 +363,8 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Council alpha model set" '.council.presets.default.alpha.model' \
       "Council beta model set" '.council.presets.default.beta.model' \
       "Council gamma model set" '.council.presets.default.gamma.model' \
-      "Huawei-MaaS-Full orchestrator model set" '.presets["Huawei-MaaS-Full"].orchestrator.model' \
-      "Huawei-MaaS-Core orchestrator model set" '.presets["Huawei-MaaS-Core"].orchestrator.model'
+      "Huawei-MaaS-Default orchestrator model set" '.presets["Huawei-MaaS-Default"].orchestrator.model' \
+      "Huawei-MaaS-Extended orchestrator model set" '.presets["Huawei-MaaS-Extended"].orchestrator.model'
 
     PERMS=$(file_perms "$SLIM_CONFIG")
     if [ "$PERMS" = "600" ]; then
