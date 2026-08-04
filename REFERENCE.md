@@ -358,12 +358,12 @@ the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 | Agent | LiteLLM-Full | LiteLLM-Core | MaaS-Full | MaaS-Core |
 |-------|-------------|-------------|-----------|-----------|
 | orchestrator | `glm-5.2` (high) | `glm-5.2` (high) | `glm-5.2` (high) | `glm-5.2` (high) |
-| oracle | `glm-5.2` → `deepseek-v4-pro` (max) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `deepseek-v4-pro` (max) | `glm-5.2` → `deepseek-v4-flash` (high) |
+| oracle | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
 | council | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
 | librarian | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) |
-| explorer | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (medium) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (medium) |
+| explorer | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) |
 | designer | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) |
-| fixer | `glm-5.1` → `deepseek-v4-flash` (high) | `glm-5.1` → `deepseek-v4-flash` (high) | `glm-5.1` → `deepseek-v4-flash` (high) | `glm-5.1` → `deepseek-v4-flash` (high) |
+| fixer | `deepseek-v4-flash` (high) | `deepseek-v4-flash` (high) | `deepseek-v4-flash` (high) | `deepseek-v4-flash` (high) |
 
 ### Council
 
