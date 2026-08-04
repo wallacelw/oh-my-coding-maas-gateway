@@ -98,7 +98,7 @@ secrets (for key rotation).
 ### `02_litellm.sh`
 
 Generates `configs/litellm/config.yaml` from `.env` — N deployments per model
-per format (dual OpenAI + Anthropic), 12N total. Checks ports 4000/5432/9090/
+per format (dual OpenAI + Anthropic), 8N total. Checks ports 4000/5432/9090/
 3000 are free. Runs `docker compose up -d` (LiteLLM + PostgreSQL + Prometheus
 + Grafana). Waits up to 90s for LiteLLM to become healthy. Supports
 `--routing-strategy=` and `--dry-run`.
@@ -404,8 +404,8 @@ opencode          # or:  codex  or:  claude --bare  or:  pi
 opencode
 # Switch preset: /preset LiteLLM-Huawei-MaaS-Core
 # Available presets:
-#   LiteLLM-Huawei-MaaS-Full  (default, all 6 models via proxy)
-#   LiteLLM-Huawei-MaaS-Core  (4 models, no v4-pro/v4-flash)
+#   LiteLLM-Huawei-MaaS-Full  (default, all 4 models via proxy)
+#   LiteLLM-Huawei-MaaS-Core  (2 models, no v4-pro/v4-flash)
 #   Huawei-MaaS-Full          (direct, bypass proxy)
 #   Huawei-MaaS-Core          (direct, bypass proxy)
 ```
@@ -417,7 +417,7 @@ If opencode was already running, exit it first (`/exit` or Ctrl+C).
 ```bash
 codex
 codex --model deepseek-v4-pro    # deep reasoning
-codex --model deepseek-v3.2      # fast
+codex --model deepseek-v4-flash      # fast
 ```
 
 ### Using Claude Code CLI

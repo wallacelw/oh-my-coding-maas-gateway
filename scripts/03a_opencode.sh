@@ -109,7 +109,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$OPENCODE_CONFIG" ]; then
     elif retry_curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/v1/chat/completions" \
          -H "Authorization: Bearer $EXISTING_KEY" \
          -H "Content-Type: application/json" \
-         -d '{"model":"deepseek-v3.2","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
+         -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
@@ -212,5 +212,5 @@ fi
 
 echo ""
 log_step "opencode installation complete"
-log_dim "Preset: LiteLLM-Huawei-MaaS-Full (default) — all 6 models via LiteLLM"
+log_dim "Preset: LiteLLM-Huawei-MaaS-Full (default) — all 4 models via LiteLLM"
 log_dim "Switch preset: /preset LiteLLM-Huawei-MaaS-Core"

@@ -60,9 +60,9 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
   Claude Code: Anthropic Messages API forwarded to MaaS Anthropic endpoint
   Pi agent: OpenAI Chat Completions API, all models from models.sh
 
-  Each tool: separate virtual key (sk-...) · unlimited budget · all 6 models
+  Each tool: separate virtual key (sk-...) · unlimited budget · all 4 models
   LiteLLM: load-balances across N MaaS API keys · PostgreSQL (:5432)
-  Models: glm-5.2 · glm-5.1 · glm-5 · deepseek-v4-pro · deepseek-v4-flash · deepseek-v3.2
+  Models: glm-5.2 · glm-5.1 · deepseek-v4-pro · deepseek-v4-flash
 
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
 ```
@@ -131,10 +131,8 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 |------|-------------|-----|------------------------|
 | `glm-5.2` | 192K/128K | 100 | $1.400 / $4.400 × 10⁻⁶ |
 | `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ |
-| `glm-5` | 192K/64K | 100 | $0.809 / $2.965 × 10⁻⁶ |
 | `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ |
 | `deepseek-v4-flash` | 1M/128K | 3 | $0.135 / $0.270 × 10⁻⁶ |
-| `deepseek-v3.2` | 128K/32K | 700 | $0.270 / $0.404 × 10⁻⁶ |
 
 ### Core Rules
 
@@ -236,7 +234,7 @@ Responses API → Chat Completions. This lets Codex CLI use `/v1/responses`
 N MaaS API keys → N deployments per model per format. LiteLLM uses
 `simple-shuffle` routing (round-robin with retry across deployments).
 
-Total deployments: 6 models × N keys × 2 formats = 12N.
+Total deployments: 4 models × N keys × 2 formats = 8N.
 
 ### model_info
 
@@ -360,12 +358,12 @@ the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 | Agent | LiteLLM-Full | LiteLLM-Core | MaaS-Full | MaaS-Core |
 |-------|-------------|-------------|-----------|-----------|
 | orchestrator | `glm-5.2` (high) | `glm-5.2` (high) | `glm-5.2` (high) | `glm-5.2` (high) |
-| oracle | `glm-5.2` → `deepseek-v4-pro` (max) | `glm-5.2` → `deepseek-v3.2` (high) | `glm-5.2` → `deepseek-v4-pro` (max) | `glm-5.2` → `deepseek-v3.2` (high) |
-| council | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v3.2` (high) | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v3.2` (high) |
-| librarian | `deepseek-v3.2` (low) | `deepseek-v3.2` (low) | `deepseek-v3.2` (low) | `deepseek-v3.2` (low) |
-| explorer | `deepseek-v3.2` (low) | `deepseek-v3.2` (medium) | `deepseek-v3.2` (low) | `deepseek-v3.2` (medium) |
-| designer | `glm-5.1` → `deepseek-v3.2` (medium) | `glm-5.1` → `deepseek-v3.2` (medium) | `glm-5.1` → `deepseek-v3.2` (medium) | `glm-5.1` → `deepseek-v3.2` (medium) |
-| fixer | `glm-5` → `deepseek-v3.2` (high) | `glm-5` → `deepseek-v3.2` (high) | `glm-5` → `deepseek-v3.2` (high) | `glm-5` → `deepseek-v3.2` (high) |
+| oracle | `glm-5.2` → `deepseek-v4-pro` (max) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `deepseek-v4-pro` (max) | `glm-5.2` → `deepseek-v4-flash` (high) |
+| council | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `deepseek-v4-pro` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
+| librarian | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (low) |
+| explorer | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (medium) | `deepseek-v4-flash` (low) | `deepseek-v4-flash` (medium) |
+| designer | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) |
+| fixer | `glm-5.1` → `deepseek-v4-flash` (high) | `glm-5.1` → `deepseek-v4-flash` (high) | `glm-5.1` → `deepseek-v4-flash` (high) | `glm-5.1` → `deepseek-v4-flash` (high) |
 
 ### Council
 
@@ -428,13 +426,13 @@ Why a custom provider:
 
 ### Model Selection
 
-Models use base names (e.g., `glm-5.2`). All 6 models are available. Switch
+Models use base names (e.g., `glm-5.2`). All 4 models are available. Switch
 at runtime with `--model`:
 
 ```bash
 codex --model deepseek-v4-pro    # deep reasoning
 codex --model glm-5.2            # general purpose (default)
-codex --model deepseek-v3.2      # fast
+codex --model deepseek-v4-flash      # fast
 ```
 
 ### Prerequisites
@@ -478,7 +476,7 @@ Set in the `env` block of `~/.claude/settings.json`:
 | `ANTHROPIC_BASE_URL` | `http://127.0.0.1:4000` | LiteLLM proxy URL (no `/v1`) |
 | `ANTHROPIC_API_KEY` | `sk-...` (virtual key) | LiteLLM auth (alias: claude-code) |
 | `ANTHROPIC_MODEL` | `claude-glm-5.2` | Primary model |
-| `ANTHROPIC_SMALL_FAST_MODEL` | `claude-deepseek-v3.2` | Fast model for background tasks |
+| `ANTHROPIC_SMALL_FAST_MODEL` | `claude-deepseek-v4-flash` | Fast model for background tasks |
 | `CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL` | `1` | Prevent VSCode extension auto-install |
 
 ### VSCode Extension Disabled
@@ -503,13 +501,13 @@ routes to the Anthropic deployment directly.
 ### Model Selection
 
 Models use `claude-` prefixed names (e.g., `claude-glm-5.2`) for the
-Anthropic endpoint. All 6 models are available. Switch at runtime with
+Anthropic endpoint. All 4 models are available. Switch at runtime with
 `--model`:
 
 ```bash
 claude --bare --model claude-deepseek-v4-pro    # deep reasoning
 claude --bare --model claude-glm-5.2            # general purpose (default)
-claude --bare --model claude-deepseek-v3.2      # fast
+claude --bare --model claude-deepseek-v4-flash      # fast
 ```
 
 ### Prerequisites
