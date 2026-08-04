@@ -47,21 +47,6 @@ model_list:
       input_cost_per_token: 0.000001078
       output_cost_per_token: 0.000003774
 
-  - model_name: glm-5
-    litellm_params:
-      model: openai/glm-5
-      api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
-      use_chat_completions_api: true
-      tpm: 1000000
-      rpm: 100
-    model_info:
-      max_tokens: 198000
-      max_input_tokens: 192000
-      max_output_tokens: 64000
-      input_cost_per_token: 0.000000809
-      output_cost_per_token: 0.000002965
-
   - model_name: deepseek-v4-pro
     litellm_params:
       model: openai/deepseek-v4-pro
@@ -91,21 +76,6 @@ model_list:
       max_output_tokens: 128000
       input_cost_per_token: 0.000000135
       output_cost_per_token: 0.00000027
-
-  - model_name: deepseek-v3.2
-    litellm_params:
-      model: openai/deepseek-v3.2
-      api_base: os.environ/HUAWEI_MAAS_API_BASE
-      api_key: os.environ/HUAWEI_MAAS_API_KEY_0
-      use_chat_completions_api: true
-      tpm: 500000
-      rpm: 700
-    model_info:
-      max_tokens: 160000
-      max_input_tokens: 128000
-      max_output_tokens: 32000
-      input_cost_per_token: 0.00000027
-      output_cost_per_token: 0.000000404
 
 
 litellm_settings:

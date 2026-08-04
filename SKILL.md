@@ -200,8 +200,8 @@ Models are in `scripts/helpers/models.sh`. Format:
 model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
 ```
 
-Current models: `glm-5.2`, `glm-5.1`, `glm-5`, `deepseek-v4-pro`,
-`deepseek-v4-flash`, `deepseek-v3.2`.
+Current models: `glm-5.2`, `glm-5.1`, `deepseek-v4-pro`,
+`deepseek-v4-flash`.
 
 **List models**:
 ```bash
@@ -238,7 +238,7 @@ MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
 curl -X POST http://127.0.0.1:4000/v1/chat/completions \
   -H "Authorization: Bearer $MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "deepseek-v3.2", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+  -d '{"model": "deepseek-v4-flash", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
 ```
 
 ## View Metrics
