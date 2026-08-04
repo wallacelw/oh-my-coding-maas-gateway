@@ -334,7 +334,7 @@ determines routing.
 
 ### Plugin: oh-my-opencode-slim
 
-`oh-my-opencode-slim` (v2.2.5) installed via `bunx`. Provides:
+`oh-my-opencode-slim` (v2.2.9) installed via `bunx`. Provides:
 
 - **4 presets** — control routing (proxy vs direct) and model selection
 - **7 agents** (1 disabled) — orchestrator, oracle, council, librarian, explorer, designer, fixer (observer disabled)

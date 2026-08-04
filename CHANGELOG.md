@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-08-04
+
+### Changed
+
+- **oh-my-opencode-slim upgraded v2.2.5 → v2.2.9** — removes redundant
+  plugin websearch MCP (opencode has built-in), fixes smartfetch CSS
+  TUI corruption, improves task reconciliation to prevent self-amplifying
+  loops, adds webfetch config for enable/disable and dedicated model,
+  guards disabled_* config fields against non-array values, places
+  AGENTS.md before orchestrator prompt in system order. No breaking
+  changes for this project's configuration.
+
 ## [1.4.0] - 2026-08-04
 
 ### Changed
