@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-08-05
+
+### Changed
+
+- **Redesigned model presets based on Huawei MaaS reasoning effort docs** —
+  `reasoning_effort` only supports `high` (no `low`/`medium`/`max`). Updated
+  all presets to use valid variants only.
+- Oracle variant: `max` → `high` (MaaS doesn't support `max`)
+- Fixer model: `[glm-5.1, deepseek-v4-flash]` → `deepseek-v4-flash` only
+  (glm-5.1 doesn't support `reasoning_effort`; deepseek-v4-flash is faster
+  and does support it)
+- Core preset explorer: variant `medium` → `low` (consistent with Full)
+- Codex model catalog: reasoning levels `[high, max]` → `[high]` for all
+  models that support reasoning effort
+
+### Fixed
+
+- REFERENCE.md agent→model table synced with new preset assignments
+
 ## [1.4.3] - 2026-08-04
 
 ### Changed
