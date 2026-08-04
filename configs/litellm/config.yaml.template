@@ -68,8 +68,8 @@ model_list:
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       use_chat_completions_api: true
-      tpm: 30000
-      rpm: 3
+      tpm: 60000
+      rpm: 15
     model_info:
       max_tokens: 1000000
       max_input_tokens: 1000000

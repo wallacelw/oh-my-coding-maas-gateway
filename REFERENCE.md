@@ -132,7 +132,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | `glm-5.2` | 192K/128K | 100 | $1.400 / $4.400 × 10⁻⁶ |
 | `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ |
 | `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ |
-| `deepseek-v4-flash` | 1M/128K | 3 | $0.135 / $0.270 × 10⁻⁶ |
+| `deepseek-v4-flash` | 1M/128K | 15 | $0.135 / $0.270 × 10⁻⁶ |
 
 ### Core Rules
 
