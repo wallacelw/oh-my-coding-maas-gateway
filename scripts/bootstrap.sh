@@ -595,16 +595,6 @@ else
   set -e
 fi
 
-# ── Step 06: Check for tool updates (existing installs only) ──
-if [ "$DRY_RUN" = false ] && is_interactive && [ -x "$SCRIPT_DIR/update.sh" ]; then
-  echo ""
-  if prompt_yesno "Check for coding tool updates?" y; then
-    set +e
-    "$SCRIPT_DIR/update.sh"
-    set -e
-  fi
-fi
-
 # ── Summary ──
 echo ""
 if [ "$VALIDATE_RC" -eq 0 ]; then
@@ -650,6 +640,8 @@ echo ""
 [ "$INSTALL_CODEX" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "Codex:"     "${C_CYAN}codex${C_RESET}"
 [ "$INSTALL_CLAUDE_CODE" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "Claude:"    "${C_CYAN}claude --bare${C_RESET}"
 [ "$INSTALL_PI" = true ] && printf "    ${C_DIM}%-12s${C_RESET} %b\n" "Pi:"        "${C_CYAN}pi${C_RESET}"
+echo ""
+echo -e "  ${C_DIM}To check for coding tool updates later: ./scripts/update.sh${C_RESET}"
 echo ""
 
 if [ "$KEYS_FROM_ENV" = true ]; then

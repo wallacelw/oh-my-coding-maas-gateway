@@ -358,11 +358,15 @@ start fresh — plugin/preset changes are not hot-reloaded).
 ### Updating coding tools
 
 The install scripts skip tools that are already installed. To check and
-update individual coding tools (opencode, Codex CLI, Claude Code, Pi,
-oh-my-opencode-slim, LiteLLM, Grafana, Prometheus):
+update individual components, use the standalone update script. Components
+are grouped into two categories:
+
+- **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
+  Code, Pi agent
+- **Infrastructure** — LiteLLM, Grafana, Prometheus
 
 ```bash
-./scripts/update.sh              # interactive: show versions, ask which to update
+./scripts/update.sh              # interactive: show grouped table, select which to update
 ./scripts/update.sh --check      # show version table only
 ./scripts/update.sh --all        # update all with updates available
 ./scripts/update.sh --dry-run    # show what would be updated, no changes

@@ -46,13 +46,15 @@ for arg in "$@"; do
 done
 
 # ── Component arrays ──
-# Each component: name | current_ver | latest_ver | update_method
+# Each component: name | current_ver | latest_ver | update_method | category
 # update_method: npm:<pkg> | curl:<url> | docker:<service>:<image>:<tag_prefix> | slim
+# category: "tool" (coding tools) | "infra" (LiteLLM + observability)
 COMPONENTS=()
 CUR_VERSIONS=()
 NEW_VERSIONS=()
 UPDATE_METHODS=()
 UPDATE_AVAILABLE=()
+CATEGORIES=()
 
 # ── Version check helpers ──
 
@@ -84,70 +86,75 @@ version_differs() {
 check_components() {
   local name cur new method
 
+  # ── Coding Tools ──
+
   # 1. opencode
   name="opencode"
   cur=$(opencode --version 2>/dev/null || echo "")
   new=$(strip_v "$(github_latest sst/opencode)")
   method="curl:https://opencode.ai/install"
-  _store_component "$name" "$cur" "$new" "$method"
+  _store_component "$name" "$cur" "$new" "$method" "tool"
 
   # 2. oh-my-opencode-slim
   name="oh-my-opencode-slim"
   cur=$(grep 'SLIM_VERSION=' "$SCRIPT_DIR/03a_opencode.sh" 2>/dev/null | head -1 | sed 's/.*="\([^"]*\)".*/\1/')
   new=$(npm_latest oh-my-opencode-slim)
   method="slim"
-  _store_component "$name" "$cur" "$new" "$method"
+  _store_component "$name" "$cur" "$new" "$method" "tool"
 
   # 3. Codex CLI
   name="codex"
   cur=$(codex --version 2>/dev/null | sed 's/codex-cli //' || echo "")
   new=$(npm_latest @openai/codex)
   method="npm:@openai/codex"
-  _store_component "$name" "$cur" "$new" "$method"
+  _store_component "$name" "$cur" "$new" "$method" "tool"
 
   # 4. Claude Code
   name="claude-code"
   cur=$(claude --version 2>/dev/null | sed 's/ (Claude Code)//' || echo "")
   new=$(npm_latest @anthropic-ai/claude-code)
   method="npm:@anthropic-ai/claude-code"
-  _store_component "$name" "$cur" "$new" "$method"
+  _store_component "$name" "$cur" "$new" "$method" "tool"
 
   # 5. Pi agent
   name="pi"
   cur=$(pi --version 2>/dev/null || echo "")
   new=$(npm_latest @earendil-works/pi-coding-agent)
   method="npm:@earendil-works/pi-coding-agent"
-  _store_component "$name" "$cur" "$new" "$method"
+  _store_component "$name" "$cur" "$new" "$method" "tool"
+
+  # ── Infrastructure (LiteLLM + Observability) ──
 
   # 6. LiteLLM (Docker)
   name="litellm"
   cur=$(grep 'image:.*litellm:' docker-compose.yml 2>/dev/null | sed 's/.*:v//' | tr -d ' ')
   new=$(strip_v "$(github_latest BerriAI/litellm)")
   method="docker:litellm:ghcr.io/berriai/litellm:v"
-  _store_component "$name" "$cur" "$new" "$method"
+  _store_component "$name" "$cur" "$new" "$method" "infra"
 
   # 7. Prometheus (Docker)
   name="prometheus"
   cur=$(grep 'image:.*prom/prometheus:' docker-compose.yml 2>/dev/null | sed 's/.*:v//' | tr -d ' ')
   new=$(strip_v "$(github_latest prometheus/prometheus)")
   method="docker:prometheus:prom/prometheus:v"
-  _store_component "$name" "$cur" "$new" "$method"
+  _store_component "$name" "$cur" "$new" "$method" "infra"
 
   # 8. Grafana (Docker)
   name="grafana"
   cur=$(grep 'image:.*grafana/grafana:' docker-compose.yml 2>/dev/null | sed 's/.*grafana://' | tr -d ' ')
   new=$(strip_v "$(github_latest grafana/grafana)")
   method="docker:grafana:grafana/grafana:"
-  _store_component "$name" "$cur" "$new" "$method"
+  _store_component "$name" "$cur" "$new" "$method" "infra"
 }
 
 # Store component info in arrays
 _store_component() {
-  local name="$1" cur="$2" new="$3" method="$4"
+  local name="$1" cur="$2" new="$3" method="$4" cat="$5"
   COMPONENTS+=("$name")
   CUR_VERSIONS+=("$cur")
   NEW_VERSIONS+=("$new")
   UPDATE_METHODS+=("$method")
+  CATEGORIES+=("$cat")
   if version_differs "$cur" "$new"; then
     UPDATE_AVAILABLE+=("yes")
   else
@@ -155,37 +162,54 @@ _store_component() {
   fi
 }
 
-# ── Display version table ──
+# ── Print a single component row ──
+_print_row() {
+  local i="$1"
+  local name="${COMPONENTS[$i]}"
+  local cur="${CUR_VERSIONS[$i]}"
+  local new="${NEW_VERSIONS[$i]}"
+  local avail="${UPDATE_AVAILABLE[$i]}"
+
+  [ -z "$cur" ] && cur="${C_DIM}(not installed)${C_RESET}"
+  [ -z "$new" ] && new="${C_DIM}(unknown)${C_RESET}"
+
+  local status
+  if [ "$avail" = "yes" ]; then
+    status="${C_YELLOW}update available${C_RESET}"
+  elif [ -z "${CUR_VERSIONS[$i]}" ]; then
+    status="${C_DIM}—${C_RESET}"
+  elif [ -z "${NEW_VERSIONS[$i]}" ]; then
+    status="${C_DIM}unknown${C_RESET}"
+  else
+    status="${C_GREEN}up to date${C_RESET}"
+  fi
+
+  printf "  %-22s %-12s %-12s %b\n" "$name" "$cur" "$new" "$status"
+}
+
+# ── Display version table (grouped) ──
 show_table() {
   local count=${#COMPONENTS[@]}
   local updates_found=0
 
-  echo ""
-  printf "  ${C_BOLD}%-22s %-12s %-12s %s${C_RESET}\n" "Component" "Current" "Latest" "Status"
-  printf "  ${C_DIM}%-22s %-12s %-12s %s${C_RESET}\n" "──────────" "───────" "──────" "──────"
-
   for ((i = 0; i < count; i++)); do
-    local name="${COMPONENTS[$i]}"
-    local cur="${CUR_VERSIONS[$i]}"
-    local new="${NEW_VERSIONS[$i]}"
-    local avail="${UPDATE_AVAILABLE[$i]}"
+    [ "${UPDATE_AVAILABLE[$i]}" = "yes" ] && updates_found=$((updates_found + 1))
+  done
 
-    [ -z "$cur" ] && cur="${C_DIM}(not installed)${C_RESET}"
-    [ -z "$new" ] && new="${C_DIM}(unknown)${C_RESET}"
+  echo ""
+  echo -e "  ${C_BOLD}Coding Tools${C_RESET}"
+  printf "  ${C_DIM}%-22s %-12s %-12s %s${C_RESET}\n" "Component" "Current" "Latest" "Status"
+  printf "  ${C_DIM}%-22s %-12s %-12s %s${C_RESET}\n" "──────────" "───────" "──────" "──────"
+  for ((i = 0; i < count; i++)); do
+    [ "${CATEGORIES[$i]}" = "tool" ] && _print_row "$i"
+  done
 
-    local status
-    if [ "$avail" = "yes" ]; then
-      status="${C_YELLOW}update available${C_RESET}"
-      updates_found=$((updates_found + 1))
-    elif [ -z "${CUR_VERSIONS[$i]}" ]; then
-      status="${C_DIM}—${C_RESET}"
-    elif [ -z "${NEW_VERSIONS[$i]}" ]; then
-      status="${C_DIM}unknown${C_RESET}"
-    else
-      status="${C_GREEN}up to date${C_RESET}"
-    fi
-
-    printf "  %-22s %-12s %-12s %b\n" "$name" "$cur" "$new" "$status"
+  echo ""
+  echo -e "  ${C_BOLD}Infrastructure (LiteLLM + Observability)${C_RESET}"
+  printf "  ${C_DIM}%-22s %-12s %-12s %s${C_RESET}\n" "Component" "Current" "Latest" "Status"
+  printf "  ${C_DIM}%-22s %-12s %-12s %s${C_RESET}\n" "──────────" "───────" "──────" "──────"
+  for ((i = 0; i < count; i++)); do
+    [ "${CATEGORIES[$i]}" = "infra" ] && _print_row "$i"
   done
 
   echo ""
@@ -198,7 +222,7 @@ show_table() {
   UPDATES_FOUND=$updates_found
 }
 
-# ── Interactive component selection ──
+# ── Interactive component selection (grouped) ──
 select_components() {
   local count=${#COMPONENTS[@]}
   local updatable=()
@@ -217,18 +241,53 @@ select_components() {
 
   echo ""
   echo -e "  ${C_BOLD}Select components to update:${C_RESET}"
-  echo ""
 
+  # Coding Tools section
+  local has_tools=false
   for u_idx in "${updatable[@]}"; do
-    local name="${COMPONENTS[$u_idx]}"
-    local cur="${CUR_VERSIONS[$u_idx]}"
-    local new="${NEW_VERSIONS[$u_idx]}"
-    printf "  ${C_BOLD}%d)${C_RESET} %-20s ${C_DIM}%s → %s${C_RESET}\n" "$idx" "$name" "$cur" "$new"
-    idx=$((idx + 1))
+    if [ "${CATEGORIES[$u_idx]}" = "tool" ]; then
+      has_tools=true
+      break
+    fi
   done
+  if [ "$has_tools" = true ]; then
+    echo ""
+    echo -e "  ${C_DIM}Coding Tools:${C_RESET}"
+    for u_idx in "${updatable[@]}"; do
+      if [ "${CATEGORIES[$u_idx]}" = "tool" ]; then
+        local name="${COMPONENTS[$u_idx]}"
+        local cur="${CUR_VERSIONS[$u_idx]}"
+        local new="${NEW_VERSIONS[$u_idx]}"
+        printf "    ${C_BOLD}%d)${C_RESET} %-20s ${C_DIM}%s → %s${C_RESET}\n" "$idx" "$name" "$cur" "$new"
+        idx=$((idx + 1))
+      fi
+    done
+  fi
+
+  # Infrastructure section
+  local has_infra=false
+  for u_idx in "${updatable[@]}"; do
+    if [ "${CATEGORIES[$u_idx]}" = "infra" ]; then
+      has_infra=true
+      break
+    fi
+  done
+  if [ "$has_infra" = true ]; then
+    echo ""
+    echo -e "  ${C_DIM}Infrastructure:${C_RESET}"
+    for u_idx in "${updatable[@]}"; do
+      if [ "${CATEGORIES[$u_idx]}" = "infra" ]; then
+        local name="${COMPONENTS[$u_idx]}"
+        local cur="${CUR_VERSIONS[$u_idx]}"
+        local new="${NEW_VERSIONS[$u_idx]}"
+        printf "    ${C_BOLD}%d)${C_RESET} %-20s ${C_DIM}%s → %s${C_RESET}\n" "$idx" "$name" "$cur" "$new"
+        idx=$((idx + 1))
+      fi
+    done
+  fi
 
   echo ""
-  echo -e "  ${C_DIM}Enter numbers (e.g. 1,3,5) or 'all' or Enter to skip:${C_RESET} "
+  echo -e "  ${C_DIM}Enter numbers (e.g. 1,3,5), 'all', or Enter to skip:${C_RESET}"
   echo -ne "  ${C_BOLD}Choice${C_RESET}: "
   local choice
   read -r choice < /dev/tty || choice=""
@@ -324,12 +383,18 @@ update_component() {
 # ── Main ──
 log_step "Component Update Check"
 
+echo ""
+echo -e "  ${C_DIM}Checks current vs latest versions for all installed components.${C_RESET}"
+echo -e "  ${C_DIM}Updates binaries, npm packages, and Docker images only —${C_RESET}"
+echo -e "  ${C_DIM}passwords, API keys, and virtual keys are never touched.${C_RESET}"
+
 # Verify we're in the project directory
 if [ ! -f "$PROJECT_DIR/docker-compose.yml" ]; then
   log_error "docker-compose.yml not found. Run from the project directory."
   exit 1
 fi
 
+echo ""
 log_info "Checking versions..."
 check_components
 
@@ -411,6 +476,7 @@ if [ "$DRY_RUN" = false ]; then
   NEW_VERSIONS=()
   UPDATE_METHODS=()
   UPDATE_AVAILABLE=()
+  CATEGORIES=()
   check_components
   show_table
 fi
