@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.10] - 2026-08-05
+
+### Updated
+
+- **oh-my-opencode-slim v2.2.9 → v2.2.10** (via `scripts/update.sh`)
+- opencode 1.17.17 → 1.18.13
+- Codex CLI 0.144.5 → 0.146.0
+- Claude Code 2.1.218 → 2.1.222
+- Pi agent 0.80.3 → 0.83.0
+- Re-minted Claude Code virtual key (previous key was stale after DB reset)
+- Fixed `ANTHROPIC_SMALL_FAST_MODEL`: `claude-deepseek-v3.2` → `claude-deepseek-v4-flash`
+- Validation: 82/84 (0 failures, 2 warnings — transient unhealthy_count + opencode.json perms)
+
 ## [1.4.9] - 2026-08-05
 
 ### Updated
