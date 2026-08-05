@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.7] - 2026-08-05
+
+### Added
+
+- **`scripts/update.sh`** — new component update script that detects
+  installed tools, checks current vs latest versions, and offers
+  selective updates without touching passwords, API keys, or virtual keys
+- Supports 8 components: opencode, oh-my-opencode-slim, Codex CLI,
+  Claude Code, Pi agent, LiteLLM, Grafana, Prometheus
+- Interactive mode: shows version table, multi-select which to update
+- Flags: `--check` (versions only), `--all` (update all), `--dry-run`
+- Integrated into bootstrap.sh: after pipeline, offers to check for
+  tool updates on existing installs
+
+### Updated
+
+- SKILL.md: added update instructions to Upgrade section
+- INSTALLATION.md: added "Updating coding tools" subsection
+- REFERENCE.md: added update.sh to script table
+
 ## [1.4.6] - 2026-08-05
 
 ### Changed

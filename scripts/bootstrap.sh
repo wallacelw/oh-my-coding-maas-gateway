@@ -595,6 +595,16 @@ else
   set -e
 fi
 
+# ── Step 06: Check for tool updates (existing installs only) ──
+if [ "$DRY_RUN" = false ] && is_interactive && [ -x "$SCRIPT_DIR/update.sh" ]; then
+  echo ""
+  if prompt_yesno "Check for coding tool updates?" y; then
+    set +e
+    "$SCRIPT_DIR/update.sh"
+    set -e
+  fi
+fi
+
 # ── Summary ──
 echo ""
 if [ "$VALIDATE_RC" -eq 0 ]; then

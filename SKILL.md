@@ -90,6 +90,22 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 After upgrade, remind user to restart any running coding tools.
 If Grafana looks stale: `docker compose restart grafana`.
 
+### Update coding tools only
+
+To check and update individual coding tools (opencode, Codex CLI, Claude
+Code, Pi, oh-my-opencode-slim, LiteLLM, Grafana, Prometheus) without
+re-running the full pipeline:
+
+```bash
+./scripts/update.sh              # interactive: show versions, ask which to update
+./scripts/update.sh --check      # show version table only
+./scripts/update.sh --all        # update all components with updates available
+./scripts/update.sh --dry-run    # show what would be updated
+```
+
+This detects installed components, checks current vs latest versions, and
+offers selective updates. Does NOT touch passwords, API keys, or virtual keys.
+
 ## Option 4: Uninstall
 
 Ask what to remove:
