@@ -70,6 +70,19 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 After upgrade, restart any running coding tools — plugin/preset changes
 are not hot-reloaded.
 
+### Update coding tools only
+
+To check and update individual components (opencode, Codex, Claude Code,
+Pi, LiteLLM, Grafana, Prometheus) without re-running the full pipeline:
+
+```bash
+./scripts/update.sh              # interactive: show versions, select which to update
+./scripts/update.sh --check      # show version table only
+./scripts/update.sh --all        # update all with updates available
+```
+
+Does not touch passwords, API keys, or virtual keys.
+
 ---
 
 ## Companion Skill
