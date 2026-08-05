@@ -355,6 +355,23 @@ start fresh — plugin/preset changes are not hot-reloaded).
 
 **Upgrade is complete when `04_validate.sh` exits 0.**
 
+### Updating coding tools
+
+The install scripts skip tools that are already installed. To check and
+update individual coding tools (opencode, Codex CLI, Claude Code, Pi,
+oh-my-opencode-slim, LiteLLM, Grafana, Prometheus):
+
+```bash
+./scripts/update.sh              # interactive: show versions, ask which to update
+./scripts/update.sh --check      # show version table only
+./scripts/update.sh --all        # update all with updates available
+./scripts/update.sh --dry-run    # show what would be updated, no changes
+```
+
+This does NOT touch passwords, API keys, or virtual keys — only updates
+binaries, npm packages, and Docker images. After updating Docker images,
+the script automatically pulls and restarts the affected service.
+
 ---
 
 ## Uninstall

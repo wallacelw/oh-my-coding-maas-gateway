@@ -119,6 +119,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | 03d | `03d_pi.sh` | Install Pi agent + mint key + write models.json |
 | 04 | `04_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi for partial runs) |
 | 05 | `05_skill.sh` | Install companion skill into detected coding agents (--dry-run, --no-skill, --yes) |
+| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Detects versions, offers selective updates for opencode, slim, Codex, Claude Code, Pi, LiteLLM, Grafana, Prometheus |
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key) |
