@@ -92,19 +92,25 @@ If Grafana looks stale: `docker compose restart grafana`.
 
 ### Update coding tools only
 
-To check and update individual coding tools (opencode, Codex CLI, Claude
-Code, Pi, oh-my-opencode-slim, LiteLLM, Grafana, Prometheus) without
-re-running the full pipeline:
+To check and update individual components without re-running the full
+pipeline. Components are grouped into two categories:
+
+- **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
+  Code, Pi agent
+- **Infrastructure** — LiteLLM, Grafana, Prometheus
 
 ```bash
-./scripts/update.sh              # interactive: show versions, ask which to update
+./scripts/update.sh              # interactive: show grouped table, select which to update
 ./scripts/update.sh --check      # show version table only
 ./scripts/update.sh --all        # update all components with updates available
 ./scripts/update.sh --dry-run    # show what would be updated
 ```
 
-This detects installed components, checks current vs latest versions, and
-offers selective updates. Does NOT touch passwords, API keys, or virtual keys.
+The script detects installed components, checks current vs latest
+versions, and offers selective updates. It does NOT touch passwords,
+API keys, or virtual keys — only updates binaries, npm packages, and
+Docker images. After updating Docker images, the affected service is
+automatically pulled and restarted.
 
 ## Option 4: Uninstall
 
