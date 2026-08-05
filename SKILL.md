@@ -295,6 +295,7 @@ Grafana: `http://127.0.0.1:3000` — 39-panel dashboard.
 | Port 4000/3000/9090 in use | `lsof -i :<port>`, stop conflicting process |
 | `git pull` conflicts on upgrade | `git stash && git pull && git stash pop` |
 | Coding tool outdated version | `./scripts/update.sh --check` to see available updates, then `./scripts/update.sh` to update |
+| Stale models in config (glm-5, deepseek-v3.2) | `./scripts/03a_opencode.sh && ./scripts/03d_pi.sh` to regenerate configs from current catalog |
 
 ## Remote Access
 

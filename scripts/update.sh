@@ -42,6 +42,7 @@ for arg in "$@"; do
       echo "  --dry-run   Show what would be updated, make no changes"
       exit 0
       ;;
+    *) log_error "Unknown flag: $arg"; exit 1 ;;
   esac
 done
 
@@ -68,7 +69,7 @@ github_latest() {
 # Get latest version from npm
 npm_latest() {
   local pkg="$1"
-  npm view "$pkg" version 2>/dev/null
+  timeout 15 npm view "$pkg" version 2>/dev/null
 }
 
 # Strip leading 'v' from version strings
@@ -331,7 +332,7 @@ update_component() {
   case "$method" in
     npm:*)
       local pkg="${method#npm:}"
-      run_filtered "npm" npm install -g "$pkg@latest"
+      run_filtered "npm" npm install -g "$pkg@latest" || { log_error "$name update failed"; return 1; }
       log_ok "$name updated to $(npm_latest "$pkg")"
       ;;
 
@@ -341,7 +342,7 @@ update_component() {
       tmpfile=$(mktemp /tmp/update_XXXXXX.sh)
       trap 'rm -f "$tmpfile"' RETURN
       if curl -fsSL --max-time 60 "$url" -o "$tmpfile"; then
-        run_filtered "$name" bash "$tmpfile"
+        run_filtered "$name" bash "$tmpfile" || { log_error "$name update failed"; return 1; }
         hash -r 2>/dev/null || true
         log_ok "$name updated"
       else
@@ -353,10 +354,12 @@ update_component() {
 
     slim)
       # Update slim plugin
-      run_filtered "slim" bunx "oh-my-opencode-slim@latest" install --companion=no
-      # Update SLIM_VERSION in 03a_opencode.sh
+      run_filtered "slim" bunx "oh-my-opencode-slim@latest" install --companion=no \
+        || { log_error "oh-my-opencode-slim update failed"; return 1; }
+      # Update SLIM_VERSION in 03a_opencode.sh (repo file mutation)
       local actual_ver
       actual_ver=$(npm_latest oh-my-opencode-slim)
+      log_dim "Updating SLIM_VERSION in scripts/03a_opencode.sh"
       sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$actual_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
       log_ok "oh-my-opencode-slim updated to $actual_ver"
       ;;
@@ -369,12 +372,13 @@ update_component() {
       local image_prefix="${rest%%:*}"
       local tag_prefix="${rest#*:}"
 
-      # Update image tag in docker-compose.yml
-      sed -i "s|image: ${image_prefix}.*|image: ${image_prefix}${new_ver}|" docker-compose.yml
+      # Update image tag in docker-compose.yml (repo file mutation)
+      log_dim "Updating image tag in docker-compose.yml"
+      sed -i "s|image: ${image_prefix}:${tag_prefix}.*|image: ${image_prefix}:${tag_prefix}${new_ver}|" docker-compose.yml
 
       # Pull and restart
-      run_filtered "docker" docker compose pull "$service"
-      run_filtered "docker" docker compose up -d "$service"
+      run_filtered "docker" docker compose pull "$service" || { log_error "$name pull failed"; return 1; }
+      run_filtered "docker" docker compose up -d "$service" || { log_error "$name restart failed"; return 1; }
       log_ok "$name updated to $new_ver"
       ;;
   esac
