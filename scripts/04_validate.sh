@@ -314,8 +314,8 @@ if [ "$RUN_OPENCODE" = true ]; then
       "LiteLLM apiKey set" '.provider.LiteLLM.options.apiKey' \
       "LiteLLM apiKey starts with sk-" '(.provider.LiteLLM.options.apiKey | startswith("sk-"))' \
       "Huawei-MaaS provider defined" '.provider["Huawei-MaaS"]' \
-      "Huawei-MaaS has 6+ models" '.provider["Huawei-MaaS"].models | keys | length >= 6' \
-      "LiteLLM has 6+ models" '.provider.LiteLLM.models | keys | length >= 6' \
+      "Huawei-MaaS has $MODEL_COUNT+ models" ".provider[\"Huawei-MaaS\"].models | keys | length >= $MODEL_COUNT" \
+      "LiteLLM has $MODEL_COUNT+ models" ".provider.LiteLLM.models | keys | length >= $MODEL_COUNT" \
       "oh-my-opencode-slim plugin" '.plugin | index("oh-my-opencode-slim")' \
       "explore agent disabled" '.agent.explore.disable == true' \
       "general agent disabled" '.agent.general.disable == true' \
@@ -727,10 +727,10 @@ if [ "$RUN_PI" = true ]; then
       fail "providers.LiteLLM.api not set to openai-completions (got: $PI_API)"
     fi
     PI_MODEL_COUNT=$(jq -r '.providers.LiteLLM.models | length' "$PI_CONFIG" 2>/dev/null || echo "0")
-    if [ "$PI_MODEL_COUNT" -ge 6 ]; then
-      pass "providers.LiteLLM.models has $PI_MODEL_COUNT models (>= 6)"
+    if [ "$PI_MODEL_COUNT" -ge "$MODEL_COUNT" ]; then
+      pass "providers.LiteLLM.models has $PI_MODEL_COUNT models (>= $MODEL_COUNT)"
     else
-      fail "providers.LiteLLM.models has only $PI_MODEL_COUNT models (expected >= 6)"
+      fail "providers.LiteLLM.models has only $PI_MODEL_COUNT models (expected >= $MODEL_COUNT)"
     fi
   else
     fail_n 4 "No Pi config file — skipping 4 provider checks"

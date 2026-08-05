@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-05
+
+### Fixed (council review)
+
+- **Validation thresholds**: replaced hardcoded `>= 6` with `$MODEL_COUNT`
+  in `04_validate.sh` — validation now self-adjusts to catalog size
+- **Docker image tag generation in update.sh**: `tag_prefix` was parsed
+  but never used in sed, producing invalid image references — now correctly
+  interpolates `:v` prefix for LiteLLM/Prometheus and `:` for Grafana
+- **run_filtered return values**: update.sh now checks exit codes and
+  reports failures instead of false success
+- **opencode.json permissions**: regenerated to 600 (was 644, exposed
+  virtual key)
+- **Stale model references removed**: regenerated opencode.json and
+  pi models.json via `03a_opencode.sh` + `03d_pi.sh` — removed `glm-5`
+  and `deepseek-v3.2` that were no longer in catalog
+- **Slim template version synced**: `@2.2.9` → `@2.2.10` in
+  `oh-my-opencode-slim.json.template`
+
+### Added
+
+- **Unknown flag rejection** in update.sh (project rule compliance)
+- **npm_latest timeout** (15s) to prevent hanging on slow registry
+- **Repo file mutation warnings** in update.sh before editing
+  `docker-compose.yml` and `03a_opencode.sh`
+- **Stale model recovery** entry in SKILL.md Recovery table
+- **--dry-run** documented in README.md
+- **Repo file mutation** documented in README.md
+
+### Council Review
+
+Three councillors (alpha/gpt-5.6-luna, beta/gemini-3-pro, gamma/claude-opus-5)
+reviewed the project from code quality, architecture, and security/UX
+perspectives. All agreed on the fixes above. See council report for details.
+
 ## [1.4.10] - 2026-08-05
 
 ### Updated

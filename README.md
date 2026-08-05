@@ -79,9 +79,12 @@ Pi, LiteLLM, Grafana, Prometheus) without re-running the full pipeline:
 ./scripts/update.sh              # interactive: show versions, select which to update
 ./scripts/update.sh --check      # show version table only
 ./scripts/update.sh --all        # update all with updates available
+./scripts/update.sh --dry-run    # show what would be updated, no changes
 ```
 
-Does not touch passwords, API keys, or virtual keys.
+Does not touch passwords, API keys, or virtual keys. Note: updating
+Docker images or slim plugin modifies `docker-compose.yml` and
+`scripts/03a_opencode.sh` in-place — commit these changes to persist.
 
 ---
 
