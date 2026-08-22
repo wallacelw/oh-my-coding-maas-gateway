@@ -357,11 +357,13 @@ update_component() {
       run_filtered "slim" bunx "oh-my-opencode-slim@latest" install --companion=no \
         || { log_error "oh-my-opencode-slim update failed"; return 1; }
       # Update SLIM_VERSION in 03a_opencode.sh (repo file mutation)
-      local actual_ver
-      actual_ver=$(npm_latest oh-my-opencode-slim)
+      if [ -z "$new_ver" ]; then
+        log_error "Cannot update oh-my-opencode-slim: latest version unknown"
+        return 1
+      fi
       log_dim "Updating SLIM_VERSION in scripts/03a_opencode.sh"
-      sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$actual_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
-      log_ok "oh-my-opencode-slim updated to $actual_ver"
+      sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$new_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
+      log_ok "oh-my-opencode-slim updated to $new_ver"
       ;;
 
     docker:*)

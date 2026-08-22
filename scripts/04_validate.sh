@@ -165,7 +165,7 @@ if [ "$RUN_LITELLM" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Docker service health"
   else
-    RUNNING=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | wc -l)
+    RUNNING=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | wc -l || true)
     if [ "$RUNNING" -ge 4 ]; then
       pass "$RUNNING services running"
     else
@@ -477,10 +477,10 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Grafana reachability"
   elif curl -sf -m 5 http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
-    GRAFANA_DB_COUNT=$(curl -sf -m 5 -u "admin:${GRAFANA_ADMIN_PASSWORD:-admin}" "http://127.0.0.1:3000/api/search?query=oh-my-coding" 2>/dev/null | jq 'length' 2>/dev/null || echo 0)
+    GRAFANA_DB_COUNT=$(curl -sf -m 5 --config - "http://127.0.0.1:3000/api/search?query=oh-my-coding" 2>/dev/null <<<"user = \"admin:${GRAFANA_ADMIN_PASSWORD:-admin}\"" | jq 'length' 2>/dev/null || echo 0)
     if [ "$GRAFANA_DB_COUNT" -gt 0 ]; then
       pass "Grafana reachable with dashboard provisioned"
-      DS_NAME=$(curl -sf -m 5 -u "admin:${GRAFANA_ADMIN_PASSWORD:-admin}" "http://127.0.0.1:3000/api/datasources/name/Prometheus" 2>/dev/null | jq -r '.name // empty' 2>/dev/null || true)
+      DS_NAME=$(curl -sf -m 5 --config - "http://127.0.0.1:3000/api/datasources/name/Prometheus" 2>/dev/null <<<"user = \"admin:${GRAFANA_ADMIN_PASSWORD:-admin}\"" | jq -r '.name // empty' 2>/dev/null || true)
       if [ "$DS_NAME" = "Prometheus" ]; then
         pass "Grafana Prometheus datasource configured"
       else

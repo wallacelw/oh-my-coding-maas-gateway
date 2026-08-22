@@ -87,7 +87,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | Service | URL | Auth |
 |----------|-----|------|
 | Prometheus | `http://127.0.0.1:9090` | None (bound to localhost) |
-| Grafana | `http://127.0.0.1:3000` | Anonymous (Viewer role) |
+| Grafana | `http://127.0.0.1:3000` | admin password (from .env) |
 
 **Tool connections (what each tool points to):**
 
@@ -288,7 +288,7 @@ dashboard.
 | Service | Port | Purpose |
 |---------|------|---------|
 | Prometheus | 9090 | Metrics storage + querying |
-| Grafana | 3000 | Dashboard visualization (anonymous, no login) |
+| Grafana | 3000 | Dashboard visualization (admin login required) |
 
 Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
 (default: `30d`).
@@ -333,7 +333,7 @@ determines routing.
 
 ### Plugin: oh-my-opencode-slim
 
-`oh-my-opencode-slim` (v2.2.9) installed via `bunx`. Provides:
+`oh-my-opencode-slim` (v2.2.15) installed via `bunx`. Provides:
 
 - **4 presets** — control routing (proxy vs direct) and model selection
 - **7 agents** (1 disabled) — orchestrator, oracle, council, librarian, explorer, designer, fixer (observer disabled)

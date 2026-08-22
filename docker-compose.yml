@@ -9,8 +9,11 @@ x-default: &default
 services:
   litellm:
     <<: *default
+    init: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
     container_name: litellm_proxy
-    image: ghcr.io/berriai/litellm:v1.95.0
+    image: ghcr.io/berriai/litellm:v1.97.0
     entrypoint: ["/app/entrypoint.sh"]
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:4000:4000"
@@ -49,6 +52,10 @@ services:
 
   db:
     <<: *default
+    init: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    cap_add: ["CHOWN", "SETUID", "SETGID"]
     image: postgres:16-alpine
     container_name: litellm_pg_db
     environment:
@@ -72,7 +79,10 @@ services:
 
   prometheus:
     <<: *default
-    image: prom/prometheus:v3.13.2
+    init: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    image: prom/prometheus:v3.14.0
     container_name: litellm_prometheus
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:9090:9090"
@@ -93,7 +103,10 @@ services:
 
   grafana:
     <<: *default
-    image: grafana/grafana:13.1.2
+    init: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    image: grafana/grafana:13.1.4
     container_name: litellm_grafana
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:3000:3000"
@@ -104,8 +117,6 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     depends_on:
       prometheus:
         condition: service_started

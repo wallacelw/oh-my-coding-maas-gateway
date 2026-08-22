@@ -57,7 +57,7 @@ cd ~/oh-my-coding-maas-gateway
 |---------|-----|------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key |
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key (from `.env`) |
-| Grafana Dashboard | `http://127.0.0.1:3000` | Anonymous |
+| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) |
 | Prometheus | `http://127.0.0.1:9090` | None |
 
 ---

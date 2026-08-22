@@ -137,10 +137,16 @@ mint_or_reuse_key() {
   if [ -n "$existing_key_id" ]; then
     # Delete the existing key (by ID) so we can reuse the alias
     log_info "Deleting existing key with alias '$alias'." >&2
+    local delete_body
+    delete_body=$(jq -nc --arg id "$existing_key_id" '{keys: [$id]}')
+    local delete_rc
     curl -sf -m 10 -X POST "$litellm_url/key/delete" \
       -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
       -H "Content-Type: application/json" \
-      -d "{\"keys\": [\"$existing_key_id\"]}" &>/dev/null || true
+      -d "$delete_body" &>/dev/null && delete_rc=0 || delete_rc=$?
+    if [ "$delete_rc" -ne 0 ]; then
+      log_warn "Failed to delete existing key with alias '$alias'. Minting may fail if alias still exists." >&2
+    fi
   fi
 
   # ── Mint the key (retry with backoff) ──

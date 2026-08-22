@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/oh-my-opencode-slim@2.2.10/oh-my-opencode-slim.schema.json",
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@2.2.15/oh-my-opencode-slim.schema.json",
   "preset": "LiteLLM-Default",
   "disabled_agents": ["observer"],
   "presets": {

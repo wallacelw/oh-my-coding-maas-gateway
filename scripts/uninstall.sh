@@ -154,14 +154,18 @@ remove_path() {
 
 remove_glob() {
   local pattern="$1" label="$2"
-  local count
-  count=$(ls -d $pattern 2>/dev/null | wc -l || true)
+  local dir base count
+  dir=$(dirname "$pattern")
+  base=$(basename "$pattern")
+  count=$(find "$dir" -maxdepth 1 -name "$base" 2>/dev/null | wc -l || true)
   if [ "$count" -gt 0 ]; then
     if [ "$DRY_RUN" = true ]; then
-      for f in $pattern; do log_dim "  Would remove: $f"; done
+      find "$dir" -maxdepth 1 -name "$base" 2>/dev/null | while IFS= read -r f; do
+        log_dim "  Would remove: $f"
+      done
     else
-      rm -rf $pattern
-      log_ok "Removed $count $label backup(s): $pattern"
+      find "$dir" -maxdepth 1 -name "$base" -exec rm -rf {} + 2>/dev/null || true
+      log_ok "Removed $count $label backup(s)"
     fi
   fi
 }

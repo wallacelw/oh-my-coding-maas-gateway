@@ -106,7 +106,7 @@ per format (dual OpenAI + Anthropic), 8N total. Checks ports 4000/5432/9090/
 ### `03a_opencode.sh`
 
 Installs the opencode binary (via curl, output filtered with `run_filtered`),
-the oh-my-opencode-slim plugin (v2.2.9, via bunx — 4 presets, 7 agents, output
+the oh-my-opencode-slim plugin (v2.2.15, via bunx — 4 presets, 7 agents, output
 filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.
@@ -179,10 +179,10 @@ Skill locations:
 |------|--------|
 | `--dry-run` | Structure checks only, no network calls. |
 | `--litellm-only` | Only LiteLLM proxy checks. |
-| `--opencode-only` | Only opencode config checks. |
-| `--codex-only` | Only Codex CLI config checks. |
-| `--claude-code-only` | Only Claude Code CLI config checks. |
-| `--pi-only` | Only Pi agent config checks. |
+| `--opencode-only` | LiteLLM + opencode config checks. |
+| `--codex-only` | LiteLLM + Codex CLI config checks. |
+| `--claude-code-only` | LiteLLM + Claude Code CLI config checks. |
+| `--pi-only` | LiteLLM + Pi agent config checks. |
 | `--skip-opencode` | Skip opencode checks (additive). |
 | `--skip-codex` | Skip Codex checks (additive). |
 | `--skip-claude-code` | Skip Claude Code checks (additive). |
@@ -457,8 +457,8 @@ pi
 
 ### Monitoring
 
-- **Grafana:** `http://127.0.0.1:3000` — 39-panel dashboard (anonymous, no
-  login). 7 sections: At-a-glance, Latency, Errors & Health, Throughput &
+- **Grafana:** `http://127.0.0.1:3000` — 39-panel dashboard (login: admin /
+  your Grafana password from .env). 7 sections: At-a-glance, Latency, Errors & Health, Throughput &
   Capacity, Tokens, Cache, Cost. Time window selectable (default 1h).
 - **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
   keys, spend, budgets. Login: `admin` / your master key.
@@ -498,7 +498,7 @@ group, `ufw allow from <your-ip> to any port 4000`).
 |---------|-----|------|---------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key | API gateway |
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key | View keys, spend, deployments |
-| Grafana Dashboard | `http://127.0.0.1:3000` | Anonymous | 39-panel observability dashboard |
+| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 39-panel observability dashboard |
 | Prometheus | `http://127.0.0.1:9090` | None | Metrics storage |
 | PostgreSQL | `localhost:5432` (internal) | — | LiteLLM database |
 

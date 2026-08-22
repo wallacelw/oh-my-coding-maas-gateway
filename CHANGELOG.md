@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-08-23
+
+### Fixed
+
+- **update.sh: empty version corruption** — slim update used fresh npm
+  lookup bypassing validation; now uses pre-validated version with guard
+- **uninstall.sh: unquoted glob expansion** — paths with spaces could
+  cause rm -rf to delete unintended directories; rewritten with find
+- **04_validate.sh: docker missing crash** — docker compose ps under
+  set -e killed script with opaque error; added fallback
+- **keys.sh: JSON built via string interpolation** — delete request
+  body now built with jq -nc for safety
+- **keys.sh: silent key deletion failure** — now warns if deletion
+  fails before minting
+- **04_validate.sh: Grafana password in process args** — credentials
+  now passed via curl --config stdin instead of -u CLI arg
+- **INSTALLATION.md: misleading --xxx-only flag docs** — clarified
+  that these flags include LiteLLM checks
+
+### Changed
+
+- **Grafana: anonymous access disabled** — login now required
+  (admin user + password from .env). Health endpoint still unauthenticated.
+- **Docker container hardening** — added init:true,
+  no-new-privileges, cap_drop:ALL to all services
+
+### Updated
+
+- LiteLLM v1.95.0 → v1.97.0 (credential header redaction security fix)
+- Prometheus v3.13.2 → v3.14.0 (stack overflow fix, shutdown CPU bug)
+- Grafana 13.1.2 → 13.1.4 (CVE-2026-17183 security fix)
+- oh-my-opencode-slim v2.2.10 → v2.2.15
+
 ## [1.5.0] - 2026-08-06
 
 ### Fixed (council review)
