@@ -63,5 +63,8 @@
     "explore": { "disable": true },
     "general": { "disable": true }
   },
+  "permission": {
+    "websearch": "allow"
+  },
   "lsp": true
 }

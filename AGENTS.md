@@ -108,8 +108,37 @@ This project uses semantic versioning (`MAJOR.MINOR.PATCH`):
 - **MINOR** — new features, new components, significant behavioral changes
 - **PATCH** — bug fixes, error corrections, documentation fixes
 
-Bump the version in `VERSION`, add a `CHANGELOG.md` entry, and create a
-GitHub release with `gh release create`.
+### Version bumps (always)
+
+Every unit of work gets a version bump for git-level tracking and rollback:
+
+1. Bump the version in `VERSION`.
+2. Add a `CHANGELOG.md` entry.
+3. Commit and push.
+
+This applies to **all** changes, including trivial fixes and doc-only
+edits. The version bump is the progress signal — it does not require a
+GitHub release or tag.
+
+### GitHub releases (milestones only)
+
+Create a GitHub release with `gh release create` only for **meaningful
+milestones**:
+
+- MINOR versions (new features, new components)
+- Significant PATCH clusters (security hardening, multi-bug fix rounds)
+- User-visible behavior changes worth announcing
+
+Do **not** create a release or tag for routine PATCH fixes (doc-only,
+config tweaks, trivial bug fixes). The `VERSION` bump + `CHANGELOG` entry
+is sufficient — git history provides rollback.
+
+### Batching
+
+Batch related changes into one version bump instead of releasing each
+incremental step. For example, a dashboard iteration across 10 commits
+should be one CHANGELOG entry and one version bump, not 10 separate
+releases.
 
 ## Never Commit
 
