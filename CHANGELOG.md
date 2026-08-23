@@ -33,10 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Updated
 
-- LiteLLM v1.95.0 → v1.97.0 (credential header redaction security fix)
+- LiteLLM v1.95.0 → v1.98.0 (credential header redaction, SSE keepalive, spend perf)
 - Prometheus v3.13.2 → v3.14.0 (stack overflow fix, shutdown CPU bug)
-- Grafana 13.1.2 → 13.1.4 (CVE-2026-17183 security fix)
+- Grafana 13.1.2 → 13.2.0 (CVE-2026-17183 security fix, new dashboard features)
 - oh-my-opencode-slim v2.2.10 → v2.2.15
+- Codex CLI 0.146.0 → 0.149.0 (agents dashboard, codex doctor)
+- Claude Code 2.1.232 → 2.1.241
+- Pi agent 0.83.0 → 0.84.2
 
 ## [1.5.0] - 2026-08-06
 

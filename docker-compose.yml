@@ -13,7 +13,7 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
     container_name: litellm_proxy
-    image: ghcr.io/berriai/litellm:v1.97.0
+    image: ghcr.io/berriai/litellm:v1.98.0
     entrypoint: ["/app/entrypoint.sh"]
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:4000:4000"
@@ -106,7 +106,7 @@ services:
     init: true
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
-    image: grafana/grafana:13.1.4
+    image: grafana/grafana:13.2.0
     container_name: litellm_grafana
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:3000:3000"
