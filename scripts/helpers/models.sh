@@ -4,7 +4,8 @@
 # Single source of truth for the Huawei MaaS model list. Sourced by
 # 02_litellm.sh (config generation) and 04_validate.sh (validation).
 #
-# To add/remove a model: edit this file only.
+# To add/remove a model: edit this file, then update config.yaml.template,
+# opencode.json.template, model_catalog.json, and slim.json.template.
 #
 # Format: model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
 

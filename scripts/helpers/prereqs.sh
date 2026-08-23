@@ -19,14 +19,6 @@ if ! declare -F log_error >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
-# Sudo availability guard (checked once at source time)
-# ---------------------------------------------------------------------------
-if [ "$(id -u)" -ne 0 ] && ! command -v sudo &>/dev/null; then
-  log_error "sudo is required when not running as root. Install it or run as root."
-  exit 1
-fi
-
-# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
@@ -34,6 +26,9 @@ fi
 _prereq_sudo() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
+  elif ! command -v sudo &>/dev/null; then
+    log_error "sudo is required when not running as root. Install it or run as root."
+    return 1
   else
     sudo "$@"
   fi

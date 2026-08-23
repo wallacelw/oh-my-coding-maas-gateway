@@ -361,7 +361,8 @@ update_component() {
         log_error "Cannot update oh-my-opencode-slim: latest version unknown"
         return 1
       fi
-      log_dim "Updating SLIM_VERSION in scripts/03a_opencode.sh"
+      log_info "Updating SLIM_VERSION in scripts/03a_opencode.sh (repo file will be modified)"
+      cp "$SCRIPT_DIR/03a_opencode.sh" "$SCRIPT_DIR/03a_opencode.sh.bak.$(date +%Y%m%d%H%M%S)"
       sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$new_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
       log_ok "oh-my-opencode-slim updated to $new_ver"
       ;;
@@ -375,7 +376,8 @@ update_component() {
       local tag_prefix="${rest#*:}"
 
       # Update image tag in docker-compose.yml (repo file mutation)
-      log_dim "Updating image tag in docker-compose.yml"
+      log_info "Updating image tag in docker-compose.yml (repo file will be modified)"
+      cp docker-compose.yml "docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
       sed -i "s|image: ${image_prefix}:${tag_prefix}.*|image: ${image_prefix}:${tag_prefix}${new_ver}|" docker-compose.yml
 
       # Pull and restart

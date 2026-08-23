@@ -306,9 +306,8 @@ echo ""
 
 # ── Non-root warning ──
 if [ "$(id -u)" -ne 0 ]; then
-  log_warn "Not running as root. Some steps (apt-get, npm install -g, Docker) may fail."
-  log_dim "  Recommended: run the oneliner with sudo:"
-  log_dim "    curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | sudo bash"
+  log_info "Not running as root. Individual system installs will prompt for sudo as needed."
+  log_dim "  Do NOT run the entire script as root — it would cause file ownership issues."
   echo ""
 fi
 
@@ -405,8 +404,8 @@ if [ "$TOOL_SPECIFIED" = false ] && is_interactive; then
         if prompt_yesno "Install Pi?" y; then INSTALL_PI=true; else INSTALL_PI=false; fi
         ;;
       *)
-        log_warn "Invalid choice. Defaulting to all."
-        INSTALL_OPENCODE=true; INSTALL_CODEX=true; INSTALL_CLAUDE_CODE=true; INSTALL_PI=true
+        log_error "Invalid choice: '${choice}'. Please enter a number 1-7."
+        exit 1
         ;;
     esac
 
@@ -607,7 +606,7 @@ printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Version:"           "v${PROJECT_VERSION
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Project dir:"       "$PROJECT_DIR"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM proxy:"     "$LITELLM_URL"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM Admin UI:"  "${LITELLM_URL}/ui"
-printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Grafana:"           "http://127.0.0.1:3000 (anonymous)"
+printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Grafana:"           "http://127.0.0.1:3000 (login: admin / password from .env)"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Prometheus:"        "http://127.0.0.1:9090"
 
 if [ "$INSTALL_OPENCODE" = true ] && [ -f "$HOME/.config/opencode/opencode.json" ]; then

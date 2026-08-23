@@ -259,7 +259,10 @@ if [ "$REMOVE_OPENCODE" = true ]; then
     log_dim "  Would remove: $HOME/.bun/ (runtime)"
   else
     [ -d "$HOME/.opencode" ] && rm -rf "$HOME/.opencode" && log_ok "Removed binary: $HOME/.opencode/"
-    [ -d "$HOME/.bun" ] && rm -rf "$HOME/.bun" && log_ok "Removed runtime: $HOME/.bun/"
+    if [ -d "$HOME/.bun" ]; then
+      log_warn "Removing bun runtime: $HOME/.bun/ (may break other bun projects)"
+      rm -rf "$HOME/.bun" && log_ok "Removed runtime: $HOME/.bun/"
+    fi
     # Clean .bashrc entries
     remove_bashrc_section "^# bun$"
     remove_bashrc_section "^# opencode$"
@@ -384,6 +387,7 @@ if [ "$REMOVE_DOCKER" = true ]; then
     if [ "$DRY_RUN" = true ]; then
       log_dim "  Would run: docker compose down -v --rmi all"
     else
+      log_warn "Removing all containers, volumes (data, metrics, keys), and images — this is irreversible"
       compose_file="$PROJECT_DIR/docker-compose.yml"
       if [ -f "$compose_file" ]; then
         set +e

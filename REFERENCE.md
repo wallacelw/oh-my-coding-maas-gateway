@@ -123,7 +123,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key) |
-| — | `helpers/models.sh` | Model catalog — single source of truth (MODELS array, sourced by 02_litellm.sh + 04_validate.sh) |
+| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh + 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, `model_catalog.json`, and `slim.json.template` when adding models. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
 
 ### Models
@@ -293,16 +293,17 @@ dashboard.
 Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
 (default: `30d`).
 
-**Dashboard** (`configs/grafana/dashboards/main.json`) — 39 panels across 7
-sections, default 1h time window, 30s refresh:
+**Dashboard** (`configs/grafana/dashboards/main.json`) — 39 panels (7 row
+headers + 32 visualization panels) across 7 sections, default 1h time
+window, 30s refresh:
 
 1. **At-a-glance** — Active Requests, RPS, RPM, Error %, TPS, TPM, Models Healthy, Spend (window) (8 stat panels)
 2. **Latency** — TTFT by model, TPOT by model, End-to-end latency, LLM API latency, Proxy overhead, Queue wait (6 timeseries)
 3. **Errors & Health** — Errors by model, Error status codes (pie), Deployment state (state-timeline) (3 panels)
 4. **Throughput & Capacity** — Total/Successful/Failed Requests (window), RPM by model, TPM by model (5 panels)
-5. **Tokens** — Input tokens, Cached input tokens, Output tokens, Reasoning tokens (4 timeseries)
-6. **Cache** — Provider cache reads, Cache misses/min, Cache hit ratio (stat) (3 panels)
-7. **Cost** — Total cost, Cost per model, Spend rate (3 panels)
+5. **Tokens** — Input tokens, Output tokens, Reasoning tokens (3 timeseries)
+6. **Cost** — Total cost, Cost per model, Spend rate, Cache misses/min, Cached input tokens, Provider cache reads, Cache hit ratio (7 panels)
+7. **Cache** — (reserved, no panels yet)
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
 `$window` (rate window: 1m/5m/15m/1h, default 15m).
@@ -643,8 +644,9 @@ re-configuration after rotation.
 | Docker containers + volumes + images | — | `--docker` |
 | Repository (`.env`, configs, scripts) | `$PROJECT_DIR` | `--repo` |
 
-Binaries (opencode, codex, claude, pi) are **not** removed — only configs
-this project created. Backup files (`*.bak.*`) are also removed.
+Binaries (opencode, codex, claude, pi), runtimes (bun, pi-node), configs,
+and `.bashrc` entries are all removed. Backup files (`*.bak.*`) are also
+removed. Use `--dry-run` to preview before running.
 
 ```bash
 ./scripts/uninstall.sh --all --dry-run        # preview
