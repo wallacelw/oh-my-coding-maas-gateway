@@ -6,6 +6,8 @@
 # in the search pattern to avoid quoting issues.
 # Patch both the /app/litellm/ source and the venv site-packages copy.
 # Detect Python version dynamically from the venv to avoid hardcoding.
+# Note: LiteLLM v1.97.0+ removed this probe text, so the sed is now a
+# no-op. Kept for backward compatibility if users pin to older images.
 PYTHON_VER="$(ls /app/.venv/lib/ 2>/dev/null | head -1)"
 for f in \
   /app/litellm/proxy/health_check.py \

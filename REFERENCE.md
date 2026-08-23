@@ -296,7 +296,7 @@ Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
 **Dashboard** (`configs/grafana/dashboards/main.json`) — 39 panels across 7
 sections, default 1h time window, 30s refresh:
 
-1. **At-a-glance** — Active Requests, RPS, RPM, Error %, TPS, TPM, Models Healthy, Spend (8 stat panels)
+1. **At-a-glance** — Active Requests, RPS, RPM, Error %, TPS, TPM, Models Healthy, Spend (window) (8 stat panels)
 2. **Latency** — TTFT by model, TPOT by model, End-to-end latency, LLM API latency, Proxy overhead, Queue wait (6 timeseries)
 3. **Errors & Health** — Errors by model, Error status codes (pie), Deployment state (state-timeline) (3 panels)
 4. **Throughput & Capacity** — Total/Successful/Failed Requests (window), RPM by model, TPM by model (5 panels)
@@ -306,6 +306,19 @@ sections, default 1h time window, 30s refresh:
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
 `$window` (rate window: 1m/5m/15m/1h, default 15m).
+
+### Container Security
+
+All 4 Docker services run with container hardening:
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| `init` | `true` | PID 1 signal handling via tini (graceful shutdown) |
+| `security_opt` | `no-new-privileges:true` | Prevents privilege escalation inside containers |
+| `cap_drop` | `ALL` | Drops all Linux capabilities |
+
+The PostgreSQL container adds back only the capabilities it needs for
+startup: `CHOWN`, `SETUID`, `SETGID`, `DAC_OVERRIDE`, `FOWNER`.
 
 
 

@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Codex CLI 0.146.0 → 0.149.0 (agents dashboard, codex doctor)
 - Claude Code 2.1.232 → 2.1.241
 - Pi agent 0.83.0 → 0.84.2
+- entrypoint.sh health-check patch is now a no-op (LiteLLM v1.97.0+
+  removed the probe text; patch kept for backward compatibility)
 
 ## [1.5.0] - 2026-08-06
 
