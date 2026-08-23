@@ -24,6 +24,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **INSTALLATION.md: misleading --xxx-only flag docs** — clarified
   that these flags include LiteLLM checks
 
+### Fixed (council review)
+
+- **bootstrap.sh: stale Grafana label** — summary said "(anonymous)"
+  but login is required; fixed to show login instructions
+- **bootstrap.sh: sudo bash recommendation** — removed harmful root
+  recommendation that broke file ownership; scripts handle sudo internally
+- **bootstrap.sh: invalid menu choice** — typing `q` or invalid input
+  silently triggered full install; now exits with error
+- **REFERENCE.md: false binary removal claim** — docs said binaries
+  aren't removed by uninstall, but they are; corrected
+- **REFERENCE.md: dashboard docs errors** — fixed section order
+  (Cost/Cache swapped), panel counts (32 viz panels, not 39), per-section
+  counts (Tokens=3, Cost=7, Cache=0)
+- **INSTALLATION.md: dashboard panel count** — corrected 39→32 panel
+  references and section order
+- **uninstall.sh: bun removal warning** — now warns before removing
+  ~/.bun (may break other bun projects)
+- **uninstall.sh: destructive docker down warning** — now warns before
+  `docker compose down -v --rmi all` (irreversible data loss)
+- **update.sh: repo file mutation** — now backs up files before sed -i
+  and logs a visible warning
+- **models.sh: false SSOT claim** — docs said "edit this file only"
+  but 5+ files needed; corrected in models.sh, INSTALLATION.md, REFERENCE.md
+- **prereqs.sh: sudo guard at source time** — moved from source-time
+  exit to function-call-time check; validation no longer crashes without sudo
+
 ### Changed
 
 - **Grafana: anonymous access disabled** — login now required
