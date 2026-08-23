@@ -55,7 +55,7 @@ services:
     init: true
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
-    cap_add: ["CHOWN", "SETUID", "SETGID"]
+    cap_add: ["CHOWN", "SETUID", "SETGID", "DAC_OVERRIDE", "FOWNER"]
     image: postgres:16-alpine
     container_name: litellm_pg_db
     environment:
