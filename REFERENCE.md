@@ -26,6 +26,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | `HUAWEI_MAAS_ANTHROPIC_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/anthropic`) | `02_litellm.sh` | URL | None — config value |
 | `HUAWEI_MAAS_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`) | `02_litellm.sh` | URL | None — config value |
 | `BIND_ADDRESS` | `01_env.sh` (default `127.0.0.1`) | docker-compose | `127.0.0.1` or `0.0.0.0` | None — config value |
+| `OPENCODE_ENABLE_EXA` | `01_env.sh` (default `1`) | `03a_opencode.sh`, opencode runtime | `1` or unset | None — feature flag |
 
 **Virtual keys (stored in tool config files, not `.env`):**
 
@@ -353,6 +354,7 @@ determines routing.
 - **7 agents** (1 disabled) — orchestrator, oracle, council, librarian, explorer, designer, fixer (observer disabled)
 - **Council** — 3 councillors running in parallel for consensus decisions
 - **Fallback chains** — each agent has a primary model and optional fallback
+- **Websearch** — opencode's built-in EXA-backed web search tool (no API key required). Enabled via `OPENCODE_ENABLE_EXA=1` (env) + `"permission": {"websearch": "allow"}` (config). Required for custom providers; automatic with the default OpenCode provider.
 
 ### Presets
 

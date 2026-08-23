@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-08-24
+
+### Fixed
+
+- **CHANGELOG section count** — corrected "39→11 sections" to "39→12 sections"
+  and added line count (1104→460).
+- **CHANGELOG version claim** — deprecated fallback keys are deprecated in
+  2.2.15 (not "removed in 2.3.x").
+
+### Added
+
+- **OPENCODE_ENABLE_EXA documented** — added to `configs/.env.template`,
+  `INSTALLATION.md` env var table, `REFERENCE.md` Key Contract table.
+- **03a_opencode.sh** — ensures `OPENCODE_ENABLE_EXA=1` is persisted to
+  `~/.bashrc` during install for custom providers.
+- **Websearch documentation** — added to `INSTALLATION.md` (Using opencode
+  section) and `REFERENCE.md` (opencode plugin section).
+
 ## [1.7.0] - 2026-08-24
 
 ### Added
@@ -17,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Slim template: deprecated fallback config keys** — removed `timeoutMs`,
-  `retryDelayMs`, `retry_on_empty` (removed in oh-my-opencode-slim 2.3.x);
+  `retryDelayMs`, `retry_on_empty` (deprecated in oh-my-opencode-slim 2.2.15);
   replaced with `fallback.maxRetries`. Fixes startup warning.
 - **Slim template: invalid MCP names** — librarian preset referenced
   `websearch` (not an MCP — it's opencode's built-in tool) and `grep_app`
@@ -28,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CHANGELOG compacted** — 39 sections → 11 sections, 1104 → 430 lines.
   Pre-1.0, 1.2.x dashboard saga, and 1.4.x component bumps consolidated
   into summary entries. All git tags preserved for rollback.
+  (39 sections → 12 sections, 1104 → 460 lines)
 - **GitHub releases pruned** — 33 → 8 milestone releases. Intermediate
   releases deleted (tags kept for rollback). Kept: v1.6.1, v1.6.0, v1.5.0,
   v1.4.10, v1.3.1, v1.2.0, v1.1.0, v1.0.0.

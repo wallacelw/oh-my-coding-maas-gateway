@@ -86,6 +86,18 @@ else
   log_ok "Already installed: $(opencode --version 2>/dev/null || echo 'unknown')"
 fi
 
+# ── 2b. Ensure OPENCODE_ENABLE_EXA is persistent ──
+# opencode's built-in websearch (EXA) is disabled for custom providers
+# unless OPENCODE_ENABLE_EXA=1 is in the environment. Add to .bashrc
+# so it persists across shell sessions.
+if [ "$DRY_RUN" = false ]; then
+  if ! grep -q "OPENCODE_ENABLE_EXA" "$HOME/.bashrc" 2>/dev/null; then
+    printf '\n# Enable opencode built-in websearch (EXA) for custom providers\nexport OPENCODE_ENABLE_EXA=1\n' >> "$HOME/.bashrc"
+    log_ok "Added OPENCODE_ENABLE_EXA=1 to ~/.bashrc"
+  fi
+  export OPENCODE_ENABLE_EXA="${OPENCODE_ENABLE_EXA:-1}"
+fi
+
 # ── 3. Install oh-my-opencode-slim plugin ──
 log_info "Installing oh-my-opencode-slim plugin (v${SLIM_VERSION})..."
 if [ -f "$OPENCODE_DIR/oh-my-opencode-slim.json" ] || [ -f "$OPENCODE_DIR/oh-my-opencode-slim.jsonc" ]; then
