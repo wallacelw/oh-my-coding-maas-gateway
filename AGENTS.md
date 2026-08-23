@@ -76,6 +76,41 @@ Fix bugs found in end-to-end review
 Note: `04_validate.sh` uses `--xxx-only` flags (still valid). `bootstrap.sh`
 uses `--tool=` flags.
 
+## Git Author
+
+Before committing, verify the git author matches the GitHub account:
+
+```bash
+git config user.name   # must match gh auth account
+git config user.email  # must match gh auth account email
+```
+
+If they don't match, fix the global config (not local):
+
+```bash
+git config --global user.name  "$(gh api user --jq .login)"
+git config --global user.email "$(gh api user/emails --jq '.[0].email')"
+```
+
+Never set a local `user.name`/`user.email` that differs from the global
+config. If a local override exists, remove it:
+
+```bash
+git config --local --unset user.name
+git config --local --unset user.email
+```
+
+## Versioning
+
+This project uses semantic versioning (`MAJOR.MINOR.PATCH`):
+
+- **MAJOR** — big refactoring, architecture changes, breaking changes
+- **MINOR** — new features, new components, significant behavioral changes
+- **PATCH** — bug fixes, error corrections, documentation fixes
+
+Bump the version in `VERSION`, add a `CHANGELOG.md` entry, and create a
+GitHub release with `gh release create`.
+
 ## Never Commit
 
 - `.env` — contains secrets (blocked by .gitignore + pre-commit hook)
