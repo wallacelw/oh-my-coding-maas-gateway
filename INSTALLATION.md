@@ -459,7 +459,7 @@ pi
 
 - **Grafana:** `http://127.0.0.1:3000` — 32-panel dashboard (login: admin /
   your Grafana password from .env). 7 sections: At-a-glance, Latency, Errors & Health, Throughput &
-  Capacity, Tokens, Cost, Cache. Time window selectable (default 1h).
+  Capacity, Tokens, Cache, Cost. Time window selectable (default 1h).
 - **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
   keys, spend, budgets. Login: `admin` / your master key.
 - **Prometheus:** `http://127.0.0.1:9090` — raw metrics.

@@ -316,6 +316,17 @@ HUAWEI_MAAS_ANTHROPIC_API_BASE="${MAAS_ANTHROPIC_BASE}"
 # 127.0.0.1 = localhost only (default, secure). 0.0.0.0 = all interfaces (remote access).
 BIND_ADDRESS="${BIND_ADDRESS}"
 EOF
+
+# Preserve unknown vars from existing .env (avoid silent data loss on re-run)
+if [ -f "$ENV_FILE" ]; then
+  unknown_vars=$(grep -vE '^(#|$|LITELLM_MASTER_KEY=|LITELLM_SALT_KEY=|DB_PASSWORD=|GRAFANA_ADMIN_PASSWORD=|PROMETHEUS_RETENTION=|HUAWEI_MAAS_API_KEY=|HUAWEI_MAAS_API_KEY_COUNT=|HUAWEI_MAAS_API_KEY_[0-9]+=|HUAWEI_MAAS_API_BASE=|HUAWEI_MAAS_ANTHROPIC_API_BASE=|BIND_ADDRESS=)' "$ENV_FILE" 2>/dev/null || true)
+  if [ -n "$unknown_vars" ]; then
+    echo "" >> "$ENV_FILE.tmp"
+    echo "# ── Custom variables (preserved from previous .env) ──" >> "$ENV_FILE.tmp"
+    echo "$unknown_vars" >> "$ENV_FILE.tmp"
+  fi
+fi
+
 chmod 600 "$ENV_FILE.tmp"
 mv "$ENV_FILE.tmp" "$ENV_FILE"
 trap - EXIT INT TERM

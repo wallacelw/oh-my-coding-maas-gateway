@@ -128,21 +128,21 @@ check_components() {
 
   # 6. LiteLLM (Docker)
   name="litellm"
-  cur=$(grep 'image:.*litellm:' docker-compose.yml 2>/dev/null | sed 's/.*:v//' | tr -d ' ')
+  cur=$(grep 'image:.*litellm:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's/.*:v//' | tr -d ' ')
   new=$(strip_v "$(github_latest BerriAI/litellm)")
   method="docker:litellm:ghcr.io/berriai/litellm:v"
   _store_component "$name" "$cur" "$new" "$method" "infra"
 
   # 7. Prometheus (Docker)
   name="prometheus"
-  cur=$(grep 'image:.*prom/prometheus:' docker-compose.yml 2>/dev/null | sed 's/.*:v//' | tr -d ' ')
+  cur=$(grep 'image:.*prom/prometheus:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's/.*:v//' | tr -d ' ')
   new=$(strip_v "$(github_latest prometheus/prometheus)")
   method="docker:prometheus:prom/prometheus:v"
   _store_component "$name" "$cur" "$new" "$method" "infra"
 
   # 8. Grafana (Docker)
   name="grafana"
-  cur=$(grep 'image:.*grafana/grafana:' docker-compose.yml 2>/dev/null | sed 's/.*grafana://' | tr -d ' ')
+  cur=$(grep 'image:.*grafana/grafana:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's/.*grafana://' | tr -d ' ')
   new=$(strip_v "$(github_latest grafana/grafana)")
   method="docker:grafana:grafana/grafana:"
   _store_component "$name" "$cur" "$new" "$method" "infra"
@@ -377,8 +377,8 @@ update_component() {
 
       # Update image tag in docker-compose.yml (repo file mutation)
       log_info "Updating image tag in docker-compose.yml (repo file will be modified)"
-      cp docker-compose.yml "docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
-      sed -i "s|image: ${image_prefix}:${tag_prefix}.*|image: ${image_prefix}:${tag_prefix}${new_ver}|" docker-compose.yml
+      cp "$PROJECT_DIR/docker-compose.yml" "$PROJECT_DIR/docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
+      sed -i "s|image: ${image_prefix}:${tag_prefix}.*|image: ${image_prefix}:${tag_prefix}${new_ver}|" "$PROJECT_DIR/docker-compose.yml"
 
       # Pull and restart
       run_filtered "docker" docker compose pull "$service" || { log_error "$name pull failed"; return 1; }

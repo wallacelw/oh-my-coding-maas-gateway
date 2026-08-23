@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-08-23
+
+### Fixed (regressions from v1.6.0)
+
+- **REFERENCE.md/INSTALLATION.md: dashboard docs done backwards** — previous
+  fix read JSON array order instead of gridPos.y render order; corrected
+  to Cache(6th)→Cost(7th), Tokens=4, Cost=3, Cache=3
+- **bootstrap.sh: invalid menu exit** — `exit 1` on invalid input killed
+  entire bootstrap; changed to `continue` to re-prompt inside while loop
+
+### Fixed (new bugs from skeptical review)
+
+- **uninstall.sh: Docker filter AND logic** — `--filter "name=litellm_"
+  --filter "name=oh-my-coding"` matched nothing (AND logic); simplified
+  to single `--filter "name=litellm_"`
+- **uninstall.sh: .bashrc permissions** — `mv "$tmp" "$bashrc"` changed
+  .bashrc to 0600; switched to `cat > file` to preserve permissions
+- **docker-compose.yml: Grafana password default** — `:-admin` silently
+  started with weak password; changed to `:?` fail-fast
+- **uninstall.sh: unconditional bun removal** — now prompts
+  "Remove bun runtime? (may break other bun projects) [y/N]"
+- **01_env.sh: silent .env data loss** — re-run deleted user-added custom
+  vars; now preserves unknown vars from existing .env
+- **update.sh: relative docker-compose.yml path** — broke when run from
+  non-project directory; changed all references to use $PROJECT_DIR
+
 ## [1.6.0] - 2026-08-23
 
 ### Fixed

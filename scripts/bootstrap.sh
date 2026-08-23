@@ -404,8 +404,8 @@ if [ "$TOOL_SPECIFIED" = false ] && is_interactive; then
         if prompt_yesno "Install Pi?" y; then INSTALL_PI=true; else INSTALL_PI=false; fi
         ;;
       *)
-        log_error "Invalid choice: '${choice}'. Please enter a number 1-7."
-        exit 1
+        log_warn "Invalid choice: '${choice}'. Please enter a number 1-7."
+        continue
         ;;
     esac
 

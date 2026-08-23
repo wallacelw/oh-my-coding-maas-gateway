@@ -192,7 +192,7 @@ remove_bashrc_block() {
     # Remove lines matching the pattern
     grep -v "$start_marker" "$bashrc" > "$tmp" || true
   fi
-  mv "$tmp" "$bashrc"
+  { cat "$tmp" > "$bashrc" && rm "$tmp"; } || { rm -f "$tmp"; log_warn "Failed to update .bashrc"; }
 }
 
 # Remove a commented section from .bashrc (comment line + following lines until blank line)
@@ -212,7 +212,7 @@ remove_bashrc_section() {
     skip { next }
     { print }
   ' "$bashrc" > "$tmp"
-  mv "$tmp" "$bashrc"
+  { cat "$tmp" > "$bashrc" && rm "$tmp"; } || { rm -f "$tmp"; log_warn "Failed to update .bashrc"; }
 }
 
 # Build summary list
@@ -260,8 +260,11 @@ if [ "$REMOVE_OPENCODE" = true ]; then
   else
     [ -d "$HOME/.opencode" ] && rm -rf "$HOME/.opencode" && log_ok "Removed binary: $HOME/.opencode/"
     if [ -d "$HOME/.bun" ]; then
-      log_warn "Removing bun runtime: $HOME/.bun/ (may break other bun projects)"
-      rm -rf "$HOME/.bun" && log_ok "Removed runtime: $HOME/.bun/"
+      if is_interactive && prompt_yesno "Remove bun runtime? (may break other bun projects)" n; then
+        rm -rf "$HOME/.bun" && log_ok "Removed runtime: $HOME/.bun/"
+      else
+        log_dim "Keeping bun runtime: $HOME/.bun/ (may be used by other projects)"
+      fi
     fi
     # Clean .bashrc entries
     remove_bashrc_section "^# bun$"
@@ -402,7 +405,7 @@ if [ "$REMOVE_DOCKER" = true ]; then
       # Fallback: stop/remove any lingering containers from this project
       # (covers cases where compose project name differs or compose file was missing)
       lingering=""
-      lingering=$(docker ps -a --filter "name=litellm_" --filter "name=oh-my-coding" --format '{{.Names}}' 2>/dev/null || true)
+      lingering=$(docker ps -a --filter "name=litellm_" --format '{{.Names}}' 2>/dev/null || true)
       if [ -n "$lingering" ]; then
         log_warn "Found lingering containers: $lingering"
         echo "$lingering" | while IFS= read -r c; do
