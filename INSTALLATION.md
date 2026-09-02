@@ -106,7 +106,7 @@ per format (dual OpenAI + Anthropic), 8N total. Checks ports 4000/5432/9090/
 ### `03a_opencode.sh`
 
 Installs the opencode binary (via curl, output filtered with `run_filtered`),
-the oh-my-opencode-slim plugin (v2.2.15, via bunx — 4 presets, 7 agents, output
+the oh-my-opencode-slim plugin (v2.2.18, via bunx — 4 presets, 7 agents, output
 filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.

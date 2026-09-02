@@ -24,7 +24,7 @@ OPENCODE_CONFIG="$OPENCODE_DIR/opencode.json"
 
 # Single source of truth for slim version — also substituted into the
 # $schema URL of oh-my-opencode-slim.json.template at install time.
-SLIM_VERSION="2.2.15"
+SLIM_VERSION="2.2.18"
 OPENCODE_INSTALL_URL="https://opencode.ai/install"
 CURL_TIMEOUT=15
 

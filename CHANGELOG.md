@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-09-03
+
+### Changed
+
+- **oh-my-opencode-slim pinned v2.2.15 → v2.2.18** — updated SLIM_VERSION
+  in `03a_opencode.sh`, `$schema` URL in slim template, and doc references
+  in INSTALLATION.md + REFERENCE.md. No breaking changes (same MCP names,
+  same default agent MCPS; one new deprecated key `runtimeOverride` which
+  we don't use).
+
+### Fixed
+
+- **`.env` missing `OPENCODE_ENABLE_EXA`** — added to actual `.env` file
+  (was only in template).
+
 ## [1.7.1] - 2026-08-24
 
 ### Fixed
