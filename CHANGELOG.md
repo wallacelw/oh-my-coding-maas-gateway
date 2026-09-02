@@ -58,10 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **CHANGELOG compacted** — 39 sections → 11 sections, 1104 → 430 lines.
+- **CHANGELOG compacted** — 39 sections → 12 sections, 1104 → 460 lines.
   Pre-1.0, 1.2.x dashboard saga, and 1.4.x component bumps consolidated
   into summary entries. All git tags preserved for rollback.
-  (39 sections → 12 sections, 1104 → 460 lines)
 - **GitHub releases pruned** — 33 → 8 milestone releases. Intermediate
   releases deleted (tags kept for rollback). Kept: v1.6.1, v1.6.0, v1.5.0,
   v1.4.10, v1.3.1, v1.2.0, v1.1.0, v1.0.0.
