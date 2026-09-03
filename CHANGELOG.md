@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-09-03
+
+### Changed
+
+- **Disabled LiteLLM no-Redis warning** — set `LITELLM_DISABLE_NO_REDIS_WARNING=true`
+  in `docker-compose.yml` for our deliberate single-worker setup. PostgreSQL alone
+  is sufficient; Redis is only needed for multi-worker/replica deployments.
+  Validation now passes 84/84 with 0 warnings.
+
+### Added
+
+- Documented `LITELLM_DISABLE_NO_REDIS_WARNING` in `INSTALLATION.md` and
+  `REFERENCE.md` Key Contract table.
+
 ## [1.7.2] - 2026-09-03
 
 ### Changed

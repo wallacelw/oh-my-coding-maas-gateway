@@ -27,6 +27,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | `HUAWEI_MAAS_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`) | `02_litellm.sh` | URL | None — config value |
 | `BIND_ADDRESS` | `01_env.sh` (default `127.0.0.1`) | docker-compose | `127.0.0.1` or `0.0.0.0` | None — config value |
 | `OPENCODE_ENABLE_EXA` | `01_env.sh` (default `1`) | `03a_opencode.sh`, opencode runtime | `1` or unset | None — feature flag |
+| `LITELLM_DISABLE_NO_REDIS_WARNING` | `docker-compose.yml` (fixed `true`) | LiteLLM container | `true` or unset | None — suppresses no-Redis banner for single-worker setup |
 
 **Virtual keys (stored in tool config files, not `.env`):**
 
