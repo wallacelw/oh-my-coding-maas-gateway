@@ -401,6 +401,12 @@ the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 | **beta** | glm-5.2 | Architecture, maintainability, trade-offs, long-term implications |
 | **gamma** | glm-5.2 | Practical implementation, cost-efficiency, verification steps |
 
+> **Note:** Council report labels in the orchestrator's output may show
+> hardcoded example model names (e.g. `gpt-5.6-luna`, `gemini-3-pro`) from
+> the plugin's Council Mode prompt template. These are display labels only —
+> the councillors actually run with the configured model (`glm-5.2`). Verify
+> actual models via LiteLLM logs or the Grafana dashboard.
+
 ### Prerequisites
 
 - `bun` — for `bunx oh-my-opencode-slim install`

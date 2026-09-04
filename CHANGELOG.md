@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-09-05
+
+### Fixed
+
+- **Council model validation hardened** — `04_validate.sh` now checks that
+  councillor models equal `LiteLLM/glm-5.2` (equality check) instead of
+  merely verifying the key exists (truthiness check). Prevents a silent
+  model-substitution regression from passing validation.
+- **Council labeling caveat documented** — added a note in REFERENCE.md
+  explaining that council report labels may show hardcoded example model
+  names from the plugin's Council Mode prompt template (`gpt-5.6-luna`,
+  `gemini-3-pro`), not the actual configured model. The councillors run
+  with `glm-5.2`; verify via LiteLLM logs or Grafana.
+
 ## [1.9.0] - 2026-09-05
 
 ### Added
