@@ -120,7 +120,7 @@ fi
   echo ""
 
   for model_entry in "${MODELS[@]}"; do
-    IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost <<< "$model_entry"
+    IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost cache_read_cost cache_creation_cost <<< "$model_entry"
 
     for i in $(seq 0 $((KEY_COUNT - 1))); do
       if [ "$KEY_COUNT" -gt 1 ]; then
@@ -140,6 +140,12 @@ fi
       echo "      max_output_tokens: $max_output"
       echo "      input_cost_per_token: $input_cost"
       echo "      output_cost_per_token: $output_cost"
+      if [ "${cache_read_cost:-0}" != "0" ]; then
+        echo "      cache_read_input_token_cost: $cache_read_cost"
+      fi
+      if [ "${cache_creation_cost:-0}" != "0" ]; then
+        echo "      cache_creation_input_token_cost: $cache_creation_cost"
+      fi
       echo ""
     done
   done
@@ -153,7 +159,7 @@ fi
   echo ""
 
   for model_entry in "${MODELS[@]}"; do
-    IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost <<< "$model_entry"
+    IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost cache_read_cost cache_creation_cost <<< "$model_entry"
 
     for i in $(seq 0 $((KEY_COUNT - 1))); do
       if [ "$KEY_COUNT" -gt 1 ]; then
@@ -172,6 +178,12 @@ fi
       echo "      max_output_tokens: $max_output"
       echo "      input_cost_per_token: $input_cost"
       echo "      output_cost_per_token: $output_cost"
+      if [ "${cache_read_cost:-0}" != "0" ]; then
+        echo "      cache_read_input_token_cost: $cache_read_cost"
+      fi
+      if [ "${cache_creation_cost:-0}" != "0" ]; then
+        echo "      cache_creation_input_token_cost: $cache_creation_cost"
+      fi
       echo ""
     done
   done

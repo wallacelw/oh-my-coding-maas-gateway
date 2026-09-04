@@ -31,6 +31,7 @@ model_list:
       max_output_tokens: 128000
       input_cost_per_token: 0.0000014
       output_cost_per_token: 0.0000044
+      cache_read_input_token_cost: 0.00000026
 
   - model_name: glm-5.1
     litellm_params:
@@ -46,6 +47,7 @@ model_list:
       max_output_tokens: 128000
       input_cost_per_token: 0.000001078
       output_cost_per_token: 0.000003774
+      cache_read_input_token_cost: 0.00000027
 
   - model_name: deepseek-v4-pro
     litellm_params:

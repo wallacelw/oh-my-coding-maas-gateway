@@ -130,12 +130,18 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 
 ### Models
 
-| Name | Input/Output | RPM | Cost (in/out per token) |
-|------|-------------|-----|------------------------|
-| `glm-5.2` | 192K/128K | 100 | $1.400 / $4.400 × 10⁻⁶ |
-| `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ |
-| `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ |
-| `deepseek-v4-flash` | 1M/128K | 15 | $0.135 / $0.270 × 10⁻⁶ |
+| Name | Input/Output | RPM | Cost (in/out per token) | Cache hit |
+|------|-------------|-----|------------------------|----------|
+| `glm-5.2` | 192K/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ |
+| `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ | $0.270 × 10⁻⁶ |
+| `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ | — |
+| `deepseek-v4-flash` | 1M/128K | 15 | $0.135 / $0.270 × 10⁻⁶ | — |
+
+**Pricing notes:**
+- Prices are peak (Period 1: 08:00–20:59 GMT+8). Off-peak (Period 2: 21:00–07:59) is 70% of peak.
+- glm-5.1 uses ≥32K token tier. <32K tier: input $0.809, output $2.265, cache hit $0.175 (per 1M tokens).
+- Cache hit pricing applies only to glm-5.2 and glm-5.1. DeepSeek models have no cache support.
+- Source: [Huawei MaaS pricing](https://support.huaweicloud.com/intl/en-us/price-maas/price-maas-0002.html)
 
 ### Core Rules
 
@@ -250,6 +256,8 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `max_output_tokens` | Output token limit |
 | `input_cost_per_token` | Cost per input token (USD) |
 | `output_cost_per_token` | Cost per output token (USD) |
+| `cache_read_input_token_cost` | Cost per cached input token on cache hit (USD) |
+| `cache_creation_input_token_cost` | Cost per token for cache creation (USD) |
 
 ### Settings
 

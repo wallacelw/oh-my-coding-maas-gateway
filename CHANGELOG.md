@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-09-05
+
+### Added
+
+- **Cache hit pricing** — added `cache_read_input_token_cost` to glm-5.2
+  ($0.26/M) and glm-5.1 ($0.27/M) in LiteLLM config. Enables accurate cost
+  tracking when Huawei MaaS serves cached tokens at a discount.
+- **Pricing documentation** — updated REFERENCE.md with cache hit column,
+  peak/off-peak time intervals (Period 1/2), and glm-5.1 tiered pricing
+  (<32K vs ≥32K tokens). Source: Huawei MaaS pricing page.
+
+### Changed
+
+- `helpers/models.sh` — extended model format with `cache_read_cost` and
+  `cache_creation_cost` fields.
+- `scripts/02_litellm.sh` — emits cache pricing fields when non-zero.
+- `configs/litellm/config.yaml.template` — added cache fields for reference.
+
 ## [1.8.0] - 2026-09-03
 
 ### Changed
