@@ -207,6 +207,8 @@ absent, the scripts prompt interactively (or error in non-interactive mode).
 | `HUAWEI_MAAS_API_KEY_1..N` | Extra MaaS keys for load balancing. | `01_env.sh`, `02_litellm.sh` |
 | `LITELLM_MASTER_KEY` | LiteLLM master key (resolved from env or `.env`). | `03a-03d` via `helpers/keys.sh` |
 | `BIND_ADDRESS` | Docker port bind address (`127.0.0.1` localhost, `0.0.0.0` all interfaces). | docker-compose |
+| `HUAWEI_MAAS_API_BASE` | MaaS OpenAI-compatible API base URL. Auto-set with default. | `02_litellm.sh` |
+| `HUAWEI_MAAS.ANTHROPIC_API_BASE` | MaaS Anthropic-compatible API base URL. Auto-set with default. | `02_litellm.sh` |
 | `OPENCODE_ENABLE_EXA` | Enable opencode built-in websearch (EXA) for custom providers. Set to `1`. | `03a_opencode.sh` |
 
 All other secrets (`LITELLM_SALT_KEY`, `DB_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`,
@@ -467,8 +469,9 @@ pi
 
 ### Monitoring
 
-- **Grafana:** `http://127.0.0.1:3000` — 32-panel dashboard (login: admin /
-  your Grafana password from .env). 7 sections: At-a-glance, Latency, Errors & Health, Throughput &
+- **Grafana:** `http://127.0.0.1:3000` — 39-panel dashboard (7 row headers +
+  32 visualization panels). Login: admin / your Grafana password from .env.
+  7 sections: At-a-glance, Latency, Errors & Health, Throughput &
   Capacity, Tokens, Cache, Cost. Time window selectable (default 1h).
 - **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
   keys, spend, budgets. Login: `admin` / your master key.
@@ -508,7 +511,7 @@ group, `ufw allow from <your-ip> to any port 4000`).
 |---------|-----|------|---------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key | API gateway |
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key | View keys, spend, deployments |
-| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 32-panel observability dashboard |
+| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 39-panel observability dashboard |
 | Prometheus | `http://127.0.0.1:9090` | None | Metrics storage |
 | PostgreSQL | `localhost:5432` (internal) | — | LiteLLM database |
 
@@ -537,7 +540,7 @@ Interactive menu appears when you run bootstrap. Or use `--tool=` flag:
 | 4 | `--tool=codex` | LiteLLM + Codex CLI |
 | 5 | `--tool=claude` | LiteLLM + Claude Code CLI |
 | 6 | `--tool=pi` | LiteLLM + Pi agent |
-| 7 | `--tool=opencode,codex` | Custom combo (comma-separated) |
+| 7 | Interactive | Custom — toggle each component on/off |
 
 ### Companion Skill
 

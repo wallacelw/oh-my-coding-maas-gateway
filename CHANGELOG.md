@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - 2026-09-05
+
+### Fixed
+
+- **SKILL.md key-adding formula** — `NEW_INDEX=$((CURRENT_COUNT - 1))`
+  would overwrite an existing key. Fixed to `NEW_INDEX=$CURRENT_COUNT`
+  (the next available index).
+- **SKILL.md model format** — updated to include `cache_read_cost` and
+  `cache_creation_cost` fields (stale since v1.9.0 added cache pricing).
+- **SKILL.md add-model instructions** — now lists all 5 files that need
+  updating: `models.sh`, `config.yaml.template`, `opencode.json.template`,
+  `model_catalog.json`, `slim.json.template`.
+- **SKILL.md grep portability** — replaced `grep -oP` (Perl regex) with
+  portable `grep -E` + `sed` equivalent.
+- **SKILL.md uninstall flags** — added missing `--repo` flag to the
+  uninstall.sh command table.
+- **REFERENCE.md OPENCODE_ENABLE_EXA attribution** — "Set by" column
+  corrected from `01_env.sh` to `03a_opencode.sh` (01_env.sh does not
+  write this variable).
+- **INSTALLATION.md panel count** — "32-panel" corrected to "39-panel
+  (7 row headers + 32 visualization panels)" for consistency with
+  REFERENCE.md and SKILL.md.
+- **INSTALLATION.md choice 7** — corrected from `--tool=opencode,codex`
+  to "Interactive — Custom toggle each component on/off".
+- **INSTALLATION.md env-var table** — added missing `HUAWEI_MAAS_API_BASE`
+  and `HUAWEI_MAAS.ANTHROPIC_API_BASE` entries.
+- **02_litellm.sh KEY_COUNT validation** — added numeric check before
+  arithmetic comparison to prevent crash on non-numeric `.env` value.
+- **04_validate.sh KEY_COUNT validation** — same numeric guard added
+  before deployment count calculation.
+- **docker-compose.yml Prometheus healthcheck** — added `wget`-based
+  healthcheck for consistency with other services.
+
 ## [1.9.1] - 2026-09-05
 
 ### Fixed

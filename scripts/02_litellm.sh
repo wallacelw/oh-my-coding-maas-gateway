@@ -80,6 +80,10 @@ source_env "$PROJECT_DIR"
 
 # ── Determine key count ──
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
+if ! [[ "$KEY_COUNT" =~ ^[0-9]+$ ]]; then
+  log_error "HUAWEI_MAAS_API_KEY_COUNT must be a positive integer. Got: $KEY_COUNT"
+  exit 1
+fi
 if [ "$KEY_COUNT" -lt 1 ]; then
   log_error "HUAWEI_MAAS_API_KEY_COUNT must be >= 1. Got: $KEY_COUNT"
   exit 1

@@ -121,6 +121,10 @@ check_jq() {
 # ── Load .env if present ──
 source_env "$PROJECT_DIR"
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
+if ! [[ "$KEY_COUNT" =~ ^[0-9]+$ ]]; then
+  log_error "HUAWEI_MAAS_API_KEY_COUNT must be a positive integer. Got: $KEY_COUNT"
+  exit 1
+fi
 
 log_step "oh-my-coding-maas-gateway — Validation"
 if [ "$DRY_RUN" = true ]; then

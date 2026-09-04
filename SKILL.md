@@ -47,7 +47,7 @@ cd ~/oh-my-coding-maas-gateway
 | `scripts/04_validate.sh` | End-to-end validation (run anytime) | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--dry-run` |
 | `scripts/05_skill.sh` | Install THIS companion skill into agents | `--yes`, `--dry-run`, `--no-skill` |
 | `scripts/install-skill.sh` | Install ANY skill into all detected agents | `--name=`, `--source=`, `--dry-run` |
-| `scripts/uninstall.sh` | Remove all or part of the gateway | `--tool=`, `--docker`, `--all`, `--dry-run`, `--yes` |
+| `scripts/uninstall.sh` | Remove all or part of the gateway | `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes` |
 | `scripts/02_litellm.sh` | Regenerate LiteLLM config + restart (after editing `.env` or `models.sh`) | `--routing-strategy=`, `--dry-run` |
 | `scripts/01_env.sh` | Regenerate `.env` (after key changes) | `--force` |
 
@@ -165,7 +165,7 @@ console, region ap-southeast-1, starts with `sk-`).
 **Step 2**: Read the current key count from `.env`:
 ```bash
 CURRENT_COUNT=$(grep '^HUAWEI_MAAS_API_KEY_COUNT=' .env | cut -d= -f2)
-NEW_INDEX=$((CURRENT_COUNT - 1))
+NEW_INDEX=$CURRENT_COUNT
 NEW_COUNT=$((CURRENT_COUNT + 1))
 ```
 
@@ -220,19 +220,24 @@ the API key in their tool's config.
 
 Models are in `scripts/helpers/models.sh`. Format:
 ```
-model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
+model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost:cache_read_cost:cache_creation_cost
 ```
+`cache_read_cost` and `cache_creation_cost` are 0 for models without
+cache support (deepseek).
 
 Current models: `glm-5.2`, `glm-5.1`, `deepseek-v4-pro`,
 `deepseek-v4-flash`.
 
 **List models**:
 ```bash
-grep -oP '^\s*"\K[^:]+' scripts/helpers/models.sh
+grep -E '^\s*"' scripts/helpers/models.sh | sed 's/^\s*"//; s/:.*//' | sort
 ```
 
 **Add a model**: add a line to the `MODELS` array in `scripts/helpers/models.sh`,
-then regenerate (this creates N deployments per model, one per API key):
+then update `configs/litellm/config.yaml.template`, `configs/opencode/opencode.json.template`,
+`configs/codex/model_catalog.json`, and `configs/opencode/oh-my-opencode-slim.json.template`
+with the new model. Then regenerate (this creates N deployments per model,
+one per API key):
 ```bash
 ./scripts/02_litellm.sh
 ./scripts/04_validate.sh
@@ -272,7 +277,7 @@ curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_spend' | jq .
 curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_total_errors[5m])' | jq .
 ```
 
-Grafana: `http://127.0.0.1:3000` — 39-panel dashboard.
+Grafana: `http://127.0.0.1:3000` — 39-panel dashboard (7 row headers + 32 visualization panels).
 
 ---
 
