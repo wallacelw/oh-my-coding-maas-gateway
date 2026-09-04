@@ -10,7 +10,7 @@ BLOCKED_FILES=(
 STAGED=$(git diff --cached --name-only 2>/dev/null || true)
 
 for file in "${BLOCKED_FILES[@]}"; do
-  if echo "$STAGED" | grep -q "^${file}$"; then
+  if echo "$STAGED" | grep -qF "^${file}$"; then
     echo "ERROR: Blocked file '$file' is staged for commit."
     echo "  This file contains secrets or is auto-generated."
     echo "  Run: git reset HEAD -- '$file'"

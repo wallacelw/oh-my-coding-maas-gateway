@@ -229,7 +229,7 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
   TEMPLATE_FILE="$PROJECT_DIR/configs/litellm/config.yaml.template"
   if [ -f "$CONFIG_FILE" ]; then
     pass "litellm_config.yaml exists (generated)"
-    DEPLOYMENT_COUNT=$(grep -c '^\s*- model_name:' "$CONFIG_FILE" 2>/dev/null || true); DEPLOYMENT_COUNT=${DEPLOYMENT_COUNT:-0}
+    DEPLOYMENT_COUNT=$(grep -c '^[[:space:]]*- model_name:' "$CONFIG_FILE" 2>/dev/null || true); DEPLOYMENT_COUNT=${DEPLOYMENT_COUNT:-0}
     EXPECTED_DEPLOYMENTS=$((KEY_COUNT * MODEL_COUNT * 2))
     if [ "$DEPLOYMENT_COUNT" = "$EXPECTED_DEPLOYMENTS" ]; then
       pass "Deployment count: $DEPLOYMENT_COUNT ($MODEL_COUNT models × $KEY_COUNT keys × 2 formats)"
@@ -240,8 +240,8 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
       # Template-sync check: assumes template contains only OpenAI entries.
       # The * 2 accounts for Anthropic entries added by 02_litellm.sh.
       # If Anthropic entries are ever added to the template, this check breaks.
-      TEMPLATE_MODELS=$(grep -c '^\s*- model_name:' "$TEMPLATE_FILE" 2>/dev/null || true); TEMPLATE_MODELS=${TEMPLATE_MODELS:-0}
-      GENERATED_MODELS=$(grep -c '^\s*- model_name:' "$CONFIG_FILE" 2>/dev/null || true); GENERATED_MODELS=${GENERATED_MODELS:-0}
+      TEMPLATE_MODELS=$(grep -c '^[[:space:]]*- model_name:' "$TEMPLATE_FILE" 2>/dev/null || true); TEMPLATE_MODELS=${TEMPLATE_MODELS:-0}
+      GENERATED_MODELS=$(grep -c '^[[:space:]]*- model_name:' "$CONFIG_FILE" 2>/dev/null || true); GENERATED_MODELS=${GENERATED_MODELS:-0}
       EXPECTED_FROM_TEMPLATE=$((TEMPLATE_MODELS * KEY_COUNT * 2))
       if [ "$GENERATED_MODELS" = "$EXPECTED_FROM_TEMPLATE" ]; then
         pass "Model catalog: template and generated config are in sync ($GENERATED_MODELS = $TEMPLATE_MODELS × $KEY_COUNT keys × 2 formats)"
@@ -529,7 +529,7 @@ if [ "$RUN_CODEX" = true ]; then
   echo ""
   log_info "D3. Provider configuration"
   if [ -f "$CODEX_CONFIG" ]; then
-    if grep -q 'base_url\s*=\s*"http://127.0.0.1:4000/v1"' "$CODEX_CONFIG"; then
+    if grep -q 'base_url[[:space:]]*=[[:space:]]*"http://127.0.0.1:4000/v1"' "$CODEX_CONFIG"; then
       pass "model provider base_url points to LiteLLM proxy"
     else
       fail "model provider base_url not pointing to LiteLLM proxy"

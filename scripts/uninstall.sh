@@ -416,10 +416,10 @@ if [ "$REMOVE_DOCKER" = true ]; then
       # Wait for ports to be freed (docker proxy can lag behind container removal)
       for port in 4000 5432 9090 3000; do
         for _ in $(seq 1 10); do
-          if ! ss -tlnp 2>/dev/null | grep -qE ":${port}\b"; then
+          if ! command -v ss >/dev/null 2>&1 || ! ss -tlnp 2>/dev/null | grep -qE ":${port}\b"; then
             break
           fi
-          sleep 0.5
+          sleep 1
         done
       done
       log_ok "Docker stack removed"

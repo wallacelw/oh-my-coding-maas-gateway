@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3] - 2026-09-05
+
+### Fixed
+
+- **04_validate.sh grep portability** — replaced GNU-specific `\s` with
+  POSIX `[[:space:]]` in 4 grep patterns for portability across systems.
+- **uninstall.sh ss guard** — added `command -v ss` check before using
+  `ss` for port-wait loop; falls through gracefully if `ss` is absent.
+- **uninstall.sh fractional sleep** — `sleep 0.5` → `sleep 1` for
+  compatibility with systems lacking GNU coreutils fractional sleep.
+- **pre-commit hook fixed-string match** — `grep -q` → `grep -qF` to
+  treat filenames as literal strings, not regex patterns.
+- **Helper file permissions** — `helpers/models.sh` and `helpers/skills.sh`
+  set to 755 for consistency with other helper scripts.
+
 ## [1.9.2] - 2026-09-05
 
 ### Fixed
