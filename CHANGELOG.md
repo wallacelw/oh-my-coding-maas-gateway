@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.5] - 2026-09-09
+
+### Added
+
+- **24 new validation checks** in `04_validate.sh` (96 → 120 total):
+  - M1: Slim plugin version match (installed vs `03a_opencode.sh`)
+  - M2: Container security hardening applied at runtime (8 checks)
+  - M3: Router settings in config (routing_strategy, prometheus callback)
+  - M4: Prometheus retention applied (matches `.env`)
+  - M5: Grafana dashboard has panels (>0)
+  - M6: Model catalog matches `models.sh` (8 checks, 4 models × 2 formats)
+  - M7: Virtual key aliases match tool names (4 checks)
+  - L1: Docker Compose file validity
+  - L2: Container restart policy (4 checks)
+  - L3: `LITELLM_SALT_KEY` strength (≥32 chars)
+  - L4: Prometheus self-monitoring active
+
 ## [1.9.4] - 2026-09-09
 
 ### Fixed

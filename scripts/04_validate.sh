@@ -193,6 +193,15 @@ if [ "$RUN_LITELLM" = true ]; then
         pass "$VAR is set (len=${#VAL})"
       fi
     done
+
+    # L3: LITELLM_SALT_KEY strength
+    if [ -n "${LITELLM_SALT_KEY:-}" ]; then
+      if [ ${#LITELLM_SALT_KEY} -ge 32 ]; then
+        pass "LITELLM_SALT_KEY strength OK (len=${#LITELLM_SALT_KEY})"
+      else
+        warn "LITELLM_SALT_KEY is short (${#LITELLM_SALT_KEY} chars, recommend 32+)"
+      fi
+    fi
   else
     fail ".env not found"
   fi
@@ -218,6 +227,39 @@ if [ "$RUN_LITELLM" = true ]; then
         starting)  warn "$container: still starting" ;;
         *)         warn "$container: no healthcheck ($HEALTH)" ;;
       esac
+    done
+
+    # L1: Docker Compose file validity
+    if docker compose -f "$PROJECT_DIR/docker-compose.yml" config --quiet 2>/dev/null; then
+      pass "docker-compose.yml is valid"
+    else
+      fail "docker-compose.yml is invalid (run: docker compose config)"
+    fi
+
+    # L2: Container restart policy
+    for container in litellm_proxy litellm_pg_db litellm_prometheus litellm_grafana; do
+      RESTART=$(docker inspect --format='{{.HostConfig.RestartPolicy.Name}}' "$container" 2>/dev/null || true)
+      if [ "$RESTART" = "unless-stopped" ]; then
+        pass "$container: restart=unless-stopped"
+      else
+        warn "$container: restart=$RESTART (expected unless-stopped)"
+      fi
+    done
+
+    # M2: Container security hardening applied
+    for container in litellm_proxy litellm_pg_db litellm_prometheus litellm_grafana; do
+      SEC_OPT=$(docker inspect --format='{{.HostConfig.SecurityOpt}}' "$container" 2>/dev/null || true)
+      if echo "$SEC_OPT" | grep -q 'no-new-privileges:true'; then
+        pass "$container: no-new-privileges applied"
+      else
+        warn "$container: no-new-privileges not applied"
+      fi
+      CAP_DROP=$(docker inspect --format='{{.HostConfig.CapDrop}}' "$container" 2>/dev/null || true)
+      if echo "$CAP_DROP" | grep -q 'ALL'; then
+        pass "$container: cap_drop=ALL applied"
+      else
+        warn "$container: cap_drop=ALL not applied"
+      fi
     done
   fi
 
@@ -302,6 +344,18 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
       log_dim "  Fix: ./scripts/02_litellm.sh (regenerates config from current .env)"
     else
       pass "config.yaml is up to date (newer than .env)"
+    fi
+
+    # M3: Router settings in config
+    if grep -q 'routing_strategy:' "$CONFIG_FILE" 2>/dev/null; then
+      pass "Router: routing_strategy configured"
+    else
+      warn "Router: routing_strategy not set in config"
+    fi
+    if grep -q 'callbacks:' "$CONFIG_FILE" 2>/dev/null && grep -q 'prometheus' "$CONFIG_FILE" 2>/dev/null; then
+      pass "LiteLLM: prometheus callback configured"
+    else
+      fail "LiteLLM: prometheus callback missing (metrics won't be emitted)"
     fi
   else
     warn "litellm_config.yaml not found — run scripts/02_litellm.sh"
@@ -432,6 +486,20 @@ if [ "$RUN_OPENCODE" = true ]; then
     else
       warn "Slim config permissions $PERMS (expected 600)"
     fi
+
+    # M1: Slim plugin version match
+    EXPECTED_SLIM=$(grep 'SLIM_VERSION=' "$PROJECT_DIR/scripts/03a_opencode.sh" 2>/dev/null \
+      | head -1 | sed 's/.*="\([^"]*\)".*/\1/' || true)
+    INSTALLED_SLIM=$(printf '%s' "$CLEAN_SLIM" | jq -r '."$schema"' 2>/dev/null \
+      | sed 's|.*oh-my-opencode-slim@||;s|/.*||' 2>/dev/null || true)
+    if [ -n "$EXPECTED_SLIM" ] && [ -n "$INSTALLED_SLIM" ]; then
+      if [ "$EXPECTED_SLIM" = "$INSTALLED_SLIM" ]; then
+        pass "Slim version: $INSTALLED_SLIM (matches 03a_opencode.sh)"
+      else
+        warn "Slim version: $INSTALLED_SLIM (expected $EXPECTED_SLIM from 03a_opencode.sh)"
+        log_dim "  Fix: ./scripts/03a_opencode.sh (reinstalls plugin at v$EXPECTED_SLIM)"
+      fi
+    fi
   else
     fail_n 22 "No oh-my-opencode-slim config — skipping 22 preset checks"
   fi
@@ -471,6 +539,24 @@ if [ "$RUN_OPENCODE" = true ]; then
         else
           fail "Inference smoke test: $SMOKE_MODEL did not respond"
         fi
+
+        # M6: Model catalog matches models.sh
+        MODEL_LIST=$(curl -sf -m 10 "$LITELLM_URL/v1/models" 2>/dev/null | jq -r '.data[].id' 2>/dev/null || true)
+        if [ -n "$MODEL_LIST" ]; then
+          for model_entry in "${MODELS[@]}"; do
+            IFS=':' read -r model_name _ <<< "$model_entry"
+            if printf '%s\n' "$MODEL_LIST" | grep -qx "$model_name"; then
+              pass "Model $model_name in LiteLLM catalog"
+            else
+              fail "Model $model_name missing from LiteLLM catalog"
+            fi
+            if printf '%s\n' "$MODEL_LIST" | grep -qx "claude-$model_name"; then
+              pass "Model claude-$model_name in LiteLLM catalog"
+            else
+              fail "Model claude-$model_name missing from LiteLLM catalog"
+            fi
+          done
+        fi
       fi
     fi
   fi
@@ -491,6 +577,24 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     skip "Prometheus reachability"
   elif curl -sf -m 5 http://127.0.0.1:9090/-/ready >/dev/null 2>&1; then
     pass "Prometheus reachable at :9090"
+
+    # M4: Prometheus retention applied
+    if [ "$DRY_RUN" = true ]; then
+      skip "Prometheus retention check"
+    else
+      EXPECTED_RET="${PROMETHEUS_RETENTION:-30d}"
+      ACTUAL_RET=$(curl -sf -m 5 http://127.0.0.1:9090/api/v1/status/flags 2>/dev/null \
+        | jq -r '.data."storage.tsdb.retention.time" // empty' 2>/dev/null || true)
+      if [ -n "$ACTUAL_RET" ]; then
+        if [ "$ACTUAL_RET" = "$EXPECTED_RET" ]; then
+          pass "Prometheus retention: $ACTUAL_RET (matches .env)"
+        else
+          warn "Prometheus retention: $ACTUAL_RET (expected $EXPECTED_RET from .env)"
+        fi
+      else
+        skip "Prometheus retention (flags API not available)"
+      fi
+    fi
   else
     fail "Prometheus not reachable at :9090"
   fi
@@ -525,6 +629,15 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     done
     if [ "$SCRAPE_COUNT" = "1" ]; then
       pass "Prometheus is scraping LiteLLM (up=1)"
+
+      # L4: Prometheus self-monitoring
+      PROM_SELF=$(curl -sf -g -m 10 'http://127.0.0.1:9090/api/v1/query?query=up{job="prometheus"}' 2>/dev/null \
+        | jq -r '.data.result[0].value[1] // empty' 2>/dev/null || true)
+      if [ "$PROM_SELF" = "1" ]; then
+        pass "Prometheus self-monitoring active (up=1)"
+      else
+        warn "Prometheus not scraping itself (up=$PROM_SELF)"
+      fi
     elif [ -n "$SCRAPE_COUNT" ]; then
       fail "Prometheus scraping LiteLLM but target is down (up=$SCRAPE_COUNT)"
     else
@@ -541,11 +654,25 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     if [ "$GRAFANA_DB_COUNT" -gt 0 ]; then
       pass "Grafana reachable with dashboard provisioned"
       DS_NAME=$(curl -sf -m 5 --config - "http://127.0.0.1:3000/api/datasources/name/Prometheus" 2>/dev/null <<<"user = \"admin:${GRAFANA_ADMIN_PASSWORD:-admin}\"" | jq -r '.name // empty' 2>/dev/null || true)
-      if [ "$DS_NAME" = "Prometheus" ]; then
-        pass "Grafana Prometheus datasource configured"
-      else
-        warn "Grafana Prometheus datasource not found or not connected"
-      fi
+       if [ "$DS_NAME" = "Prometheus" ]; then
+         pass "Grafana Prometheus datasource configured"
+       else
+         warn "Grafana Prometheus datasource not found or not connected"
+       fi
+
+       # M5: Grafana dashboard has panels
+       DASHBOARD_JSON=$(curl -sf -m 5 -u "admin:${GRAFANA_ADMIN_PASSWORD:-admin}" \
+         "http://127.0.0.1:3000/api/dashboards/uid/oh-my-coding-maas-gateway" 2>/dev/null || true)
+       if [ -n "$DASHBOARD_JSON" ]; then
+         PANEL_COUNT=$(printf '%s' "$DASHBOARD_JSON" | jq '.dashboard.panels | length' 2>/dev/null || echo "0")
+         if [ "$PANEL_COUNT" -gt 0 ]; then
+           pass "Grafana dashboard has $PANEL_COUNT panels"
+         else
+           fail "Grafana dashboard has 0 panels (dashboard may be corrupted)"
+         fi
+       else
+         skip "Grafana dashboard panel count (API not reachable)"
+       fi
     else
       warn "Grafana reachable but dashboard not found — check provisioning"
     fi
@@ -858,6 +985,31 @@ if [ "$RUN_LITELLM" = true ]; then
     fi
   done
   [ "$SHARED_FOUND" = false ] && pass "All tool virtual keys are unique"
+
+  echo ""
+  log_info "G2. Virtual key aliases"
+  if [ "$DRY_RUN" = true ]; then
+    skip "Virtual key alias check"
+  elif [ -n "${LITELLM_MASTER_KEY:-}" ]; then
+    declare -A EXPECTED_ALIASES=()
+    [ -n "$OC_KEY" ] && EXPECTED_ALIASES["$OC_KEY"]="opencode"
+    [ -n "$CODEX_KEY" ] && EXPECTED_ALIASES["$CODEX_KEY"]="codex"
+    [ -n "$CLAUDE_KEY" ] && EXPECTED_ALIASES["$CLAUDE_KEY"]="claude-code"
+    [ -n "$PI_VKEY" ] && EXPECTED_ALIASES["$PI_VKEY"]="pi"
+    for vk in "${!EXPECTED_ALIASES[@]}"; do
+      EXPECTED="${EXPECTED_ALIASES[$vk]}"
+      KEY_INFO=$(curl -sf -m 10 "$LITELLM_URL/key/info?key=$vk" \
+        -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
+      ACTUAL_ALIAS=$(printf '%s' "$KEY_INFO" | jq -r '.info.key_alias // empty' 2>/dev/null || true)
+      if [ "$ACTUAL_ALIAS" = "$EXPECTED" ]; then
+        pass "$EXPECTED virtual key alias: correct"
+      else
+        warn "$EXPECTED virtual key alias: '$ACTUAL_ALIAS' (expected '$EXPECTED')"
+      fi
+    done
+  else
+    skip "Virtual key alias check (LITELLM_MASTER_KEY not set)"
+  fi
 
   echo ""
 fi
