@@ -160,6 +160,39 @@ if [ "$RUN_LITELLM" = true ]; then
     else
       warn "HUAWEI_MAAS_API_KEY_COUNT not set (defaulting to 1)"
     fi
+
+    # C1: BIND_ADDRESS exposure check
+    BIND_ADDR="${BIND_ADDRESS:-127.0.0.1}"
+    if [ "$BIND_ADDR" = "127.0.0.1" ]; then
+      pass "BIND_ADDRESS=127.0.0.1 (localhost-only, secure)"
+    elif [ "$BIND_ADDR" = "0.0.0.0" ]; then
+      warn "BIND_ADDRESS=0.0.0.0 — all services exposed to all network interfaces"
+      log_dim "  LiteLLM /metrics is unauthenticated; ensure firewall rules"
+    else
+      warn "BIND_ADDRESS=$BIND_ADDR — non-default bind address"
+    fi
+
+    # C2: Git hooks installed
+    if [ -d "$PROJECT_DIR/.git" ]; then
+      HOOKS_PATH=$(git -C "$PROJECT_DIR" config --local core.hooksPath 2>/dev/null || true)
+      if [ "$HOOKS_PATH" = ".githooks" ]; then
+        pass "Git hooks configured (pre-commit blocks .env and config.yaml)"
+      else
+        fail "Git hooks not configured — .env could be accidentally committed"
+        log_dim "  Fix: git config core.hooksPath .githooks"
+      fi
+    fi
+
+    # H2: All MaaS API keys present
+    for i in $(seq 0 $((KEY_COUNT - 1))); do
+      VAR="HUAWEI_MAAS_API_KEY_$i"
+      VAL="${!VAR:-}"
+      if [ -z "$VAL" ]; then
+        fail "$VAR is not set in .env (referenced by config.yaml)"
+      else
+        pass "$VAR is set (len=${#VAL})"
+      fi
+    done
   else
     fail ".env not found"
   fi
@@ -175,6 +208,17 @@ if [ "$RUN_LITELLM" = true ]; then
     else
       fail "Only $RUNNING services running (expected 4: litellm, db, prometheus, grafana)"
     fi
+
+    # H1: Container health status (not just running)
+    for container in litellm_proxy litellm_pg_db litellm_prometheus litellm_grafana; do
+      HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "missing")
+      case "$HEALTH" in
+        healthy)   pass "$container: healthy" ;;
+        unhealthy) fail "$container: unhealthy (run: docker logs $container)" ;;
+        starting)  warn "$container: still starting" ;;
+        *)         warn "$container: no healthcheck ($HEALTH)" ;;
+      esac
+    done
   fi
 
   echo ""
@@ -249,24 +293,36 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
         warn "Model catalog drift: template has $TEMPLATE_MODELS entries, generated has $GENERATED_MODELS (expected $EXPECTED_FROM_TEMPLATE)"
       fi
     fi
+
+    # H5: Config freshness (.env vs config.yaml)
+    ENV_MTIME=$(stat -c '%Y' "$PROJECT_DIR/.env" 2>/dev/null || echo 0)
+    CFG_MTIME=$(stat -c '%Y' "$CONFIG_FILE" 2>/dev/null || echo 0)
+    if [ "$ENV_MTIME" -gt "$CFG_MTIME" ]; then
+      warn ".env is newer than config.yaml — config may be stale"
+      log_dim "  Fix: ./scripts/02_litellm.sh (regenerates config from current .env)"
+    else
+      pass "config.yaml is up to date (newer than .env)"
+    fi
   else
     warn "litellm_config.yaml not found — run scripts/02_litellm.sh"
   fi
 
   echo ""
-  log_info "A5. Inference smoke test"
+  log_info "A5. Inference smoke test (all models)"
   if [ "$DRY_RUN" = true ]; then
     skip "Inference smoke test"
   elif [ -n "${LITELLM_MASTER_KEY:-}" ]; then
-    SMOKE_MODEL="deepseek-v4-flash"
-    if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
-        -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-        -H "Content-Type: application/json" \
-        -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1; then
-      pass "Inference smoke test: $SMOKE_MODEL responded (master key)"
-    else
-      fail "Inference smoke test: $SMOKE_MODEL did not respond"
-    fi
+    for model_entry in "${MODELS[@]}"; do
+      IFS=':' read -r model_name _ <<< "$model_entry"
+      if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
+          -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+          -H "Content-Type: application/json" \
+          -d "{\"model\":\"$model_name\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1; then
+        pass "Inference ($model_name): responded"
+      else
+        fail "Inference ($model_name): did not respond"
+      fi
+    done
   else
     skip "Inference smoke test (LITELLM_MASTER_KEY not set)"
   fi
@@ -758,6 +814,50 @@ if [ "$RUN_PI" = true ]; then
   else
     skip "Inference smoke test (no API key found)"
   fi
+
+  echo ""
+fi
+
+# ════════════════════════════════════════════════════════════════════════════
+# SECTION G: Cross-tool Key Isolation
+# ════════════════════════════════════════════════════════════════════════════
+if [ "$RUN_LITELLM" = true ]; then
+  log_step "G. Cross-tool key isolation"
+
+  echo ""
+  log_info "G1. Virtual key uniqueness"
+  declare -A VK_TOOLS=()
+  OC_KEY=""
+  CODEX_KEY=""
+  CLAUDE_KEY=""
+  PI_VKEY=""
+
+  if [ -f "$HOME/.config/opencode/opencode.json" ]; then
+    OC_KEY=$(strip_jsonc "$HOME/.config/opencode/opencode.json" 2>/dev/null | jq -r '.provider.LiteLLM.options.apiKey // empty' 2>/dev/null || true)
+    [ -n "$OC_KEY" ] && VK_TOOLS["$OC_KEY"]="${VK_TOOLS[$OC_KEY]:-}opencode"
+  fi
+  if [ -f "$HOME/.codex/.env" ]; then
+    CODEX_KEY=$(sed -n 's/^LITELLM_CODEX_API_KEY=\(.*\)/\1/p' "$HOME/.codex/.env" 2>/dev/null || true)
+    [ -n "$CODEX_KEY" ] && VK_TOOLS["$CODEX_KEY"]="${VK_TOOLS[$CODEX_KEY]:-}codex"
+  fi
+  if [ -f "$HOME/.claude/settings.json" ]; then
+    CLAUDE_KEY=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$HOME/.claude/settings.json" 2>/dev/null || true)
+    [ -n "$CLAUDE_KEY" ] && VK_TOOLS["$CLAUDE_KEY"]="${VK_TOOLS[$CLAUDE_KEY]:-}claude"
+  fi
+  if [ -f "$HOME/.pi/agent/models.json" ]; then
+    PI_VKEY=$(jq -r '.providers.LiteLLM.apiKey // empty' "$HOME/.pi/agent/models.json" 2>/dev/null || true)
+    [ -n "$PI_VKEY" ] && VK_TOOLS["$PI_VKEY"]="${VK_TOOLS[$PI_VKEY]:-}pi"
+  fi
+
+  SHARED_FOUND=false
+  for key in "${!VK_TOOLS[@]}"; do
+    TOOLS="${VK_TOOLS[$key]}"
+    if echo "$TOOLS" | grep -q ' '; then
+      fail "Virtual key $(mask_key "$key") shared by: $TOOLS (should be unique per tool)"
+      SHARED_FOUND=true
+    fi
+  done
+  [ "$SHARED_FOUND" = false ] && pass "All tool virtual keys are unique"
 
   echo ""
 fi

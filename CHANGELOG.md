@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.4] - 2026-09-09
+
+### Fixed
+
+- **update.sh npm_latest() crash on bun-only hosts** (GitHub issue #4) —
+  `npm view` returned exit 127 when npm not installed (default on bun-only
+  hosts), causing `set -e` to abort silently. Added `command -v npm` guard
+  with curl-based npm registry fallback so version table populates without npm.
+
+### Added
+
+- **12 new validation checks** in `04_validate.sh` (84 → 96 total):
+  - C1: `BIND_ADDRESS` exposure warning (0.0.0.0 vs 127.0.0.1)
+  - C2: Git hooks installed (`core.hooksPath` = `.githooks`)
+  - H1: Container health status (healthy/unhealthy/starting, not just running)
+  - H2: All `HUAWEI_MAAS_API_KEY_N` present in `.env`
+  - H3: All-models inference smoke test (was single-model `deepseek-v4-flash`)
+  - H4: Cross-tool virtual key isolation (no shared keys between tools)
+  - H5: Config freshness (`.env` vs `config.yaml` mtime comparison)
+
 ## [1.9.3] - 2026-09-05
 
 ### Fixed

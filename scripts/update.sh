@@ -69,7 +69,14 @@ github_latest() {
 # Get latest version from npm
 npm_latest() {
   local pkg="$1"
-  timeout 15 npm view "$pkg" version 2>/dev/null
+  if command -v npm >/dev/null 2>&1; then
+    timeout 15 npm view "$pkg" version 2>/dev/null || true
+  else
+    # Fallback: query the registry directly (scoped packages use /<scope>/<name>/latest)
+    local enc="${pkg//@/%40}"
+    curl -sLf -m 10 "https://registry.npmjs.org/${enc}/latest" 2>/dev/null \
+      | python3 -c "import json,sys; print(json.load(sys.stdin).get('version',''))" 2>/dev/null || true
+  fi
 }
 
 # Strip leading 'v' from version strings
