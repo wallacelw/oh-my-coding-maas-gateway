@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.9] - 2026-09-10
+
+### Fixed
+
+- **INSTALLATION.md** — Updated `03d_pi.sh` description: downloads to temp
+  file instead of `curl | sh` pipe (reflects M5 fix)
+- **README.md** — Updated `update.sh` note: changes are auto-committed
+  instead of requiring manual commit (reflects H4 fix)
+
 ## [1.9.8] - 2026-09-10
 
 ### Fixed

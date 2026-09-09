@@ -129,7 +129,8 @@ extension auto-install. Supports `--dry-run`.
 
 ### `03d_pi.sh`
 
-Installs the Pi coding agent (via `curl | sh` from pi.dev), mints a virtual
+Installs the Pi coding agent (downloads installer from pi.dev to a temp
+file, then executes it), mints a virtual
 key (alias "pi"), and writes `~/.pi/agent/models.json` (LiteLLM provider
 pointing to the proxy via OpenAI Chat Completions API). Supports `--dry-run`.
 

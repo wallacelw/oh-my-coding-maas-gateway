@@ -84,7 +84,7 @@ Pi, LiteLLM, Grafana, Prometheus) without re-running the full pipeline:
 
 Does not touch passwords, API keys, or virtual keys. Note: updating
 Docker images or slim plugin modifies `docker-compose.yml` and
-`scripts/03a_opencode.sh` in-place — commit these changes to persist.
+`scripts/03a_opencode.sh` in-place — changes are auto-committed.
 
 ---
 
