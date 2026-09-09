@@ -120,6 +120,8 @@ if [ -f "$CONFIG_FILE" ]; then
   BACKUP="${CONFIG_FILE}.bak.$(date +%Y%m%d%H%M%S)"
   cp "$CONFIG_FILE" "$BACKUP"
   log_info "Backed up existing config to $(basename "$BACKUP")"
+  # Keep only the last 3 backups
+  ls -t "$CONFIG_FILE".bak.* 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
 fi
 
 # ── Generate config ──
@@ -265,6 +267,7 @@ if [ "$DRY_RUN" = true ]; then
   exit 0
 fi
 
+was_running=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | grep -c litellm || echo 0)
 log_info "Starting Docker Compose (idempotent — no-op if already running)..."
 if ! run_with_spinner "Starting containers" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d; then
   log_error "Docker Compose failed to start."
@@ -272,7 +275,8 @@ if ! run_with_spinner "Starting containers" docker compose -f "$PROJECT_DIR/dock
 fi
 
 # Restart LiteLLM if config changed (bind mount — compose won't auto-restart)
-if [ -n "${BACKUP:-}" ] && [ -f "$BACKUP" ] && ! diff -q "$BACKUP" "$CONFIG_FILE" &>/dev/null; then
+# Only restart if LiteLLM was already running (skip on fresh install)
+if [ "${was_running:-0}" -gt 0 ] && [ -n "${BACKUP:-}" ] && [ -f "$BACKUP" ] && ! diff -q "$BACKUP" "$CONFIG_FILE" &>/dev/null; then
   log_info "Config changed — restarting LiteLLM to load new config..."
   run_with_spinner "Restarting LiteLLM" docker compose -f "$PROJECT_DIR/docker-compose.yml" restart litellm || log_warn "LiteLLM restart failed — health check will verify"
 fi

@@ -294,6 +294,14 @@ if [ "$ERRORS" -gt 0 ]; then
 fi
 
 # ── Write .env ──
+# Validate secrets don't contain newlines (would corrupt heredoc)
+for secret_var in MASTER_KEY SALT_KEY DB_PASSWORD; do
+  if [[ "${!secret_var}" == *$'\n'* ]]; then
+    log_error "$secret_var contains a newline character — cannot write to .env safely."
+    exit 1
+  fi
+done
+
 cat > "$ENV_FILE.tmp" <<EOF
 # ── Proxy Auth ───────────────────────────────────
 LITELLM_MASTER_KEY="${MASTER_KEY}"
@@ -310,7 +318,7 @@ PROMETHEUS_RETENTION="${PROM_RETENTION}"
 
 # ── Huawei MaaS ──────────────────────────────────
 HUAWEI_MAAS_API_KEY="${MAAS_API_KEY}"
-HUAWEI_MAAS_API_KEY_COUNT=${KEY_COUNT}
+HUAWEI_MAAS_API_KEY_COUNT="${KEY_COUNT}"
 HUAWEI_MAAS_API_KEY_0="${MAAS_API_KEY}"
 EOF
 for i in "${!EXTRA_KEYS[@]}"; do

@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.8] - 2026-09-10
+
+### Fixed
+
+- **M1: flock availability guard** — `bootstrap.sh` warns and continues if
+  `flock` is missing (macOS) instead of misleading "already running" error
+- **M3: Config backup rotation** — `02_litellm.sh` keeps only last 3
+  backups, preventing indefinite accumulation
+- **M4: env_file scope warning** — Added NOTE comments in `docker-compose.yml`
+  and `.env.template` about secret leakage via `env_file: .env`
+- **M5: Pi installer download** — `03d_pi.sh` downloads to temp file before
+  executing instead of `curl | sh` pipe
+- **M6: Secret newline validation** — `01_env.sh` rejects secrets containing
+  newline characters before heredoc write
+- **L1: nvm path detection** — `bootstrap.sh` tries `nvm which default`
+  first, falls back to directory listing
+- **L2: Grafana password exposure** — `04_validate.sh` uses `--config -`
+  heredoc instead of `-u` flag (password not visible in `ps`)
+- **L3: Quote KEY_COUNT** — `01_env.sh` now quotes
+  `HUAWEI_MAAS_API_KEY_COUNT` in .env heredoc
+- **L4: Redundant restart** — `02_litellm.sh` skips restart on fresh
+  install (when container wasn't previously running)
+- **D8: REFERENCE.md config examples** — Updated glm-5.2 examples to
+  show 1M context window (was 198K)
+- Removed dead `log_action()` from `common.sh`
+- Added `.env.template` comment clarifying `OPENCODE_ENABLE_EXA` is set
+  by `03a_opencode.sh` in `~/.bashrc`
+- Cleaned stale legacy models (`glm-5`, `deepseek-v3.2`) from local
+  codex `model_catalog.json`
+- Cleaned old config backups (kept last 3)
+
 ## [1.9.7] - 2026-09-10
 
 ### Changed

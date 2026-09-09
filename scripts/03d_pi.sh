@@ -63,10 +63,19 @@ if ! command -v pi &>/dev/null; then
   else
     # Pi installer needs terminal access — it has interactive prompts
     # (logo animation, may install Node.js 22+ if system version is too old)
-    if ! curl -fsSL --max-time 60 "$PI_INSTALL_URL" | sh; then
+    PI_INSTALLER_TMP=$(mktemp)
+    if ! curl -fsSL --max-time 60 "$PI_INSTALL_URL" -o "$PI_INSTALLER_TMP"; then
+      log_error "Failed to download Pi installer."
+      rm -f "$PI_INSTALLER_TMP"
+      exit 1
+    fi
+    log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
+    if ! sh "$PI_INSTALLER_TMP"; then
+      rm -f "$PI_INSTALLER_TMP"
       log_error "Pi installer failed. Ensure Node.js 22.19.0+ is available."
       exit 1
     fi
+    rm -f "$PI_INSTALLER_TMP"
     # Refresh PATH — installer may have added ~/.local/bin or updated nvm
     hash -r 2>/dev/null || true
     # Also check common install locations

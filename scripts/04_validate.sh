@@ -661,8 +661,8 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
        fi
 
        # M5: Grafana dashboard has panels
-       DASHBOARD_JSON=$(curl -sf -m 5 -u "admin:${GRAFANA_ADMIN_PASSWORD:-admin}" \
-         "http://127.0.0.1:3000/api/dashboards/uid/oh-my-coding-maas-gateway" 2>/dev/null || true)
+       DASHBOARD_JSON=$(curl -sf -m 5 --config - \
+         "http://127.0.0.1:3000/api/dashboards/uid/oh-my-coding-maas-gateway" 2>/dev/null <<<"user = \"admin:${GRAFANA_ADMIN_PASSWORD:-admin}\"" || true)
        if [ -n "$DASHBOARD_JSON" ]; then
          PANEL_COUNT=$(printf '%s' "$DASHBOARD_JSON" | jq '.dashboard.panels | length' 2>/dev/null || echo "0")
          if [ "$PANEL_COUNT" -gt 0 ]; then

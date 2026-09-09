@@ -226,7 +226,13 @@ refresh_path() {
   # nvm: pick the default Node version if installed
   if [ -d "$HOME/.nvm/versions/node" ]; then
     local nvm_dir
-    nvm_dir=$(ls -d "$HOME/.nvm/versions/node"/*/bin 2>/dev/null | tail -1 || true)
+    nvm_dir=""
+    if command -v nvm &>/dev/null; then
+      nvm_dir=$(nvm which default 2>/dev/null | xargs dirname 2>/dev/null || true)
+    fi
+    if [ -z "$nvm_dir" ]; then
+      nvm_dir=$(ls -d "$HOME/.nvm/versions/node"/*/bin 2>/dev/null | tail -1 || true)
+    fi
     if [ -n "$nvm_dir" ] && [[ ":$PATH:" != *":$nvm_dir:"* ]]; then
       export PATH="$nvm_dir:$PATH"
     fi
@@ -256,11 +262,15 @@ for _v in "${!HUAWEI_MAAS_API_KEY_@}"; do
 done
 
 # ── Prevent concurrent runs (flock) ──
-exec 9>"$PROJECT_DIR/.bootstrap.lock"
-if ! flock -n 9; then
-  log_error "Another bootstrap is already running in $PROJECT_DIR."
-  log_dim "If this is stale, remove $PROJECT_DIR/.bootstrap.lock and retry."
-  exit 1
+if ! command -v flock &>/dev/null; then
+  log_warn "flock not found — concurrent bootstrap protection disabled"
+else
+  exec 9>"$PROJECT_DIR/.bootstrap.lock"
+  if ! flock -n 9; then
+    log_error "Another bootstrap is already running in $PROJECT_DIR."
+    log_dim "If this is stale, remove $PROJECT_DIR/.bootstrap.lock and retry."
+    exit 1
+  fi
 fi
 
 # ── Defaults ──

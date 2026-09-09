@@ -174,8 +174,8 @@ model_list:
       tpm: 1000000
       rpm: 100
     model_info:
-      max_tokens: 198000
-      max_input_tokens: 192000
+      max_tokens: 1000000
+      max_input_tokens: 1000000
       max_output_tokens: 128000
       input_cost_per_token: 0.0000014
       output_cost_per_token: 0.0000044
@@ -189,8 +189,8 @@ model_list:
       tpm: 1000000
       rpm: 100
     model_info:
-      max_tokens: 198000
-      max_input_tokens: 192000
+      max_tokens: 1000000
+      max_input_tokens: 1000000
       max_output_tokens: 128000
       input_cost_per_token: 0.0000014
       output_cost_per_token: 0.0000044

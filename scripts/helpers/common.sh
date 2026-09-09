@@ -17,7 +17,6 @@
 #   log_warn "msg"             — yellow ⚠ (stderr)
 #   log_error "msg"            — red ✗ (stderr)
 #   log_dim "msg"              — dim secondary text
-#   log_action "who" "msg"     — dim [who] prefix for action labeling
 #
 #   ── Prompts (interactive, auto-default on non-TTY) ──
 #   prompt_yesno "question" [y|n]  — returns 0 (yes) or 1 (no)
@@ -163,13 +162,6 @@ log_done() {
 
 log_dim() {
   echo -e "  ${C_DIM}$*${C_RESET}"
-}
-
-# Action-labeled output: shows who is performing the action.
-# Usage: log_action "opencode:installer" "Downloading binary..."
-log_action() {
-  local tag="$1"; shift
-  echo -e "  ${C_DIM}[$tag]${C_RESET} $*"
 }
 
 # ── Prompt functions ─────────────────────────────────────────
