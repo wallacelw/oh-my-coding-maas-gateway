@@ -65,8 +65,8 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 | `prereqs.sh` | all steps | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install labeled with `[LOG_TAG]`. |
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
 | `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`, `log_action`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
-| `models.sh` | 02, 04 | `MODELS` array + `MODEL_COUNT` — model catalog sourced by 02_litellm.sh and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, `model_catalog.json`, and `slim.json.template`. |
-| `skills.sh` | 05 | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
+| `models.sh` | 02, 03d, 04 | `MODELS` array + `MODEL_COUNT` — model catalog sourced by 02_litellm.sh and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, `model_catalog.json`, and `slim.json.template`. |
+| `skills.sh` | 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
 
 ---
 
@@ -208,7 +208,7 @@ absent, the scripts prompt interactively (or error in non-interactive mode).
 | `LITELLM_MASTER_KEY` | LiteLLM master key (resolved from env or `.env`). | `03a-03d` via `helpers/keys.sh` |
 | `BIND_ADDRESS` | Docker port bind address (`127.0.0.1` localhost, `0.0.0.0` all interfaces). | docker-compose |
 | `HUAWEI_MAAS_API_BASE` | MaaS OpenAI-compatible API base URL. Auto-set with default. | `02_litellm.sh` |
-| `HUAWEI_MAAS.ANTHROPIC_API_BASE` | MaaS Anthropic-compatible API base URL. Auto-set with default. | `02_litellm.sh` |
+| `HUAWEI_MAAS_ANTHROPIC_API_BASE` | MaaS Anthropic-compatible API base URL. Auto-set with default. | `02_litellm.sh` |
 | `OPENCODE_ENABLE_EXA` | Enable opencode built-in websearch (EXA) for custom providers. Set to `1`. | `03a_opencode.sh` |
 
 All other secrets (`LITELLM_SALT_KEY`, `DB_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`,

@@ -61,9 +61,16 @@ for port in 4000 5432 9090 3000; do
     stale_container=""
     stale_container=$(docker ps --filter "publish=${port}" --format '{{.Names}}' 2>/dev/null || true)
     if [ -n "$stale_container" ]; then
-      log_warn "Port $port held by stale container(s): $stale_container — stopping them"
+      log_warn "Port $port held by stale container(s): $stale_container — checking them"
       echo "$stale_container" | while IFS= read -r c; do
-        docker rm -f "$c" 2>/dev/null || true
+        if [[ "$c" == litellm_* ]]; then
+          log_dim "  Removing stale LiteLLM container: $c"
+          docker rm -f "$c" 2>/dev/null || true
+        else
+          log_error "Port $port held by foreign container '$c' — refusing to remove."
+          log_dim "  Stop it manually: docker stop $c"
+          exit 1
+        fi
       done
     else
       log_warn "Port $port is already in use by a non-Docker process. Docker Compose may fail."

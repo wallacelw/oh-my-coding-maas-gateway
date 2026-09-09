@@ -147,6 +147,12 @@ if [ "$IS_FRESH" = true ]; then
   SALT_KEY=$(prompt_password "LITELLM_SALT_KEY (virtual key signing)" "$AUTO_SALT_KEY")
   echo ""
   DB_PASSWORD=$(prompt_password "DB_PASSWORD (PostgreSQL)" "$AUTO_DB_PASSWORD")
+  if [[ "$DB_PASSWORD" == *[@:/#]* ]]; then
+    log_error "DB_PASSWORD contains URL-special characters (@, :, /, #)."
+    log_dim "  These break the DATABASE_URL connection string."
+    log_dim "  Use only alphanumeric and -_ characters."
+    exit 1
+  fi
   echo ""
   GRAFANA_PASSWORD=$(prompt_password "GRAFANA_ADMIN_PASSWORD" "$AUTO_GRAFANA_PASSWORD")
 
@@ -211,7 +217,13 @@ if [ -n "${HUAWEI_MAAS_API_KEY_COUNT:-}" ]; then
     for i in $(seq 1 $((HUAWEI_MAAS_API_KEY_COUNT - 1))); do
       VAR="HUAWEI_MAAS_API_KEY_$i"
       VAL="${!VAR:-}"
-      [ -n "$VAL" ] && EXTRA_KEYS+=("$VAL")
+      if [ -n "$VAL" ]; then
+        if [[ "$VAL" == *"change-me"* ]] || [[ "$VAL" == *"your-"* ]] || [[ "$VAL" == *"xxx"* ]]; then
+          log_error "$VAR has a placeholder value — refusing to use."
+          exit 1
+        fi
+        EXTRA_KEYS+=("$VAL")
+      fi
     done
     # R3: warn if actual count doesn't match declared count
     actual_count=$(( 1 + ${#EXTRA_KEYS[@]} ))

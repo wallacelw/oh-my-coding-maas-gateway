@@ -134,22 +134,8 @@ mint_or_reuse_key() {
     done
   fi
 
-  if [ -n "$existing_key_id" ]; then
-    # Delete the existing key (by ID) so we can reuse the alias
-    log_info "Deleting existing key with alias '$alias'." >&2
-    local delete_body
-    delete_body=$(jq -nc --arg id "$existing_key_id" '{keys: [$id]}')
-    local delete_rc
-    curl -sf -m 10 -X POST "$litellm_url/key/delete" \
-      -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-      -H "Content-Type: application/json" \
-      -d "$delete_body" &>/dev/null && delete_rc=0 || delete_rc=$?
-    if [ "$delete_rc" -ne 0 ]; then
-      log_warn "Failed to delete existing key with alias '$alias'. Minting may fail if alias still exists." >&2
-    fi
-  fi
-
   # ── Mint the key (retry with backoff) ──
+  # Mint BEFORE deleting the old key so the user always has a working key.
   local max_attempts=3 response=""
   for attempt in $(seq 1 $max_attempts); do
     response=$(curl -sf --connect-timeout 10 --max-time 30 -X POST "$litellm_url/key/generate" \
@@ -166,6 +152,21 @@ mint_or_reuse_key() {
       return 1
     fi
   done
+
+  # ── Delete old key only after successful mint ──
+  if [ -n "$existing_key_id" ]; then
+    log_info "Deleting existing key with alias '$alias'." >&2
+    local delete_body
+    delete_body=$(jq -nc --arg id "$existing_key_id" '{keys: [$id]}')
+    local delete_rc
+    curl -sf -m 10 -X POST "$litellm_url/key/delete" \
+      -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+      -H "Content-Type: application/json" \
+      -d "$delete_body" &>/dev/null && delete_rc=0 || delete_rc=$?
+    if [ "$delete_rc" -ne 0 ]; then
+      log_warn "Failed to delete existing key with alias '$alias'. Old key may still be active." >&2
+    fi
+  fi
 
   local key
   key=$(echo "$response" | jq -r '.key')

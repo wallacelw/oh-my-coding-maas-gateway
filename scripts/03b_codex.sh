@@ -63,7 +63,13 @@ if ! command -v codex &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
     log_info "Would run: npm install -g @openai/codex"
   else
-    run_filtered "npm" npm install -g @openai/codex
+    npm_prefix=$(npm config get prefix 2>/dev/null || echo "")
+    if [ -n "$npm_prefix" ] && [ -w "$npm_prefix/lib/node_modules" ] 2>/dev/null; then
+      run_filtered "npm" npm install -g @openai/codex
+    else
+      log_info "npm global prefix not writable — using sudo"
+      run_filtered "npm" sudo npm install -g @openai/codex
+    fi
     log_ok "Installed: $(codex --version 2>/dev/null || echo 'unknown')"
   fi
 else

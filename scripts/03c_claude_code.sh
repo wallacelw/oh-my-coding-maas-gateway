@@ -61,7 +61,13 @@ if ! command -v claude &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
     log_info "Would run: npm install -g @anthropic-ai/claude-code"
   else
-    run_filtered "npm" npm install -g @anthropic-ai/claude-code
+    npm_prefix=$(npm config get prefix 2>/dev/null || echo "")
+    if [ -n "$npm_prefix" ] && [ -w "$npm_prefix/lib/node_modules" ] 2>/dev/null; then
+      run_filtered "npm" npm install -g @anthropic-ai/claude-code
+    else
+      log_info "npm global prefix not writable — using sudo"
+      run_filtered "npm" sudo npm install -g @anthropic-ai/claude-code
+    fi
     log_ok "Installed: $(claude --version 2>/dev/null || echo 'unknown')"
   fi
 else

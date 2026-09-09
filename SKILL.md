@@ -306,7 +306,7 @@ Grafana: `http://127.0.0.1:3000` — 39-panel dashboard (7 row headers + 32 visu
 
 **SSH forwarding (recommended):**
 ```bash
-ssh -L 4000:127.0.0.1:4000 -L 3000:127.0.0.1:3000 user@vm
+ssh -L 4000:127.0.0.1:4000 -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 user@vm
 ```
 
 **Bind to all interfaces:** set `BIND_ADDRESS="0.0.0.0"` in `.env`, then

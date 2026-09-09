@@ -5,11 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.6] - 2026-09-10
+
+### Fixed
+
+- **C1: Foreign container destruction guard** — `02_litellm.sh` now only
+  removes `litellm_*` containers on occupied ports; foreign containers
+  trigger an error instead of being force-removed
+- **C2: Key deletion ordering race** — `keys.sh` now mints the new virtual
+  key before deleting the old one, preventing auth failures on transient
+  minting errors
+- **H1: Env-var key validation** — `01_env.sh` now validates extra MaaS
+  keys from env vars for placeholder values (matching interactive path)
+- **H2: DB_PASSWORD URL-special char check** — `01_env.sh` rejects
+  passwords containing `@`, `:`, `/`, `#` that would break DATABASE_URL
+- **H3: pi-node removal confirmation** — `uninstall.sh` now prompts before
+  removing `~/.local/share/pi-node` (may break other projects)
+- **H4: update.sh tracked file mutation** — `update.sh` now warns and
+  auto-commits when modifying tracked files (`03a_opencode.sh`,
+  `docker-compose.yml`) to prevent future `git pull` failures
+- **H5: npm install -g sudo detection** — `03b_codex.sh` and
+  `03c_claude_code.sh` detect non-writable npm prefix and use sudo
+- **D1: Env var typo** — `HUAWEI_MAAS.ANTHROPIC_API_BASE` → underscore
+  in INSTALLATION.md and CHANGELOG.md
+- **D2-D3: Helpers table** — models.sh and skills.sh "Used by" columns
+  updated in INSTALLATION.md
+- **D4: SSH port forwarding** — SKILL.md now includes port 9090 for
+  Prometheus
+- **D5: PROMETHEUS_RETENTION** — REFERENCE.md "Read by" updated to
+  include `04_validate.sh`
+- **D6: EXA .bashrc cleanup** — `uninstall.sh` now removes
+  `OPENCODE_ENABLE_EXA` from `~/.bashrc`
+- **D7: CHANGELOG check count** — Clarified "24 at runtime (32 defined)"
+
 ## [1.9.5] - 2026-09-09
 
 ### Added
 
-- **24 new validation checks** in `04_validate.sh` (96 → 120 total):
+- **24 new validation checks at runtime** in `04_validate.sh` (96 → 120 total, 32 defined — some skipped by conditionals):
   - M1: Slim plugin version match (installed vs `03a_opencode.sh`)
   - M2: Container security hardening applied at runtime (8 checks)
   - M3: Router settings in config (routing_strategy, prometheus callback)
@@ -82,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **INSTALLATION.md choice 7** — corrected from `--tool=opencode,codex`
   to "Interactive — Custom toggle each component on/off".
 - **INSTALLATION.md env-var table** — added missing `HUAWEI_MAAS_API_BASE`
-  and `HUAWEI_MAAS.ANTHROPIC_API_BASE` entries.
+  and `HUAWEI_MAAS_ANTHROPIC_API_BASE` entries.
 - **02_litellm.sh KEY_COUNT validation** — added numeric check before
   arithmetic comparison to prevent crash on non-numeric `.env` value.
 - **04_validate.sh KEY_COUNT validation** — same numeric guard added

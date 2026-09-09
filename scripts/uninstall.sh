@@ -269,6 +269,7 @@ if [ "$REMOVE_OPENCODE" = true ]; then
     # Clean .bashrc entries
     remove_bashrc_section "^# bun$"
     remove_bashrc_section "^# opencode$"
+    remove_bashrc_section "Enable opencode built-in websearch"
     remove_bashrc_block "^# >>> oh-my-opencode-slim" "^# <<< oh-my-opencode-slim"
     [ -f "$HOME/.bashrc" ] && log_ok "Cleaned .bashrc entries"
   fi
@@ -354,10 +355,14 @@ if [ "$REMOVE_PI" = true ]; then
   fi
   # Also remove pi-managed Node.js if present
   if [ "$DRY_RUN" != true ] && [ -d "$HOME/.local/share/pi-node" ]; then
-    rm -rf "$HOME/.local/share/pi-node"
-    log_ok "Removed pi-managed Node.js: $HOME/.local/share/pi-node/"
-    # Clean .bashrc entries for pi-node
-    remove_bashrc_block "pi-node"
+    if is_interactive && prompt_yesno "Remove pi-managed Node.js at ~/.local/share/pi-node? (may break other projects using it)" n; then
+      rm -rf "$HOME/.local/share/pi-node"
+      log_ok "Removed pi-managed Node.js: $HOME/.local/share/pi-node/"
+      # Clean .bashrc entries for pi-node
+      remove_bashrc_block "pi-node"
+    else
+      log_dim "Keeping pi-managed Node.js: $HOME/.local/share/pi-node/"
+    fi
   fi
 fi
 

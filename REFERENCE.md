@@ -22,7 +22,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | `LITELLM_SALT_KEY` | `01_env.sh` (auto or custom) | LiteLLM container | Random string | **High** — invalidates all virtual keys (`--force` to regenerate) |
 | `DB_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, postgres | Random string | **High** — breaks DB auth (`--force` to regenerate) |
 | `GRAFANA_ADMIN_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, `04_validate.sh` | Random string | Low — changes dashboard login only |
-| `PROMETHEUS_RETENTION` | `01_env.sh` (default `30d`) | docker-compose | Prometheus duration (`Nd`/`Nh`/`Nw`) | None — config value |
+| `PROMETHEUS_RETENTION` | `01_env.sh` (default `30d`) | docker-compose, 04_validate.sh | Prometheus duration (`Nd`/`Nh`/`Nw`) | None — config value |
 | `HUAWEI_MAAS_ANTHROPIC_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/anthropic`) | `02_litellm.sh` | URL | None — config value |
 | `HUAWEI_MAAS_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`) | `02_litellm.sh` | URL | None — config value |
 | `BIND_ADDRESS` | `01_env.sh` (default `127.0.0.1`) | docker-compose | `127.0.0.1` or `0.0.0.0` | None — config value |
