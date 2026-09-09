@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.7] - 2026-09-10
+
+### Changed
+
+- **Model catalog updated** to match latest Huawei MaaS specs:
+  - `glm-5.2`: context window 198K → **1M** (max_tokens and max_input
+    198000→1000000)
+  - `deepseek-v4-flash`: TPM 60000→30000, RPM 15→3, max_output
+    128K → **384K** (128000→384000)
+  - `glm-5.1` and `deepseek-v4-pro`: unchanged
+- Updated in: `models.sh`, `config.yaml.template`, `model_catalog.json`,
+  `opencode.json.template`, `REFERENCE.md`
+- Regenerated `config.yaml` and restarted LiteLLM container
+
 ## [1.9.6] - 2026-09-10
 
 ### Fixed

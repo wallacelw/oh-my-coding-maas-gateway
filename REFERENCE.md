@@ -132,10 +132,10 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 
 | Name | Input/Output | RPM | Cost (in/out per token) | Cache hit |
 |------|-------------|-----|------------------------|----------|
-| `glm-5.2` | 192K/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ |
+| `glm-5.2` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ |
 | `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ | $0.270 × 10⁻⁶ |
 | `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ | — |
-| `deepseek-v4-flash` | 1M/128K | 15 | $0.135 / $0.270 × 10⁻⁶ | — |
+| `deepseek-v4-flash` | 1M/384K | 3 | $0.135 / $0.270 × 10⁻⁶ | — |
 
 **Pricing notes:**
 - Prices are peak (Period 1: 08:00–20:59 GMT+8). Off-peak (Period 2: 21:00–07:59) is 70% of peak.
