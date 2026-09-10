@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.3] - 2026-09-11
+
+### Fixed
+
+- **Pi installer prompts suppressed with `-y`** — Pi's internal prompts
+  ("Install Node.js?", "Choose action") now auto-answered via `yes` pipe
+  when `AUTO_YES=true`
+- **01_env.sh MaaS key prompt** — errors with clear message when
+  `AUTO_YES=true` and no key provided (instead of prompting)
+- **uninstall.sh bun/pi-node prompts** — auto-remove when `AUTO_YES=true`
+- **update.sh "Run validation?" prompt** — auto-proceeds when
+  `AUTO_YES=true`
+- **keys.sh fallback prompt** — errors instead of prompting when
+  `AUTO_YES=true`
+- **docker-compose.yml** — removed redundant env_file comment
+- **SKILL.md** — added `-y`/`--yes` and `--api-key=` to bootstrap flags table
+- **README.md** — added non-interactive upgrade example
+
 ## [1.10.2] - 2026-09-10
 
 ### Fixed

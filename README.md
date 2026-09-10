@@ -80,6 +80,12 @@ pulls updates. All secrets and data preserved.
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
 ```
 
+Or non-interactive:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash -s -- -y
+```
+
 After upgrade, restart any running coding tools — plugin/preset changes
 are not hot-reloaded.
 

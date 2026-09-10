@@ -42,7 +42,7 @@ cd ~/oh-my-coding-maas-gateway
 
 | Script | Purpose | Key flags |
 |--------|---------|-----------|
-| `scripts/bootstrap.sh` | Install or upgrade the entire stack | `--tool=`, `--virtual-key=`, `--dry-run`, `--no-skill` |
+| `scripts/bootstrap.sh` | Install or upgrade the entire stack | `--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--dry-run`, `--no-skill` |
 | `scripts/update.sh` | Check and update individual components (tools + infrastructure) | `--check`, `--all`, `--dry-run` |
 | `scripts/04_validate.sh` | End-to-end validation (run anytime) | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--dry-run` |
 | `scripts/05_skill.sh` | Install THIS companion skill into agents | `--yes`, `--dry-run`, `--no-skill` |

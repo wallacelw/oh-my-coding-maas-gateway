@@ -42,7 +42,10 @@ resolve_master_key() {
   fi
 
   # 3. Prompt if interactive, else fail
-  if is_interactive; then
+  if [ "${AUTO_YES:-false}" = true ]; then
+    log_error "LITELLM_MASTER_KEY not found. Set it in .env or environment."
+    return 1
+  elif is_interactive; then
     log_warn "LITELLM_MASTER_KEY not found in env or .env."
     log_info "Enter LITELLM_MASTER_KEY (or Ctrl+C to abort):" >&2
     read -r LITELLM_MASTER_KEY < /dev/tty

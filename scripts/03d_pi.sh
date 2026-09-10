@@ -70,7 +70,13 @@ if ! command -v pi &>/dev/null; then
       exit 1
     fi
     log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
-    if ! sh "$PI_INSTALLER_TMP"; then
+    if [ "${AUTO_YES:-false}" = true ]; then
+      yes | sh "$PI_INSTALLER_TMP"
+    else
+      sh "$PI_INSTALLER_TMP"
+    fi
+    _pi_rc=$?
+    if [ $_pi_rc -ne 0 ]; then
       rm -f "$PI_INSTALLER_TMP"
       log_error "Pi installer failed. Ensure Node.js 22.19.0+ is available."
       exit 1

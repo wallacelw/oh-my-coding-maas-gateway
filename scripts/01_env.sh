@@ -195,6 +195,9 @@ if [ -z "$MAAS_API_KEY" ] && [ -n "$EXISTING_MAAS_KEY" ]; then
 fi
 if [ -n "$MAAS_API_KEY" ]; then
   log_ok "HUAWEI_MAAS_API_KEY set from environment"
+elif [ "${AUTO_YES:-false}" = true ]; then
+  log_error "HUAWEI_MAAS_API_KEY is required. Use --api-key=KEY or set HUAWEI_MAAS_API_KEY env var."
+  exit 1
 elif is_interactive; then
   while true; do
     echo ""

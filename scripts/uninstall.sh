@@ -260,7 +260,10 @@ if [ "$REMOVE_OPENCODE" = true ]; then
   else
     [ -d "$HOME/.opencode" ] && rm -rf "$HOME/.opencode" && log_ok "Removed binary: $HOME/.opencode/"
     if [ -d "$HOME/.bun" ]; then
-      if is_interactive && prompt_yesno "Remove bun runtime? (may break other bun projects)" n; then
+      if [ "${AUTO_YES:-false}" = true ]; then
+        rm -rf "$HOME/.bun"
+        log_ok "Removed bun runtime: $HOME/.bun/"
+      elif is_interactive && prompt_yesno "Remove bun runtime? (may break other bun projects)" n; then
         rm -rf "$HOME/.bun" && log_ok "Removed runtime: $HOME/.bun/"
       else
         log_dim "Keeping bun runtime: $HOME/.bun/ (may be used by other projects)"
@@ -355,7 +358,11 @@ if [ "$REMOVE_PI" = true ]; then
   fi
   # Also remove pi-managed Node.js if present
   if [ "$DRY_RUN" != true ] && [ -d "$HOME/.local/share/pi-node" ]; then
-    if is_interactive && prompt_yesno "Remove pi-managed Node.js at ~/.local/share/pi-node? (may break other projects using it)" n; then
+    if [ "${AUTO_YES:-false}" = true ]; then
+      rm -rf "$HOME/.local/share/pi-node"
+      log_ok "Removed pi-managed Node.js: $HOME/.local/share/pi-node/"
+      remove_bashrc_block "pi-node"
+    elif is_interactive && prompt_yesno "Remove pi-managed Node.js at ~/.local/share/pi-node? (may break other projects using it)" n; then
       rm -rf "$HOME/.local/share/pi-node"
       log_ok "Removed pi-managed Node.js: $HOME/.local/share/pi-node/"
       # Clean .bashrc entries for pi-node

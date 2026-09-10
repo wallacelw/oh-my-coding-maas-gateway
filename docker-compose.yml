@@ -26,7 +26,6 @@ services:
       LITELLM_DISABLE_NO_REDIS_WARNING: "true"
     # NOTE: env_file injects ALL .env vars into this container.
     # Only add vars needed by LiteLLM to .env — unrelated secrets will leak.
-    # env_file passes all .env vars to the container.
     # Acceptable because: (1) vars are container-local and not exposed to host,
     # (2) HUAWEI_MAAS_API_KEY_* count is dynamic so can't enumerate in environment:,
     # (3) .env should contain only vars needed by this stack.

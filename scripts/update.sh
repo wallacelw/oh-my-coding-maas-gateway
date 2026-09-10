@@ -503,7 +503,10 @@ fi
 # Offer to run validation
 if [ "$DRY_RUN" = false ] && [ ${#SELECTED[@]} -gt 0 ] && [ $FAILED -eq 0 ]; then
   echo ""
-  if prompt_yesno "Run validation?" y; then
-    "$SCRIPT_DIR/04_validate.sh"
+  if [ "${AUTO_YES:-false}" = true ]; then
+    : # auto-proceed with validation in non-interactive mode
+  elif ! prompt_yesno "Run validation?" y; then
+    log_info "Skipping validation"
   fi
+  "$SCRIPT_DIR/04_validate.sh"
 fi
