@@ -681,7 +681,7 @@ echo ""
 echo -e "  ${C_DIM}To check for coding tool updates later: ./scripts/update.sh${C_RESET}"
 echo ""
 
-if [ "$KEYS_FROM_ENV" = true ]; then
+if [ "$KEYS_FROM_ENV" = true ] && [ "${AUTO_YES:-false}" != true ]; then
   echo -e "  ${C_YELLOW}⚠ Security:${C_RESET} API keys were shared via environment variables and command line."
   echo -e "    ${C_DIM}Rotate your MaaS keys to prevent unauthorized use:${C_RESET}"
   echo -e "      ${C_DIM}1. Get new key(s) from https://console.huaweicloud.com/modelarts/${C_RESET}"
