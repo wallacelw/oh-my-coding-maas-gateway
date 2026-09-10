@@ -61,31 +61,33 @@ if ! command -v pi &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
     log_info "Would run: curl -fsSL $PI_INSTALL_URL | sh"
   else
-    # Pi installer needs terminal access — it has interactive prompts
-    # (logo animation, may install Node.js 22+ if system version is too old)
-    PI_INSTALLER_TMP=$(mktemp)
-    if ! curl -fsSL --max-time 60 "$PI_INSTALL_URL" -o "$PI_INSTALLER_TMP"; then
-      log_error "Failed to download Pi installer."
-      rm -f "$PI_INSTALLER_TMP"
-      exit 1
-    fi
-    log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
-    if [ "${AUTO_YES:-false}" = true ]; then
-      # Pi installer reads from /dev/tty (not stdin), so 'yes |' pipe
-      # alone doesn't work. Use 'script' to create a pseudo-terminal
-      # so the installer can detect a tty, and pipe 'yes' to auto-answer
-      # all confirmation prompts (Node.js install, action choice, etc.).
-      yes | script -q -c "sh $PI_INSTALLER_TMP" /dev/null
+    # Check if we can install directly via npm (avoids installer prompts entirely)
+    _node_major=$(node --version 2>/dev/null | sed 's/^v//;s/\..*//' || echo 0)
+    if [ "${AUTO_YES:-false}" = true ] && [ "$_node_major" -ge 22 ] 2>/dev/null; then
+      # Node.js 22+ available — install Pi directly via npm, skip installer
+      log_dim "Node.js $_node_major detected — installing Pi via npm directly"
+      npm install -g --ignore-scripts --min-release-age=0 @earendil-works/pi-coding-agent
+      _pi_rc=$?
     else
-      sh "$PI_INSTALLER_TMP"
-    fi
-    _pi_rc=$?
-    if [ $_pi_rc -ne 0 ]; then
+      # Use installer script (handles Node.js installation if needed)
+      PI_INSTALLER_TMP=$(mktemp)
+      if ! curl -fsSL --max-time 60 "$PI_INSTALL_URL" -o "$PI_INSTALLER_TMP"; then
+        log_error "Failed to download Pi installer."
+        rm -f "$PI_INSTALLER_TMP"
+        exit 1
+      fi
+      log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
+      if [ "${AUTO_YES:-false}" = true ]; then
+        # Pi installer reads from /dev/tty (not stdin). Use 'script' to
+        # create a pseudo-terminal so the installer can detect a tty,
+        # and pipe 'yes' to auto-answer all confirmation prompts.
+        yes | script -q -c "sh $PI_INSTALLER_TMP" /dev/null
+      else
+        sh "$PI_INSTALLER_TMP"
+      fi
+      _pi_rc=$?
       rm -f "$PI_INSTALLER_TMP"
-      log_error "Pi installer failed. Ensure Node.js 22.19.0+ is available."
-      exit 1
     fi
-    rm -f "$PI_INSTALLER_TMP"
     # Refresh PATH — installer may have added ~/.local/bin or updated nvm
     hash -r 2>/dev/null || true
     # Also check common install locations
