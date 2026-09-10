@@ -59,6 +59,9 @@ if [ -n "${HUAWEI_MAAS_API_KEY:-}" ]; then
   export HUAWEI_MAAS_API_KEY
 fi
 
+# Export AUTO_YES so child scripts can check it
+export AUTO_YES
+
 # ── Version ──
 PROJECT_VERSION="unknown"
 if [ -f "$SCRIPT_DIR/../VERSION" ]; then

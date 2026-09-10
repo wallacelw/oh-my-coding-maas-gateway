@@ -138,26 +138,37 @@ if [ "$IS_FRESH" = true ]; then
     log_warn "Regenerating all secrets (--force). Existing virtual keys will be invalidated."
   fi
 
-  log_step "Secret configuration"
-  log_dim "For each secret, choose auto-generated or enter a custom value."
-  echo ""
+  if [ "${AUTO_YES:-false}" = true ]; then
+    # Non-interactive: use auto-generated defaults
+    log_step "Secret configuration"
+    MASTER_KEY="$AUTO_MASTER_KEY"
+    SALT_KEY="$AUTO_SALT_KEY"
+    DB_PASSWORD="$AUTO_DB_PASSWORD"
+    GRAFANA_PASSWORD="$AUTO_GRAFANA_PASSWORD"
+    PROM_RETENTION="$AUTO_PROM_RETENTION"
+    log_ok "Using auto-generated secrets (non-interactive mode)"
+  else
+    log_step "Secret configuration"
+    log_dim "For each secret, choose auto-generated or enter a custom value."
+    echo ""
 
-  MASTER_KEY=$(prompt_password "LITELLM_MASTER_KEY (proxy auth)" "$AUTO_MASTER_KEY" "sk-")
-  echo ""
-  SALT_KEY=$(prompt_password "LITELLM_SALT_KEY (virtual key signing)" "$AUTO_SALT_KEY")
-  echo ""
-  DB_PASSWORD=$(prompt_password "DB_PASSWORD (PostgreSQL)" "$AUTO_DB_PASSWORD")
-  if [[ "$DB_PASSWORD" == *[@:/#]* ]]; then
-    log_error "DB_PASSWORD contains URL-special characters (@, :, /, #)."
-    log_dim "  These break the DATABASE_URL connection string."
-    log_dim "  Use only alphanumeric and -_ characters."
-    exit 1
+    MASTER_KEY=$(prompt_password "LITELLM_MASTER_KEY (proxy auth)" "$AUTO_MASTER_KEY" "sk-")
+    echo ""
+    SALT_KEY=$(prompt_password "LITELLM_SALT_KEY (virtual key signing)" "$AUTO_SALT_KEY")
+    echo ""
+    DB_PASSWORD=$(prompt_password "DB_PASSWORD (PostgreSQL)" "$AUTO_DB_PASSWORD")
+    if [[ "$DB_PASSWORD" == *[@:/#]* ]]; then
+      log_error "DB_PASSWORD contains URL-special characters (@, :, /, #)."
+      log_dim "  These break the DATABASE_URL connection string."
+      log_dim "  Use only alphanumeric and -_ characters."
+      exit 1
+    fi
+    echo ""
+    GRAFANA_PASSWORD=$(prompt_password "GRAFANA_ADMIN_PASSWORD" "$AUTO_GRAFANA_PASSWORD")
+
+    echo ""
+    PROM_RETENTION=$(prompt_password "PROMETHEUS_RETENTION (e.g. 30d, 14d, 7d)" "$AUTO_PROM_RETENTION")
   fi
-  echo ""
-  GRAFANA_PASSWORD=$(prompt_password "GRAFANA_ADMIN_PASSWORD" "$AUTO_GRAFANA_PASSWORD")
-
-  echo ""
-  PROM_RETENTION=$(prompt_password "PROMETHEUS_RETENTION (e.g. 30d, 14d, 7d)" "$AUTO_PROM_RETENTION")
 fi
 
 # ── Collect MaaS API key (env var or prompt) ──
@@ -235,7 +246,7 @@ if [ -n "${HUAWEI_MAAS_API_KEY_COUNT:-}" ]; then
 elif [ ${#EXISTING_EXTRA_KEYS[@]} -gt 0 ]; then
   EXTRA_KEYS=("${EXISTING_EXTRA_KEYS[@]}")
   log_ok "${#EXTRA_KEYS[@]} extra MaaS key(s) preserved from existing .env"
-elif is_interactive; then
+elif is_interactive && [ "${AUTO_YES:-false}" != true ]; then
   echo ""
   log_dim "Additional MaaS API keys for load balancing."
   log_dim "Each extra key multiplies effective RPM/TPM across all models."

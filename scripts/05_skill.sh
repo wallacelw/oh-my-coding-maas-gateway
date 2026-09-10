@@ -99,7 +99,9 @@ if [ "$ASSUME_YES" = false ] && is_interactive; then
   log_info "Would install into: $(echo "$NEW" | tr ' ' ',' | sed 's/,$//')"
   echo ""
 
-  if ! prompt_yesno "Install companion skill into these agents?" y; then
+  if [ "${AUTO_YES:-false}" = true ]; then
+    log_info "Installing companion skill (non-interactive mode)"
+  elif ! prompt_yesno "Install companion skill into these agents?" y; then
     log_info "Skipping companion skill installation"
     exit 0
   fi
