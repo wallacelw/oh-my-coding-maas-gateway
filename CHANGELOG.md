@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.9] - 2026-09-11
+
+### Changed
+
+- **Security warning → tip** — Replaced the alarming 5-step key rotation
+  warning with a simple dim tip shown after every install: "If you shared
+  your MaaS API key with a coding agent or CI system, consider rotating
+  it." Shows in all modes (interactive and non-interactive).
+
 ## [1.10.8] - 2026-09-11
 
 ### Fixed

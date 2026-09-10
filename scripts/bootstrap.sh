@@ -681,18 +681,8 @@ echo ""
 echo -e "  ${C_DIM}To check for coding tool updates later: ./scripts/update.sh${C_RESET}"
 echo ""
 
-if [ "$KEYS_FROM_ENV" = true ] && [ "${AUTO_YES:-false}" != true ]; then
-  echo -e "  ${C_YELLOW}⚠ Security:${C_RESET} API keys were shared via environment variables and command line."
-  echo -e "    ${C_DIM}Rotate your MaaS keys to prevent unauthorized use:${C_RESET}"
-  echo -e "      ${C_DIM}1. Get new key(s) from https://console.huaweicloud.com/modelarts/${C_RESET}"
-  echo -e "      ${C_DIM}2. Edit .env: replace HUAWEI_MAAS_API_KEY and HUAWEI_MAAS_API_KEY_1..N${C_RESET}"
-  echo -e "      ${C_DIM}3. Regenerate config: ./scripts/02_litellm.sh${C_RESET}"
-  echo -e "      ${C_DIM}4. Restart LiteLLM:  docker compose restart litellm${C_RESET}"
-  echo -e "      ${C_DIM}5. Re-validate:      ./scripts/04_validate.sh${C_RESET}"
-  echo ""
-  echo -e "  ${C_BOLD}Restart your shell${C_RESET} (or open a new terminal) to clear exported environment"
-  echo -e "  variables and apply all changes:"
-  echo -e "    ${C_CYAN}exec \"\$SHELL\"${C_RESET}    ${C_DIM}# or close and reopen your terminal${C_RESET}"
-fi
+echo ""
+echo -e "  ${C_DIM}Tip: If you shared your MaaS API key with a coding agent or CI system,"
+echo -e "  consider rotating it at https://console.huaweicloud.com/modelarts/ to stay secure.${C_RESET}"
 
 exit "$VALIDATE_RC"
