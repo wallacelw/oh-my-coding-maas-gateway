@@ -71,7 +71,11 @@ if ! command -v pi &>/dev/null; then
     fi
     log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
     if [ "${AUTO_YES:-false}" = true ]; then
-      yes | sh "$PI_INSTALLER_TMP"
+      # Pi installer reads from /dev/tty (not stdin), so 'yes |' pipe
+      # doesn't work. Use setsid to start a new session without a
+      # controlling terminal — installer detects "No terminal" and
+      # skips all confirmation prompts automatically.
+      setsid sh "$PI_INSTALLER_TMP" < /dev/null
     else
       sh "$PI_INSTALLER_TMP"
     fi
