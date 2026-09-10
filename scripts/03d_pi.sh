@@ -72,10 +72,10 @@ if ! command -v pi &>/dev/null; then
     log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
     if [ "${AUTO_YES:-false}" = true ]; then
       # Pi installer reads from /dev/tty (not stdin), so 'yes |' pipe
-      # doesn't work. Use setsid to start a new session without a
-      # controlling terminal — installer detects "No terminal" and
-      # skips all confirmation prompts automatically.
-      setsid sh "$PI_INSTALLER_TMP" < /dev/null
+      # alone doesn't work. Use 'script' to create a pseudo-terminal
+      # so the installer can detect a tty, and pipe 'yes' to auto-answer
+      # all confirmation prompts (Node.js install, action choice, etc.).
+      yes | script -q -c "sh $PI_INSTALLER_TMP" /dev/null
     else
       sh "$PI_INSTALLER_TMP"
     fi
