@@ -35,18 +35,29 @@ DRY_RUN=false
 TOOL_SPECIFIED=false
 TOOL_SELECTION=""
 NO_SKILL=false
+AUTO_YES=false
 for arg in "$@"; do
   case "$arg" in
-    --virtual-key=*) VIRTUAL_KEY="${arg#--virtual-key=}" ;;
-    --dry-run)       DRY_RUN=true ;;
-    --tool=*)        TOOL_SPECIFIED=true; TOOL_SELECTION="${arg#--tool=}" ;;
-    --no-skill)      NO_SKILL=true ;;
+    --virtual-key=*)  VIRTUAL_KEY="${arg#--virtual-key=}" ;;
+    --dry-run)        DRY_RUN=true ;;
+    --tool=*)         TOOL_SPECIFIED=true; TOOL_SELECTION="${arg#--tool=}" ;;
+    --no-skill)       NO_SKILL=true ;;
+    -y|--yes)         AUTO_YES=true ;;
+    --api-key=*)      HUAWEI_MAAS_API_KEY="${arg#--api-key=}" ;;
     *)
-      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--dry-run] [--no-skill]"
+      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--api-key=KEY] [-y|--yes] [--dry-run] [--no-skill]"
+      echo ""
+      echo "  -y, --yes          Auto-accept all prompts (non-interactive mode)"
+      echo "  --api-key=KEY      Huawei MaaS API key (alternative to HUAWEI_MAAS_API_KEY env var)"
       exit 1
       ;;
   esac
 done
+
+# Export API key if set via flag (so child scripts inherit it)
+if [ -n "${HUAWEI_MAAS_API_KEY:-}" ]; then
+  export HUAWEI_MAAS_API_KEY
+fi
 
 # ── Version ──
 PROJECT_VERSION="unknown"
@@ -138,7 +149,9 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
   echo ""
 
   default_parent="/home"
-  if is_interactive; then
+  if [ "$AUTO_YES" = true ]; then
+    install_parent="$default_parent"
+  elif is_interactive; then
     echo -n "  Where to install? [$default_parent]: "
     read -r install_parent < /dev/tty || install_parent="$default_parent"
     install_parent="${install_parent:-$default_parent}"
@@ -149,7 +162,11 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
   if [ -d "$target_dir/.git" ]; then
     echo "  Existing install found at $target_dir"
     show_version_info "$target_dir"
-    if is_interactive; then
+    if [ "$AUTO_YES" = true ]; then
+      echo "  Pulling updates..."
+      cd "$target_dir"
+      git pull --ff-only || git reset --hard origin/main
+    elif is_interactive; then
       echo ""
       echo -e "  ${C_BOLD}1)${C_RESET} Pull updates (preserve existing config & data) ${C_DIM}[default]${C_RESET}"
       echo -e "  ${C_BOLD}2)${C_RESET} Fresh install (uninstall old, remove all configs & Docker data)"
@@ -173,9 +190,13 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
           echo "  Pulling updates..."
           cd "$target_dir"
           if ! git pull --ff-only; then
-            echo ""
-            echo -e "  ${C_YELLOW}⚠ git pull failed.${C_RESET} Reset to origin/main? ${C_DIM}[y/N]${C_RESET}: "
-            read -r reset_choice < /dev/tty || reset_choice="n"
+            if [ "$AUTO_YES" = true ]; then
+              reset_choice="y"
+            else
+              echo ""
+              echo -e "  ${C_YELLOW}⚠ git pull failed.${C_RESET} Reset to origin/main? ${C_DIM}[y/N]${C_RESET}: "
+              read -r reset_choice < /dev/tty || reset_choice="n"
+            fi
             case "$reset_choice" in
               y|Y|yes|YES)
                 echo "  Resetting to origin/main..."
@@ -326,6 +347,8 @@ current_parent="$(dirname "$PROJECT_DIR")"
 if [ "${BOOTSTRAP_STANDALONE:-}" = "1" ]; then
   # Skip prompt — already determined during standalone bootstrap
   install_parent="$current_parent"
+elif [ "$AUTO_YES" = true ]; then
+  install_parent="$current_parent"
 elif is_interactive; then
   install_parent=$(prompt_input "Install directory (project will be in \$INSTALL_DIR/$REPO_NAME)" "$current_parent")
 else
@@ -340,7 +363,9 @@ if [ "$target_dir" != "$PROJECT_DIR" ]; then
     echo ""
     echo -e "  ${C_BOLD}1)${C_RESET} Switch to existing (pull updates) ${C_DIM}[default]${C_RESET}"
     echo -e "  ${C_BOLD}2)${C_RESET} Fresh install (uninstall old, remove all configs & Docker data)"
-    if is_interactive; then
+    if [ "$AUTO_YES" = true ]; then
+      existing_choice="1"
+    elif is_interactive; then
       echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[1]${C_RESET}: "
       read -r existing_choice < /dev/tty || existing_choice="1"
     else
@@ -386,7 +411,7 @@ prereq_ensure_apt "curl"    curl    curl    "curl is needed to download install 
 prereq_ensure_apt "jq"      jq      jq      "jq is needed to parse JSON from MaaS API and LiteLLM responses"
 
 # ── Tool selection (menu if --tool= not given) ──
-if [ "$TOOL_SPECIFIED" = false ] && is_interactive; then
+if [ "$TOOL_SPECIFIED" = false ] && is_interactive && [ "$AUTO_YES" = false ]; then
   while true; do
     log_step "Select installation scope"
     echo -e "  ${C_BOLD}1)${C_RESET} Default — LiteLLM + all coding tools"

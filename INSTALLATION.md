@@ -167,6 +167,8 @@ Skill locations:
 |------|--------|
 | `--tool=VAL` | `all` (default), `litellm`, `opencode`, `codex`, `claude`, `pi`, or comma combo (e.g. `opencode,codex`). Skips the menu. |
 | `--virtual-key=sk-...` | Reuse an existing opencode virtual key, skip minting. |
+| `--api-key=KEY` | Huawei MaaS API key (alternative to `HUAWEI_MAAS_API_KEY` env var). |
+| `-y`, `--yes` | Auto-accept all prompts, install all tools (non-interactive mode). |
 | `--dry-run` | Preview actions without modifying anything. |
 | `--no-skill` | Skip companion skill installation (step 05). |
 

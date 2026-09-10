@@ -44,6 +44,19 @@ menu to select which coding tools to install, auto-install prerequisites,
 deploy the proxy + observability stack, configure each tool with its own
 virtual key, run validation, and offer to install the companion skill.
 
+### Non-interactive
+
+```bash
+# Fresh install with API key (no prompts)
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash -s -- -y --api-key=sk-xxxx
+
+# Upgrade existing install (pull updates, regenerate configs)
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash -s -- -y
+
+# Non-interactive with specific tools only
+curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash -s -- -y --api-key=sk-xxxx --tool=litellm,opencode
+```
+
 Estimated time: ~5 min fresh, ~2 min upgrade. For flags and non-interactive
 usage, see [INSTALLATION.md](./INSTALLATION.md).
 

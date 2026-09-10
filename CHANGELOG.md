@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-09-10
+
+### Added
+
+- **`-y` / `--yes` flag** — Non-interactive mode for `bootstrap.sh`.
+  Auto-accepts all prompts: install directory, existing install upgrade,
+  tool selection (all tools), git pull reset, and companion skill.
+  Enables fully automated installs and upgrades via one-liner.
+- **`--api-key=KEY` flag** — Pass Huawei MaaS API key via CLI.
+  Alternative to `HUAWEI_MAAS_API_KEY` env var. Exported to child scripts.
+
+### Non-interactive usage
+
+```bash
+# Fresh install
+curl -fsSL .../bootstrap.sh | bash -s -- -y --api-key=sk-xxxx
+
+# Upgrade existing install
+curl -fsSL .../bootstrap.sh | bash -s -- -y
+```
+
 ## [1.9.9] - 2026-09-10
 
 ### Fixed
