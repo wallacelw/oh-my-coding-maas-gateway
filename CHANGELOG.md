@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.7] - 2026-09-11
+
+### Fixed
+
+- **Pi installer broken pipe with `-y`** — `yes` infinite stream caused
+  SIGPIPE when installer exited, killing it mid-install under `set -e`.
+  Replaced with `printf 'y\ny\ny\ny\ny\n'` (finite input, no broken pipe).
+
 ## [1.10.6] - 2026-09-11
 
 ### Improved

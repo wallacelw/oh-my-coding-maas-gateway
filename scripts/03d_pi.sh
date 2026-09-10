@@ -79,9 +79,10 @@ if ! command -v pi &>/dev/null; then
       log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
       if [ "${AUTO_YES:-false}" = true ]; then
         # Pi installer reads from /dev/tty (not stdin). Use 'script' to
-        # create a pseudo-terminal so the installer can detect a tty,
-        # and pipe 'yes' to auto-answer all confirmation prompts.
-        yes | script -q -c "sh $PI_INSTALLER_TMP" /dev/null
+        # create a pseudo-terminal so the installer can detect a tty.
+        # Feed finite 'y' answers (not 'yes' which causes broken pipe
+        # when installer exits, killing it mid-install under set -e).
+        printf 'y\ny\ny\ny\ny\n' | script -q -c "sh $PI_INSTALLER_TMP" /dev/null
       else
         sh "$PI_INSTALLER_TMP"
       fi
