@@ -61,8 +61,8 @@ _prereq_prompt() {
   if [ "${PREREQ_MODE:-prompt}" = "auto" ]; then
     return 0
   fi
-  # Non-interactive shell → auto-install
-  if ! is_interactive; then
+  # Non-interactive shell or AUTO_YES → auto-install
+  if ! is_interactive || [ "${AUTO_YES:-false}" = true ]; then
     return 0
   fi
   prompt_yesno "$question" y
