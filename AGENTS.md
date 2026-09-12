@@ -4,9 +4,10 @@
 
 1. Make changes.
 2. Validate end-to-end from multiple perspectives (see below).
-3. Commit with a clear message (see below).
-4. Push: `git push origin main`.
-5. Repeat.
+3. Quality pass: spawn a fresh subagent to review all changes (see below).
+4. Commit with a clear message (see below).
+5. Push: `git push origin main`.
+6. Repeat.
 
 **Always commit and push after completing a unit of work.** Do not accumulate
 multiple unrelated changes in one commit. Do not leave uncommitted changes.
@@ -42,7 +43,110 @@ Before committing, validate the change from **all** relevant perspectives:
    - `--litellm-only` vs full mode (on 04_validate.sh)
    - `--dry-run` mode
    - Idempotent re-run (existing .env, running containers)
-   - Upgrade path (existing installation, missing vars)
+    - Upgrade path (existing installation, missing vars)
+
+## Quality Pass
+
+After validation passes, spawn a **fresh `@oracle` session** (new session,
+no prior context) to do a thorough quality pass through all changes. Oracle
+reviews only the diff and changed files — not the conversation history —
+ensuring an independent, unbiased review.
+
+### Why fresh context
+
+A subagent with prior context knows what was *intended* and may overlook
+issues a fresh reviewer would catch. A new session reviews only what the
+code actually does, not what it was supposed to do.
+
+### Process
+
+1. Spawn a fresh `@oracle` with the diff (`git diff`) and a one-sentence
+   summary of what changed. Oracle reviews without any prior context.
+2. Oracle reports findings (HIGH / MEDIUM / LOW).
+3. The same `@fixer` session uses oracle's findings to fix HIGH and
+   MEDIUM issues.
+4. Re-validate: `./scripts/04_validate.sh`.
+5. LOW findings may be deferred to a follow-up.
+6. Commit only after fixes are validated.
+
+### Review for
+
+- **Bugs:**
+  - Logic errors (wrong variable, inverted condition, off-by-one)
+  - Unhandled edge cases (empty input, missing files, non-zero exits)
+  - Race conditions (concurrent access, ordering dependencies)
+  - Resource leaks (unclosed handles, orphaned processes, temp files)
+
+- **Error handling:**
+  - Failures degrade gracefully, not just crash
+  - Error messages are actionable (tell user how to fix)
+  - Exit codes correct (0=success, non-zero=failure)
+  - Cleanup runs on failure (trap handlers, finally blocks)
+
+- **Security:**
+  - No secrets in logs, process list, or error messages
+  - User input validated and sanitized
+  - File permissions appropriate (not world-readable for secrets)
+  - No command injection (quoted variables, no eval on user input)
+
+- **Simplicity:**
+  - No over-engineering (YAGNI)
+  - No unnecessary abstractions or indirection
+  - Dead code removed
+  - Complex logic has explanatory comments
+
+- **Maintainability:**
+  - Functions do one thing (single responsibility)
+  - No magic numbers that should be configurable
+  - Dependencies are explicit, not hidden
+  - Changes don't require touching unrelated code
+
+- **Modularity:**
+  - Clear separation of concerns
+  - Shared logic extracted into reusable helpers
+  - No circular dependencies
+  - Modules can be tested independently
+
+- **Consistency:**
+  - Naming conventions followed throughout
+  - Style alignment (indentation, quoting, formatting)
+  - Cross-file references valid (names, paths, flags)
+  - Patterns match existing codebase conventions
+
+- **Quality of life:**
+  - Output formatted consistently (alignment, colors, spacing)
+  - Dry-run/preview mode accurate
+  - Help text matches actual flags and behavior
+  - Interactive prompts have sensible defaults
+
+- **Documentation:**
+  - Docs match current behavior, not stale descriptions
+  - Examples are correct and runnable
+  - No duplication across docs (each topic documented once)
+  - Text is direct and objective
+
+- **Stale references:**
+  - No references to removed files, models, or flags
+  - Version numbers current
+  - Config values match actual defaults
+  - Comments match code (not outdated TODOs)
+
+- **Performance:**
+  - No redundant calls or repeated parsing
+  - No blocking operations where async would work
+  - Startup/shutdown time reasonable
+  - Resource usage proportional to workload
+
+- **Backwards compatibility:**
+  - No breaking changes without migration path
+  - Deprecated features have upgrade instructions
+  - Config format backward-compatible
+  - Upgrade path tested (old → new version)
+
+### When to skip
+
+Trivial changes only (one-line typo, doc-only edit with no code impact).
+When in doubt, run the quality pass.
 
 ## Commit Messages
 
@@ -238,8 +342,8 @@ consistent, and readable. These standards apply to ALL scripts.
   final summary. Consistent column alignment.
 - **Next steps.** Show how to use each installed tool with the
   exact command. Use `printf %-12s` for tool names.
-- **Security reminder.** Always show the key rotation steps after
-  install, since keys were passed via CLI/env.
+- **Key rotation tip.** Show a dim tip after install reminding users
+  to rotate keys if shared with agents or CI systems.
 
 ## Project Structure
 

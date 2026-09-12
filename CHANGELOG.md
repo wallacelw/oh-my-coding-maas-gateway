@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.10] - 2026-09-11
+
+### Added
+
+- **Quality Pass standard in AGENTS.md** — After validation passes,
+  spawn a fresh `@oracle` session (no prior context) to review all
+  changes. Oracle reports findings, `@fixer` fixes HIGH/MEDIUM issues,
+  re-validate, then commit. 12 review categories: bugs, error handling,
+  security, simplicity, maintainability, modularity, consistency, QoL,
+  documentation, stale references, performance, backwards compatibility.
+
+### Fixed
+
+- Updated stale "Security reminder" note in AGENTS.md to match the
+  soft key rotation tip from v1.10.9.
+
 ## [1.10.9] - 2026-09-11
 
 ### Changed
