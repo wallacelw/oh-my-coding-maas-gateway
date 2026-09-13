@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.11] - 2026-09-14
+
+### Fixed
+
+- `02_litellm.sh`: "integer expression expected" error when LiteLLM was
+  not already running. `grep -c litellm || echo 0` produced `"0\n0"` (grep
+  outputs `0` on no-match AND exits 1, triggering the `|| echo 0` fallback).
+  Changed to `|| true` to suppress the exit code without duplicating output.
+
 ## [1.10.10] - 2026-09-11
 
 ### Added
