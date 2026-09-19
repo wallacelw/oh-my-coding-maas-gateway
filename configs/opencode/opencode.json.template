@@ -15,6 +15,10 @@
           "name": "glm-5.2",
           "limit": { "context": 1000000, "input": 1000000, "output": 128000 }
         },
+        "glm-5.3": {
+          "name": "glm-5.3",
+          "limit": { "context": 1000000, "input": 1000000, "output": 128000 }
+        },
         "glm-5.1": {
           "name": "glm-5.1",
           "limit": { "context": 198000, "input": 192000, "output": 128000 }
@@ -39,6 +43,10 @@
       "models": {
         "glm-5.2": {
           "name": "glm-5.2",
+          "limit": { "context": 1000000, "input": 1000000, "output": 128000 }
+        },
+        "glm-5.3": {
+          "name": "glm-5.3",
           "limit": { "context": 1000000, "input": 1000000, "output": 128000 }
         },
         "glm-5.1": {

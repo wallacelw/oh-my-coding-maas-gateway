@@ -522,7 +522,7 @@ if [ "$DRY_RUN" = true ]; then
 else
   log_desc "Deploying LiteLLM proxy, Docker containers, and observability stack"
   "$SCRIPT_DIR/02_litellm.sh"
-  log_done "LiteLLM proxy running — 4 models, Grafana + Prometheus active"
+  log_done "LiteLLM proxy running — 5 models, Grafana + Prometheus active"
 fi
 
 # ── Step 03a: opencode (optional) ──

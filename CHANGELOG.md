@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-09-19
+
+### Added
+
+- **glm-5.3 model** — New GLM generation added to the model catalog.
+  Specs: 1M context, 128K max output, TPM 1M, RPM 100, cache read support.
+  Pricing: $1.40/$4.40 per 1M tokens (input/output), $0.26 cache hit —
+  identical to glm-5.2. Updated in: `models.sh`, `config.yaml.template`,
+  `opencode.json.template`, `model_catalog.json`, `REFERENCE.md`,
+  `README.md`, `SKILL.md`, `bootstrap.sh`.
+
 ## [1.10.11] - 2026-09-14
 
 ### Fixed

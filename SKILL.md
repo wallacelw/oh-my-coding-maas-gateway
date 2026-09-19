@@ -225,7 +225,7 @@ model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost:cache_
 `cache_read_cost` and `cache_creation_cost` are 0 for models without
 cache support (deepseek).
 
-Current models: `glm-5.2`, `glm-5.1`, `deepseek-v4-pro`,
+Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4-pro`,
 `deepseek-v4-flash`.
 
 **List models**:
@@ -235,8 +235,9 @@ grep -E '^\s*"' scripts/helpers/models.sh | sed 's/^\s*"//; s/:.*//' | sort
 
 **Add a model**: add a line to the `MODELS` array in `scripts/helpers/models.sh`,
 then update `configs/litellm/config.yaml.template`, `configs/opencode/opencode.json.template`,
-`configs/codex/model_catalog.json`, and `configs/opencode/oh-my-opencode-slim.json.template`
-with the new model. Then regenerate (this creates N deployments per model,
+and `configs/codex/model_catalog.json` with the new model. Update
+`configs/opencode/oh-my-opencode-slim.json.template` only if agents should be
+assigned the new model. Then regenerate (this creates N deployments per model,
 one per API key):
 ```bash
 ./scripts/02_litellm.sh

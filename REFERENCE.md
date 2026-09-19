@@ -62,9 +62,9 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
   Claude Code: Anthropic Messages API forwarded to MaaS Anthropic endpoint
   Pi agent: OpenAI Chat Completions API, all models from models.sh
 
-  Each tool: separate virtual key (sk-...) · unlimited budget · all 4 models
+  Each tool: separate virtual key (sk-...) · unlimited budget · all 5 models
   LiteLLM: load-balances across N MaaS API keys · PostgreSQL (:5432)
-  Models: glm-5.2 · glm-5.1 · deepseek-v4-pro · deepseek-v4-flash
+  Models: glm-5.3 · glm-5.2 · glm-5.1 · deepseek-v4-pro · deepseek-v4-flash
 
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
 ```
@@ -125,7 +125,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key) |
-| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh + 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, `model_catalog.json`, and `slim.json.template` when adding models. |
+| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh + 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Update `slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
 
 ### Models
@@ -133,6 +133,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | Name | Input/Output | RPM | Cost (in/out per token) | Cache hit |
 |------|-------------|-----|------------------------|----------|
 | `glm-5.2` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ |
+| `glm-5.3` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ |
 | `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ | $0.270 × 10⁻⁶ |
 | `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ | — |
 | `deepseek-v4-flash` | 1M/384K | 3 | $0.135 / $0.270 × 10⁻⁶ | — |
@@ -140,7 +141,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 **Pricing notes:**
 - Prices are peak (Period 1: 08:00–20:59 GMT+8). Off-peak (Period 2: 21:00–07:59) is 70% of peak.
 - glm-5.1 uses ≥32K token tier. <32K tier: input $0.809, output $2.265, cache hit $0.175 (per 1M tokens).
-- Cache hit pricing applies only to glm-5.2 and glm-5.1. DeepSeek models have no cache support.
+- Cache hit pricing applies only to glm-5.3, glm-5.2, and glm-5.1. DeepSeek models have no cache support.
 - Source: [Huawei MaaS pricing](https://support.huaweicloud.com/intl/en-us/price-maas/price-maas-0002.html)
 
 ### Core Rules
@@ -243,7 +244,7 @@ Responses API → Chat Completions. This lets Codex CLI use `/v1/responses`
 N MaaS API keys → N deployments per model per format. LiteLLM uses
 `simple-shuffle` routing (round-robin with retry across deployments).
 
-Total deployments: 4 models × N keys × 2 formats = 8N.
+Total deployments: 5 models × N keys × 2 formats = 10N.
 
 ### model_info
 
@@ -458,7 +459,7 @@ Why a custom provider:
 
 ### Model Selection
 
-Models use base names (e.g., `glm-5.2`). All 4 models are available. Switch
+Models use base names (e.g., `glm-5.2`). All 5 models are available. Switch
 at runtime with `--model`:
 
 ```bash
@@ -533,7 +534,7 @@ routes to the Anthropic deployment directly.
 ### Model Selection
 
 Models use `claude-` prefixed names (e.g., `claude-glm-5.2`) for the
-Anthropic endpoint. All 4 models are available. Switch at runtime with
+Anthropic endpoint. All 5 models are available. Switch at runtime with
 `--model`:
 
 ```bash
