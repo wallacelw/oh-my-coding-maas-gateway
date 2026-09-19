@@ -139,9 +139,10 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | `deepseek-v4-flash` | 1M/384K | 3 | $0.135 / $0.270 × 10⁻⁶ | — |
 
 **Pricing notes:**
-- Prices are peak (Period 1: 08:00–20:59 GMT+8). Off-peak (Period 2: 21:00–07:59) is 70% of peak.
+- Peak (Period 1: 08:00–20:59 GMT+8) and off-peak (Period 2: 21:00–07:59, 70% of peak) are modeled via LiteLLM `off_peak_pricing` in `model_info` for glm-5.2 and glm-5.1. GLM-5.3 and DeepSeek models have flat pricing.
 - glm-5.1 uses ≥32K token tier. <32K tier: input $0.809, output $2.265, cache hit $0.175 (per 1M tokens).
 - Cache hit pricing applies only to glm-5.3, glm-5.2, and glm-5.1. DeepSeek models have no cache support.
+- Off-peak pricing applies only to glm-5.2 and glm-5.1. GLM-5.3 and DeepSeek have flat pricing (no time-based differential).
 - Source: [Huawei MaaS pricing](https://support.huaweicloud.com/intl/en-us/price-maas/price-maas-0002.html)
 
 ### Core Rules
@@ -304,8 +305,8 @@ dashboard.
 Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
 (default: `30d`).
 
-**Dashboard** (`configs/grafana/dashboards/main.json`) — 39 panels (7 row
-headers + 32 visualization panels) across 7 sections, default 1h time
+**Dashboard** (`configs/grafana/dashboards/main.json`) — 44 panels (8 row
+headers + 36 visualization panels) across 8 sections, default 1h time
 window, 30s refresh:
 
 1. **At-a-glance** — Active Requests, RPS, RPM, Error %, TPS, TPM, Models Healthy, Spend (window) (8 stat panels)
@@ -315,6 +316,7 @@ window, 30s refresh:
 5. **Tokens** — Input tokens, Output tokens, Reasoning tokens, Cached input tokens (4 timeseries)
 6. **Cache** — Cache misses/min, Provider cache reads, Cache hit ratio (stat) (3 panels)
 7. **Cost** — Total cost, Cost per model, Spend rate (3 panels)
+8. **Rate Limits & Budget** — Deployment TPM limits, Deployment RPM limits, Spend by tool (pie), Spend by tool × model (table) (4 panels)
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
 `$window` (rate window: 1m/5m/15m/1h, default 15m).

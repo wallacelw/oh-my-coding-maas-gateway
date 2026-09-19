@@ -2,7 +2,7 @@
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
   "schemaVersion": 39,
-  "version": 14,
+  "version": 15,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -2045,6 +2045,146 @@
       },
       "collapsed": false,
       "panels": []
+    },
+    {
+      "id": 48,
+      "type": "row",
+      "title": "Rate Limits & Budget",
+      "description": "Deployment rate limits (TPM/RPM) from config, and spend attribution per coding tool. Use these to understand capacity headroom and cost distribution across opencode, Codex, Claude Code, and Pi.",
+      "gridPos": { "x": 0, "y": 76, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 49,
+      "type": "stat",
+      "title": "Deployment TPM limits",
+      "description": "Tokens-per-minute limit per model deployment, from litellm_deployment_tpm_limit (set in models.sh). Shows the provider-side rate ceiling for each model.\n\nHOW TO READ: GLM models allow 1M TPM; DeepSeek models are limited to 30K TPM. Compare against the 'TPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors; consider load-balancing keys or shifting work to higher-limit models.",
+      "gridPos": { "x": 0, "y": 77, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "max by (litellm_model_name) (litellm_deployment_tpm_limit{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}",
+          "hide": false,
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 50,
+      "type": "stat",
+      "title": "Deployment RPM limits",
+      "description": "Requests-per-minute limit per model deployment, from litellm_deployment_rpm_limit (set in models.sh). Shows the provider-side request rate ceiling.\n\nHOW TO READ: GLM models allow 100 RPM; DeepSeek models are limited to 3 RPM. Compare against the 'RPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors.",
+      "gridPos": { "x": 6, "y": 77, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "max by (litellm_model_name) (litellm_deployment_rpm_limit{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}",
+          "hide": false,
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 51,
+      "type": "piechart",
+      "title": "Spend by tool",
+      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
+      "gridPos": { "x": 12, "y": 77, "w": 12, "h": 5 },
+      "targets": [
+        {
+          "expr": "sum by (api_key_alias) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{api_key_alias}}",
+          "hide": false,
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "$",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "pieType": "donut",
+        "displayLabels": ["name", "percent"]
+      }
+    },
+    {
+      "id": 52,
+      "type": "table",
+      "title": "Spend by tool × model",
+      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model.\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs librarian on glm-5.1. Useful for tuning preset assignments for cost efficiency.",
+      "gridPos": { "x": 0, "y": 82, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (api_key_alias, model) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{api_key_alias}} — {{model}}",
+          "hide": false,
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "range": true,
+          "format": "table",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "$",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false }
+      }
     }
   ],
   "fiscalYearStartMonth": 0,

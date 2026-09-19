@@ -32,6 +32,11 @@ model_list:
       input_cost_per_token: 0.0000014
       output_cost_per_token: 0.0000044
       cache_read_input_token_cost: 0.00000026
+      off_peak_pricing:
+        hours_utc: "13:00-00:00"
+        input_cost_per_token: 0.00000098
+        output_cost_per_token: 0.00000308
+        cache_read_input_token_cost: 0.000000182
 
   - model_name: glm-5.3
     litellm_params:
@@ -64,6 +69,11 @@ model_list:
       input_cost_per_token: 0.000001078
       output_cost_per_token: 0.000003774
       cache_read_input_token_cost: 0.00000027
+      off_peak_pricing:
+        hours_utc: "13:00-00:00"
+        input_cost_per_token: 0.000000755
+        output_cost_per_token: 0.000002642
+        cache_read_input_token_cost: 0.000000189
 
   - model_name: deepseek-v4-pro
     litellm_params:

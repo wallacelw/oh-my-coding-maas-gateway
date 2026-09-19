@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-09-20
+
+### Added
+
+- **Off-peak billing** — Huawei MaaS time-based differential pricing now
+  modeled via LiteLLM `off_peak_pricing` in `model_info`. GLM-5.2 and
+  GLM-5.1 have off-peak rates (70% of peak) during 21:00–07:59 GMT+8
+  (13:00–00:00 UTC). GLM-5.3 and DeepSeek models have flat pricing.
+  Configured in `models.sh` via `OFF_PEAK_PRICING` array, emitted by
+  `02_litellm.sh` for both OpenAI and Anthropic deployments.
+- **Grafana dashboard: Rate Limits & Budget row** — 4 new panels:
+  - Deployment TPM limits (stat) — per-model TPM ceiling from config
+  - Deployment RPM limits (stat) — per-model RPM ceiling from config
+  - Spend by tool (piechart) — USD spend per API key alias (opencode,
+    codex, claude-code, pi)
+  - Spend by tool × model (table) — granular cost attribution
+
+### Changed
+
+- Dashboard panel count: 39 → 44 (8 row headers + 36 visualization panels).
+- `models.sh` now defines `OFF_PEAK_PRICING` array for time-based
+  differential pricing (format: `model_name|hours_utc|input|output|cache`).
+- `REFERENCE.md` pricing notes updated to document off-peak modeling.
+
 ## [1.14.0] - 2026-09-19
 
 ### Security

@@ -21,4 +21,29 @@ MODELS=(
 )
 
 MODEL_COUNT=${#MODELS[@]}
+
+# Off-peak pricing (Huawei MaaS Period 2: 21:00-07:59 GMT+8 = 13:00-00:00 UTC, 70% of peak)
+# Format: model_name|hours_utc|input_cost|output_cost|cache_read_cost
+# Only models with off-peak pricing are listed. Rates are absolute values.
+OFF_PEAK_PRICING=(
+  "glm-5.2|13:00-00:00|0.00000098|0.00000308|0.000000182"
+  "glm-5.1|13:00-00:00|0.000000755|0.000002642|0.000000189"
+)
 # Total deployments = keys × models × 2 formats (OpenAI + Anthropic)
+
+# Off-peak pricing (Huawei MaaS Period 2: 21:00-07:59 GMT+8 = 13:00-00:00 UTC, 70% of peak)
+# Format: model_name|hours_utc|input_cost|output_cost|cache_read_cost
+# Only models with off-peak pricing are listed. Rates are absolute values.
+OFF_PEAK_PRICING=(
+  "glm-5.2|13:00-00:00|0.00000098|0.00000308|0.000000182"
+  "glm-5.1|13:00-00:00|0.000000755|0.000002642|0.000000189"
+)
+
+# Off-peak pricing (Huawei MaaS Period 2: 21:00-07:59 GMT+8 = 13:00-00:00 UTC, 70% of peak)
+# Format: model_name|hours_utc|input_cost|output_cost|cache_read_cost
+# Only models with off-peak pricing are listed. Rates are absolute values.
+# off_peak_pricing goes in model_info (NOT litellm_params) per LiteLLM docs.
+OFF_PEAK_PRICING=(
+  "glm-5.2|13:00-00:00|0.00000098|0.00000308|0.000000182"
+  "glm-5.1|13:00-00:00|0.000000755|0.000002642|0.000000189"
+)

@@ -224,6 +224,9 @@ model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost:cache_
 ```
 `cache_read_cost` and `cache_creation_cost` are 0 for models without
 cache support (deepseek).
+Off-peak pricing is configured separately in the `OFF_PEAK_PRICING` array
+(format: `model_name|hours_utc|input_cost|output_cost|cache_read_cost`).
+Only models with off-peak pricing are listed; rates are absolute values.
 
 Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4-pro`,
 `deepseek-v4-flash`.
@@ -278,7 +281,7 @@ curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_spend' | jq .
 curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_total_errors[5m])' | jq .
 ```
 
-Grafana: `http://127.0.0.1:3000` — 39-panel dashboard (7 row headers + 32 visualization panels).
+Grafana: `http://127.0.0.1:3000` — 44-panel dashboard (8 row headers + 36 visualization panels).
 
 ---
 

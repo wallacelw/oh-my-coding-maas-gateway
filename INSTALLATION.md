@@ -65,7 +65,7 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 | `prereqs.sh` | all steps | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install labeled with `[LOG_TAG]`. |
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
 | `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`, `log_action`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
-| `models.sh` | 02, 03d, 04 | `MODELS` array + `MODEL_COUNT` — model catalog sourced by 02_litellm.sh and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Update `slim.json.template` only if agents should use the new model. |
+| `models.sh` | 02, 03d, 04 | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array — model catalog and time-based differential pricing sourced by 02_litellm.sh and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Update `slim.json.template` only if agents should use the new model. |
 | `skills.sh` | 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
 
 ---
@@ -472,10 +472,10 @@ pi
 
 ### Monitoring
 
-- **Grafana:** `http://127.0.0.1:3000` — 39-panel dashboard (7 row headers +
-  32 visualization panels). Login: admin / your Grafana password from .env.
-  7 sections: At-a-glance, Latency, Errors & Health, Throughput &
-  Capacity, Tokens, Cache, Cost. Time window selectable (default 1h).
+- **Grafana:** `http://127.0.0.1:3000` — 44-panel dashboard (8 row headers +
+  36 visualization panels). Login: admin / your Grafana password from .env.
+  8 sections: At-a-glance, Latency, Errors & Health, Throughput &
+  Capacity, Tokens, Cache, Cost, Rate Limits & Budget. Time window selectable (default 1h).
 - **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
   keys, spend, budgets. Login: `admin` / your master key.
 - **Prometheus:** `http://127.0.0.1:9090` — raw metrics.

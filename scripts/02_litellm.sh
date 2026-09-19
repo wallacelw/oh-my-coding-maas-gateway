@@ -124,6 +124,19 @@ if [ -f "$CONFIG_FILE" ]; then
   ls -t "$CONFIG_FILE".bak.* 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
 fi
 
+# Look up off-peak pricing for a model from OFF_PEAK_PRICING array
+get_off_peak_pricing() {
+  local model="$1"
+  for entry in "${OFF_PEAK_PRICING[@]}"; do
+    local name="${entry%%|*}"
+    if [ "$name" = "$model" ]; then
+      echo "${entry#*|}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 # ── Generate config ──
 {
   echo "model_list:"
@@ -158,6 +171,18 @@ fi
       fi
       if [ "${cache_creation_cost:-0}" != "0" ]; then
         echo "      cache_creation_input_token_cost: $cache_creation_cost"
+      fi
+      # Off-peak pricing (if configured for this model)
+      OFF_PEAK=$(get_off_peak_pricing "$model_name") || true
+      if [ -n "$OFF_PEAK" ]; then
+        IFS='|' read -r op_hours op_input op_output op_cache <<< "$OFF_PEAK"
+        echo "      off_peak_pricing:"
+        echo "        hours_utc: \"$op_hours\""
+        echo "        input_cost_per_token: $op_input"
+        echo "        output_cost_per_token: $op_output"
+        if [ "${op_cache:-0}" != "0" ]; then
+          echo "        cache_read_input_token_cost: $op_cache"
+        fi
       fi
       echo ""
     done
@@ -196,6 +221,18 @@ fi
       fi
       if [ "${cache_creation_cost:-0}" != "0" ]; then
         echo "      cache_creation_input_token_cost: $cache_creation_cost"
+      fi
+      # Off-peak pricing (if configured for this model)
+      OFF_PEAK=$(get_off_peak_pricing "$model_name") || true
+      if [ -n "$OFF_PEAK" ]; then
+        IFS='|' read -r op_hours op_input op_output op_cache <<< "$OFF_PEAK"
+        echo "      off_peak_pricing:"
+        echo "        hours_utc: \"$op_hours\""
+        echo "        input_cost_per_token: $op_input"
+        echo "        output_cost_per_token: $op_output"
+        if [ "${op_cache:-0}" != "0" ]; then
+          echo "        cache_read_input_token_cost: $op_cache"
+        fi
       fi
       echo ""
     done
