@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-09-19
+
+### Security
+
+- **LiteLLM 1.98.0 → 1.101.0** — Critical fix: virtual key no longer
+  forwarded to Anthropic on the `/anthropic` passthrough route (#29609).
+  Also fixes spend updates silently dropped on Postgres deadlocks (#34887)
+  and multiple secret-leak paths in verbose logging (#37391, #37373).
+- **Grafana 13.2.0 → 13.2.2** — CVE-2026-15815, CVE-2026-76154,
+  CVE-2026-79656. Also fixes provisioning folder-rename UID collision.
+
+### Changed
+
+- **Component updates** (via `./scripts/update.sh --all`):
+  - LiteLLM 1.98.0 → 1.101.0 — Anthropic `/v1/messages` streaming fixes
+    (thinking blocks, tool calls, document blocks), per-key/per-team
+    Prometheus rate-limit gauges, fail-closed budget enforcement,
+    streaming cost on usage, model deprecation alerts.
+  - oh-my-opencode-slim 2.2.18 → 2.2.21 — per-agent `skills_add`/
+    `skills_remove` directives, configurable fallback retry delays,
+    fix for spaces in provider model names.
+  - Codex CLI 0.149.0 → 0.155.1 — reasoning summaries disabled by
+    default for new sessions (fixes request rejections from non-OpenAI
+    providers like our LiteLLM proxy), experimental worktree support,
+    `@`-mention tasks.
+  - Pi agent 0.84.2 → 0.85.1 — fixed proxied plain-HTTP requests hanging
+    after tool calls (CONNECT tunneling), OpenAI-compatible stream fixes.
+    Skips 0.85.0 (bad npm publish).
+
+### Fixed
+
+- `update.sh`: "Skipping validation" answer now actually skips validation
+  (previously logged the skip message but ran validation anyway).
+- `update.sh`: slim plugin updates now re-apply opencode configs from
+  repo templates — the slim installer preserves the existing config
+  (leaving a stale `$schema` version) and rewrites `opencode.json` with
+  looser permissions; configs are regenerated and `chmod 600`
+  re-enforced after every slim update.
+- `03a_opencode.sh`: config file permissions are now fixed to 600 even
+  when content is unchanged (previously the write was skipped entirely,
+  leaving loose permissions set by external installers).
+
 ## [1.13.0] - 2026-09-19
 
 ### Changed

@@ -184,6 +184,12 @@ fi
 if [ -f "$OPENCODE_CONFIG" ]; then
   if [ "$NEW_CONFIG" = "$(cat "$OPENCODE_CONFIG")" ]; then
     log_dim "Config unchanged — skipping write"
+    # Fix permissions even when content unchanged (external installers
+    # may rewrite this file with looser permissions)
+    if [ "$(stat -c '%a' "$OPENCODE_CONFIG" 2>/dev/null)" != "600" ]; then
+      chmod 600 "$OPENCODE_CONFIG"
+      log_ok "Fixed permissions: $OPENCODE_CONFIG (600)"
+    fi
   else
     cp "$OPENCODE_CONFIG" "$OPENCODE_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
     echo "$NEW_CONFIG" > "$OPENCODE_CONFIG"
@@ -210,6 +216,12 @@ fi
 if [ -f "$SLIM_CONFIG" ]; then
   if [ "$NEW_SLIM" = "$(cat "$SLIM_CONFIG")" ]; then
     log_dim "Config unchanged — skipping write"
+    # Fix permissions even when content unchanged (external installers
+    # may rewrite this file with looser permissions)
+    if [ "$(stat -c '%a' "$SLIM_CONFIG" 2>/dev/null)" != "600" ]; then
+      chmod 600 "$SLIM_CONFIG"
+      log_ok "Fixed permissions: $SLIM_CONFIG (600)"
+    fi
   else
     cp "$SLIM_CONFIG" "$SLIM_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
     echo "$NEW_SLIM" > "$SLIM_CONFIG"

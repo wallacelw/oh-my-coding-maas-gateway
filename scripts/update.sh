@@ -373,6 +373,12 @@ update_component() {
       sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$new_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
       git -C "$PROJECT_DIR" add scripts/03a_opencode.sh 2>/dev/null && \
         git -C "$PROJECT_DIR" commit -m "Bump SLIM_VERSION to $new_ver" --quiet 2>/dev/null || true
+      # Re-apply opencode configs from repo templates. The slim installer
+      # preserves the existing config (stale $schema version) and rewrites
+      # opencode.json with looser permissions; 03a_opencode.sh regenerates
+      # both from templates and enforces chmod 600 (idempotent).
+      log_info "Re-applying opencode configs from templates..."
+      "$SCRIPT_DIR/03a_opencode.sh" || log_warn "Config re-apply failed — run ./scripts/03a_opencode.sh manually"
       log_ok "oh-my-opencode-slim updated to $new_ver"
       ;;
 
@@ -503,10 +509,14 @@ fi
 # Offer to run validation
 if [ "$DRY_RUN" = false ] && [ ${#SELECTED[@]} -gt 0 ] && [ $FAILED -eq 0 ]; then
   echo ""
-  if [ "${AUTO_YES:-false}" = true ]; then
-    : # auto-proceed with validation in non-interactive mode
-  elif ! prompt_yesno "Run validation?" y; then
-    log_info "Skipping validation"
+  RUN_VALIDATION=true
+  if [ "${AUTO_YES:-false}" != true ]; then
+    if ! prompt_yesno "Run validation?" y; then
+      RUN_VALIDATION=false
+      log_info "Skipping validation"
+    fi
   fi
-  "$SCRIPT_DIR/04_validate.sh"
+  if [ "$RUN_VALIDATION" = true ]; then
+    "$SCRIPT_DIR/04_validate.sh"
+  fi
 fi
