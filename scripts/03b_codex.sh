@@ -163,5 +163,5 @@ fi
 
 echo ""
 log_ok "Codex CLI installation complete"
-log_info "Default model: glm-5.2"
+log_info "Default model: glm-5.3"
 log_info "Run: codex"

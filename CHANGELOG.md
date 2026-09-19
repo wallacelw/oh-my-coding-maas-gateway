@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-09-19
+
+### Changed
+
+- **Agent presets reassigned to glm-5.3** — Quality-biased default preset.
+  glm-5.3 is now the primary model for orchestrator, oracle, council,
+  designer, fixer, and all 3 councillors. glm-5.2 is the fallback (where
+  glm-5.1 was before). Librarian and explorer stay on glm-5.1 /
+  deepseek-v4-flash for cost efficiency. Updated default models for
+  opencode, Codex CLI, and Claude Code CLI. Updated in:
+  `oh-my-opencode-slim.json.template`, `opencode.json.template`,
+  `config.toml.template`, `03a_opencode.sh`, `03b_codex.sh`,
+  `03c_claude_code.sh`, `04_validate.sh`, `REFERENCE.md`,
+  `INSTALLATION.md`.
+
 ## [1.11.0] - 2026-09-19
 
 ### Added

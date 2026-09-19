@@ -474,9 +474,9 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Fallback has no chains (v2 format)" '(.fallback.chains // null) == null' \
       "Council presets defined" '.council.presets' \
       "Council has 3 councillors" '(.council.presets.default | keys | length) == 3' \
-      "Council alpha model is LiteLLM/glm-5.2" '.council.presets.default.alpha.model == "LiteLLM/glm-5.2"' \
-      "Council beta model is LiteLLM/glm-5.2" '.council.presets.default.beta.model == "LiteLLM/glm-5.2"' \
-      "Council gamma model is LiteLLM/glm-5.2" '.council.presets.default.gamma.model == "LiteLLM/glm-5.2"' \
+      "Council alpha model is LiteLLM/glm-5.3" '.council.presets.default.alpha.model == "LiteLLM/glm-5.3"' \
+      "Council beta model is LiteLLM/glm-5.3" '.council.presets.default.beta.model == "LiteLLM/glm-5.3"' \
+      "Council gamma model is LiteLLM/glm-5.3" '.council.presets.default.gamma.model == "LiteLLM/glm-5.3"' \
       "Huawei-MaaS-Default orchestrator model set" '.presets["Huawei-MaaS-Default"].orchestrator.model' \
       "Huawei-MaaS-Extended orchestrator model set" '.presets["Huawei-MaaS-Extended"].orchestrator.model'
 

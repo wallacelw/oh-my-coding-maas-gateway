@@ -22,7 +22,7 @@
 # for Huawei MaaS models so Codex CLI doesn't fall back to default metadata.
 # ─────────────────────────────────────────────────────────────────────────────
 
-model = "glm-5.2"
+model = "glm-5.3"
 model_provider = "litellm_proxy"
 model_catalog_json = "<CODEX_HOME>/model_catalog.json"
 

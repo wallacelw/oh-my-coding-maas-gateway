@@ -436,7 +436,7 @@ opencode          # or:  codex  or:  claude --bare  or:  pi
 opencode
 # Switch preset: /preset LiteLLM-Extended
 # Available presets:
-#   LiteLLM-Default   (default, GLM only — glm-5.2, glm-5.1)
+#   LiteLLM-Default   (default, GLM only — glm-5.3, glm-5.2, glm-5.1)
 #   LiteLLM-Extended   (GLM + deepseek-v4-flash — faster, lower RPM)
 #   Huawei-MaaS-Default           (direct, GLM only)
 #   Huawei-MaaS-Extended           (direct, GLM + deepseek-v4-flash)

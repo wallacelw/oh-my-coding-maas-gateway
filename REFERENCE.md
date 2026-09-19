@@ -352,7 +352,7 @@ agent→model mappings.
 | `~/.config/opencode/oh-my-opencode-slim.json` | Plugin config: presets, agents, council |
 
 The `LiteLLM` provider uses `@ai-sdk/openai-compatible` with
-`baseURL: http://127.0.0.1:4000`. Models use base names (e.g., `glm-5.2`)
+`baseURL: http://127.0.0.1:4000`. Models use base names (e.g., `glm-5.3`)
 without provider prefix — the preset name (`LiteLLM/` vs `Huawei-MaaS/`)
 determines routing.
 
@@ -370,9 +370,9 @@ determines routing.
 
 | Preset | Route | Models |
 |--------|-------|--------|
-| **LiteLLM-Default** (default) | Proxy → MaaS | GLM only (glm-5.2, glm-5.1) |
+| **LiteLLM-Default** (default) | Proxy → MaaS | GLM only (glm-5.3, glm-5.2, glm-5.1) |
 | **LiteLLM-Extended** | Proxy → MaaS | GLM + deepseek-v4-flash |
-| **Huawei-MaaS-Default** | Direct → MaaS | GLM only (glm-5.2, glm-5.1) |
+| **Huawei-MaaS-Default** | Direct → MaaS | GLM only (glm-5.3, glm-5.2, glm-5.1) |
 | **Huawei-MaaS-Extended** | Direct → MaaS | GLM + deepseek-v4-flash |
 
 Switch at runtime: `/preset LiteLLM-Extended`
@@ -384,28 +384,28 @@ the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 
 | Agent | LiteLLM-Default | LiteLLM-Extended | MaaS-Default | MaaS-Extended |
 |-------|-----------------|------------------|--------------|---------------|
-| orchestrator | `glm-5.2` (high) | `glm-5.2` (high) | `glm-5.2` (high) | `glm-5.2` (high) |
-| oracle | `glm-5.2` → `glm-5.1` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `glm-5.1` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
-| council | `glm-5.2` → `glm-5.1` (high) | `glm-5.2` → `deepseek-v4-flash` (high) | `glm-5.2` → `glm-5.1` (high) | `glm-5.2` → `deepseek-v4-flash` (high) |
+| orchestrator | `glm-5.3` (high) | `glm-5.3` (high) | `glm-5.3` (high) | `glm-5.3` (high) |
+| oracle | `glm-5.3` → `glm-5.2` (high) | `glm-5.3` → `deepseek-v4-flash` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.3` → `deepseek-v4-flash` (high) |
+| council | `glm-5.3` → `glm-5.2` (high) | `glm-5.3` → `deepseek-v4-flash` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.3` → `deepseek-v4-flash` (high) |
 | librarian | `glm-5.1` (low) | `deepseek-v4-flash` (low) | `glm-5.1` (low) | `deepseek-v4-flash` (low) |
 | explorer | `glm-5.1` (low) | `deepseek-v4-flash` (low) | `glm-5.1` (low) | `deepseek-v4-flash` (low) |
-| designer | `glm-5.1` → `glm-5.2` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) | `glm-5.1` → `glm-5.2` (medium) | `glm-5.1` → `deepseek-v4-flash` (medium) |
-| fixer | `glm-5.1` (high) | `deepseek-v4-flash` → `glm-5.1` (high) | `glm-5.1` (high) | `deepseek-v4-flash` → `glm-5.1` (high) |
+| designer | `glm-5.3` → `glm-5.2` (medium) | `glm-5.3` → `deepseek-v4-flash` (medium) | `glm-5.3` → `glm-5.2` (medium) | `glm-5.3` → `deepseek-v4-flash` (medium) |
+| fixer | `glm-5.3` (high) | `glm-5.3` → `deepseek-v4-flash` (high) | `glm-5.3` (high) | `glm-5.3` → `deepseek-v4-flash` (high) |
 
 ### Council
 
-3 councillors run in parallel, all using glm-5.2, each with a different focus:
+3 councillors run in parallel, all using glm-5.3, each with a different focus:
 
 | Councillor | Model | Focus |
 |------------|-------|-------|
-| **alpha** | glm-5.2 | Deep reasoning, logical correctness, subtle bugs/edge cases |
-| **beta** | glm-5.2 | Architecture, maintainability, trade-offs, long-term implications |
-| **gamma** | glm-5.2 | Practical implementation, cost-efficiency, verification steps |
+| **alpha** | glm-5.3 | Deep reasoning, logical correctness, subtle bugs/edge cases |
+| **beta** | glm-5.3 | Architecture, maintainability, trade-offs, long-term implications |
+| **gamma** | glm-5.3 | Practical implementation, cost-efficiency, verification steps |
 
 > **Note:** Council report labels in the orchestrator's output may show
 > hardcoded example model names (e.g. `gpt-5.6-luna`, `gemini-3-pro`) from
 > the plugin's Council Mode prompt template. These are display labels only —
-> the councillors actually run with the configured model (`glm-5.2`). Verify
+> the councillors actually run with the configured model (`glm-5.3`). Verify
 > actual models via LiteLLM logs or the Grafana dashboard.
 
 ### Prerequisites
@@ -459,12 +459,12 @@ Why a custom provider:
 
 ### Model Selection
 
-Models use base names (e.g., `glm-5.2`). All 5 models are available. Switch
+Models use base names (e.g., `glm-5.3`). All 5 models are available. Switch
 at runtime with `--model`:
 
 ```bash
 codex --model deepseek-v4-pro    # deep reasoning
-codex --model glm-5.2            # general purpose (default)
+codex --model glm-5.3            # general purpose (default)
 codex --model deepseek-v4-flash      # fast
 ```
 
@@ -508,7 +508,7 @@ Set in the `env` block of `~/.claude/settings.json`:
 |----------|-------|---------|
 | `ANTHROPIC_BASE_URL` | `http://127.0.0.1:4000` | LiteLLM proxy URL (no `/v1`) |
 | `ANTHROPIC_API_KEY` | `sk-...` (virtual key) | LiteLLM auth (alias: claude-code) |
-| `ANTHROPIC_MODEL` | `claude-glm-5.2` | Primary model |
+| `ANTHROPIC_MODEL` | `claude-glm-5.3` | Primary model |
 | `ANTHROPIC_SMALL_FAST_MODEL` | `claude-deepseek-v4-flash` | Fast model for background tasks |
 | `CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL` | `1` | Prevent VSCode extension auto-install |
 
@@ -525,21 +525,21 @@ The installer also uninstalls the extension if already present (`code --uninstal
 ### Why `claude-` Prefix
 
 LiteLLM routes requests by `model_name`, not by request format. If OpenAI
-and Anthropic deployments share the same `model_name` (e.g., `glm-5.2`),
+and Anthropic deployments share the same `model_name` (e.g., `glm-5.3`),
 a `/v1/messages` request might randomly hit the OpenAI deployment, triggering
 a broken Anthropic→OpenAI→Anthropic translation that drops content. The
-`claude-` prefix (e.g., `claude-glm-5.2`) ensures `/v1/messages` always
+`claude-` prefix (e.g., `claude-glm-5.3`) ensures `/v1/messages` always
 routes to the Anthropic deployment directly.
 
 ### Model Selection
 
-Models use `claude-` prefixed names (e.g., `claude-glm-5.2`) for the
+Models use `claude-` prefixed names (e.g., `claude-glm-5.3`) for the
 Anthropic endpoint. All 5 models are available. Switch at runtime with
 `--model`:
 
 ```bash
 claude --bare --model claude-deepseek-v4-pro    # deep reasoning
-claude --bare --model claude-glm-5.2            # general purpose (default)
+claude --bare --model claude-glm-5.3            # general purpose (default)
 claude --bare --model claude-deepseek-v4-flash      # fast
 ```
 
@@ -597,7 +597,7 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 | Grafana dashboard stale after upgrade | `docker compose restart grafana` — hard restart picks up provisioning changes |
 | Claude Code `claude not found` | `npm install -g @anthropic-ai/claude-code` |
 | Claude Code 401 | Check `ANTHROPIC_API_KEY` in `~/.claude/settings.json` env block — must start with `sk-` |
-| Claude Code model rejected | Model name case-sensitive — use `claude-` prefixed names (e.g., `claude-glm-5.2`) |
+| Claude Code model rejected | Model name case-sensitive — use `claude-` prefixed names (e.g., `claude-glm-5.3`) |
 
 ### Lifecycle
 
