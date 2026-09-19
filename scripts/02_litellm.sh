@@ -137,6 +137,15 @@ get_off_peak_pricing() {
   return 1
 }
 
+# Check if a model supports reasoning_effort
+supports_reasoning() {
+  local model="$1"
+  for m in "${REASONING_MODELS[@]}"; do
+    [ "$m" = "$model" ] && return 0
+  done
+  return 1
+}
+
 # ── Generate config ──
 {
   echo "model_list:"
@@ -184,6 +193,21 @@ get_off_peak_pricing() {
           echo "        cache_read_input_token_cost: $op_cache"
         fi
       fi
+      # Capability flags and metadata
+      echo "      mode: chat"
+      echo "      supports_function_calling: true"
+      if [ "${cache_read_cost:-0}" != "0" ]; then
+        echo "      supports_prompt_caching: true"
+      else
+        echo "      supports_prompt_caching: false"
+      fi
+      if supports_reasoning "$model_name"; then
+        echo "      supports_reasoning: true"
+      else
+        echo "      supports_reasoning: false"
+      fi
+      echo "      description: \"$model_name on Huawei Cloud MaaS\""
+      echo "      organization: Huawei Cloud"
       echo ""
     done
   done
@@ -234,6 +258,21 @@ get_off_peak_pricing() {
           echo "        cache_read_input_token_cost: $op_cache"
         fi
       fi
+      # Capability flags and metadata
+      echo "      mode: chat"
+      echo "      supports_function_calling: true"
+      if [ "${cache_read_cost:-0}" != "0" ]; then
+        echo "      supports_prompt_caching: true"
+      else
+        echo "      supports_prompt_caching: false"
+      fi
+      if supports_reasoning "$model_name"; then
+        echo "      supports_reasoning: true"
+      else
+        echo "      supports_reasoning: false"
+      fi
+      echo "      description: \"$model_name on Huawei Cloud MaaS\""
+      echo "      organization: Huawei Cloud"
       echo ""
     done
   done

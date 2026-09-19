@@ -37,6 +37,12 @@ model_list:
         input_cost_per_token: 0.00000098
         output_cost_per_token: 0.00000308
         cache_read_input_token_cost: 0.000000182
+      mode: chat
+      supports_function_calling: true
+      supports_prompt_caching: true
+      supports_reasoning: true
+      description: "glm-5.2 on Huawei Cloud MaaS"
+      organization: Huawei Cloud
 
   - model_name: glm-5.3
     litellm_params:
@@ -53,6 +59,12 @@ model_list:
       input_cost_per_token: 0.0000014
       output_cost_per_token: 0.0000044
       cache_read_input_token_cost: 0.00000026
+      mode: chat
+      supports_function_calling: true
+      supports_prompt_caching: true
+      supports_reasoning: true
+      description: "glm-5.3 on Huawei Cloud MaaS"
+      organization: Huawei Cloud
 
   - model_name: glm-5.1
     litellm_params:
@@ -74,6 +86,12 @@ model_list:
         input_cost_per_token: 0.000000755
         output_cost_per_token: 0.000002642
         cache_read_input_token_cost: 0.000000189
+      mode: chat
+      supports_function_calling: true
+      supports_prompt_caching: true
+      supports_reasoning: false
+      description: "glm-5.1 on Huawei Cloud MaaS"
+      organization: Huawei Cloud
 
   - model_name: deepseek-v4-pro
     litellm_params:
@@ -89,6 +107,12 @@ model_list:
       max_output_tokens: 128000
       input_cost_per_token: 0.000001617
       output_cost_per_token: 0.000003235
+      mode: chat
+      supports_function_calling: true
+      supports_prompt_caching: false
+      supports_reasoning: false
+      description: "deepseek-v4-pro on Huawei Cloud MaaS"
+      organization: Huawei Cloud
 
   - model_name: deepseek-v4-flash
     litellm_params:
@@ -104,6 +128,12 @@ model_list:
       max_output_tokens: 384000
       input_cost_per_token: 0.000000135
       output_cost_per_token: 0.00000027
+      mode: chat
+      supports_function_calling: true
+      supports_prompt_caching: false
+      supports_reasoning: false
+      description: "deepseek-v4-flash on Huawei Cloud MaaS"
+      organization: Huawei Cloud
 
 
 litellm_settings:

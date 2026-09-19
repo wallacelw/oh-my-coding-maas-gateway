@@ -21,23 +21,7 @@ MODELS=(
 )
 
 MODEL_COUNT=${#MODELS[@]}
-
-# Off-peak pricing (Huawei MaaS Period 2: 21:00-07:59 GMT+8 = 13:00-00:00 UTC, 70% of peak)
-# Format: model_name|hours_utc|input_cost|output_cost|cache_read_cost
-# Only models with off-peak pricing are listed. Rates are absolute values.
-OFF_PEAK_PRICING=(
-  "glm-5.2|13:00-00:00|0.00000098|0.00000308|0.000000182"
-  "glm-5.1|13:00-00:00|0.000000755|0.000002642|0.000000189"
-)
 # Total deployments = keys × models × 2 formats (OpenAI + Anthropic)
-
-# Off-peak pricing (Huawei MaaS Period 2: 21:00-07:59 GMT+8 = 13:00-00:00 UTC, 70% of peak)
-# Format: model_name|hours_utc|input_cost|output_cost|cache_read_cost
-# Only models with off-peak pricing are listed. Rates are absolute values.
-OFF_PEAK_PRICING=(
-  "glm-5.2|13:00-00:00|0.00000098|0.00000308|0.000000182"
-  "glm-5.1|13:00-00:00|0.000000755|0.000002642|0.000000189"
-)
 
 # Off-peak pricing (Huawei MaaS Period 2: 21:00-07:59 GMT+8 = 13:00-00:00 UTC, 70% of peak)
 # Format: model_name|hours_utc|input_cost|output_cost|cache_read_cost
@@ -46,4 +30,12 @@ OFF_PEAK_PRICING=(
 OFF_PEAK_PRICING=(
   "glm-5.2|13:00-00:00|0.00000098|0.00000308|0.000000182"
   "glm-5.1|13:00-00:00|0.000000755|0.000002642|0.000000189"
+)
+
+# Models that support reasoning_effort parameter
+# (glm-5.3: high/low, always thinks; glm-5.2: max/xhigh/high/medium/low/minimal/none;
+#  glm-5.1: not supported; deepseek: thinking via temperature, not reasoning_effort)
+REASONING_MODELS=(
+  "glm-5.3"
+  "glm-5.2"
 )

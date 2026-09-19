@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-09-20
+
+### Added
+
+- **Model capability flags** — All models now have explicit `mode: chat`,
+  `supports_function_calling: true`, `supports_prompt_caching`, and
+  `supports_reasoning` in `model_info`. Enables LiteLLM parameter
+  validation and capability-aware routing.
+  - `supports_reasoning`: true for glm-5.3 and glm-5.2 (support
+    `reasoning_effort`), false for glm-5.1 and DeepSeek.
+  - `supports_prompt_caching`: true for GLM models (cache hit pricing),
+    false for DeepSeek (no cache support).
+- **Model metadata** — `description` and `organization: Huawei Cloud`
+  fields added to all model_info blocks. Visible in LiteLLM Admin UI
+  and `/v1/model/info` endpoint.
+- `models.sh`: `REASONING_MODELS` array for reasoning_effort support
+  lookup.
+
+### Changed
+
+- `02_litellm.sh`: `supports_reasoning()` lookup function added; both
+  OpenAI and Anthropic loops now emit capability flags + metadata.
+- `config.yaml.template`: Updated all 5 model entries with capability
+  flags and metadata for consistency with generated config.
+- `models.sh`: Cleaned up duplicate `OFF_PEAK_PRICING` arrays (caused
+  by interrupted fixer tasks).
+
 ## [1.15.0] - 2026-09-20
 
 ### Added
