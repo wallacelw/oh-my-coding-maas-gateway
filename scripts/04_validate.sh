@@ -458,9 +458,9 @@ if [ "$RUN_OPENCODE" = true ]; then
     CLEAN_SLIM=$(strip_jsonc "$SLIM_CONFIG")
     check_jq "$CLEAN_SLIM" \
       "LiteLLM-Default preset" '.presets["LiteLLM-Default"]' \
-      "LiteLLM-Extended preset" '.presets["LiteLLM-Extended"]' \
+      "LiteLLM-Balanced preset" '.presets["LiteLLM-Balanced"]' \
       "Huawei-MaaS-Default direct preset" '.presets["Huawei-MaaS-Default"]' \
-      "Huawei-MaaS-Extended direct preset" '.presets["Huawei-MaaS-Extended"]' \
+      "Huawei-MaaS-Balanced direct preset" '.presets["Huawei-MaaS-Balanced"]' \
       "Default is LiteLLM-Default" '.preset == "LiteLLM-Default"' \
       "Orchestrator model set" '.presets["LiteLLM-Default"].orchestrator.model' \
       "Oracle model set (array for fallback)" '.presets["LiteLLM-Default"].oracle.model' \
@@ -478,7 +478,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Council beta model is LiteLLM/glm-5.3" '.council.presets.default.beta.model == "LiteLLM/glm-5.3"' \
       "Council gamma model is LiteLLM/glm-5.3" '.council.presets.default.gamma.model == "LiteLLM/glm-5.3"' \
       "Huawei-MaaS-Default orchestrator model set" '.presets["Huawei-MaaS-Default"].orchestrator.model' \
-      "Huawei-MaaS-Extended orchestrator model set" '.presets["Huawei-MaaS-Extended"].orchestrator.model'
+      "Huawei-MaaS-Balanced orchestrator model set" '.presets["Huawei-MaaS-Balanced"].orchestrator.model'
 
     PERMS=$(file_perms "$SLIM_CONFIG")
     if [ "$PERMS" = "600" ]; then

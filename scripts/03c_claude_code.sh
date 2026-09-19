@@ -125,7 +125,7 @@ NEW_ENV_BLOCK=$(jq -n \
   --arg base_url "http://127.0.0.1:4000" \
   --arg api_key "$VIRTUAL_KEY" \
   --arg model "claude-glm-5.3" \
-  --arg fast_model "claude-deepseek-v4-flash" \
+  --arg fast_model "claude-glm-5.1" \
   '{env: {ANTHROPIC_BASE_URL: $base_url, ANTHROPIC_API_KEY: $api_key, ANTHROPIC_MODEL: $model, ANTHROPIC_SMALL_FAST_MODEL: $fast_model, CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL: "1"}}')
 
 if [ -f "$CLAUDE_SETTINGS" ]; then

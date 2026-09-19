@@ -224,5 +224,5 @@ fi
 
 echo ""
 log_step "opencode installation complete"
-log_dim "Preset: LiteLLM-Default (default) — GLM only (glm-5.3, glm-5.2, glm-5.1) via LiteLLM"
-log_dim "Switch preset: /preset LiteLLM-Extended"
+log_dim "Preset: LiteLLM-Default (quality) — glm-5.3 primary, glm-5.2 fallback via LiteLLM"
+log_dim "Switch preset: /preset LiteLLM-Balanced (cost-effective)"

@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-09-19
+
+### Changed
+
+- **Preset restructure** — Removed LiteLLM-Extended and Huawei-MaaS-Extended
+  presets (they relied on deepseek-v4-flash which has very low rate limits:
+  TPM 30K, RPM 3). Added LiteLLM-Balanced and Huawei-MaaS-Balanced presets
+  (cost-effective: glm-5.1 primary, glm-5.2/glm-5.3 fallback, no deepseek).
+- **All agents now have fallbacks** — orchestrator, librarian, explorer, and
+  fixer previously had single models with no fallback. All agents now have
+  a primary + fallback chain for reliability.
+- **Designer variant medium → low** — glm-5.3 doesn't support `medium`
+  reasoning_effort (only `high` and `low`). Changed to `low` (enhanced
+  reasoning) for compatibility.
+- **small_model changed to glm-5.1** — Was deepseek-v4-flash (rate limit
+  issues). Now uses glm-5.1 (TPM 1M, RPM 100) for lightweight tasks.
+- **ANTHROPIC_SMALL_FAST_MODEL changed to claude-glm-5.1** — Same rationale.
+
+### Added
+
+- **LiteLLM-Balanced preset** — Cost-effective preset using glm-5.1 as
+  primary for all agents (~23% cheaper than glm-5.3). Oracle fallback is
+  glm-5.3 for critical reasoning quality. All other fallbacks are glm-5.2.
+- **Huawei-MaaS-Balanced preset** — Direct MaaS version of the above.
+
 ## [1.12.0] - 2026-09-19
 
 ### Changed

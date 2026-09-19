@@ -434,12 +434,12 @@ opencode          # or:  codex  or:  claude --bare  or:  pi
 
 ```bash
 opencode
-# Switch preset: /preset LiteLLM-Extended
+# Switch preset: /preset LiteLLM-Balanced
 # Available presets:
-#   LiteLLM-Default   (default, GLM only — glm-5.3, glm-5.2, glm-5.1)
-#   LiteLLM-Extended   (GLM + deepseek-v4-flash — faster, lower RPM)
-#   Huawei-MaaS-Default           (direct, GLM only)
-#   Huawei-MaaS-Extended           (direct, GLM + deepseek-v4-flash)
+#   LiteLLM-Default   (default, quality — glm-5.3 primary, glm-5.2 fallback)
+#   LiteLLM-Balanced  (cost-effective — glm-5.1 primary, glm-5.2/glm-5.3 fallback)
+#   Huawei-MaaS-Default           (direct, quality)
+#   Huawei-MaaS-Balanced          (direct, cost-effective)
 ```
 
 If opencode was already running, exit it first (`/exit` or Ctrl+C).

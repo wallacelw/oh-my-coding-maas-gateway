@@ -370,27 +370,32 @@ determines routing.
 
 | Preset | Route | Models |
 |--------|-------|--------|
-| **LiteLLM-Default** (default) | Proxy → MaaS | GLM only (glm-5.3, glm-5.2, glm-5.1) |
-| **LiteLLM-Extended** | Proxy → MaaS | GLM + deepseek-v4-flash |
-| **Huawei-MaaS-Default** | Direct → MaaS | GLM only (glm-5.3, glm-5.2, glm-5.1) |
-| **Huawei-MaaS-Extended** | Direct → MaaS | GLM + deepseek-v4-flash |
+| **LiteLLM-Default** (default, quality) | Proxy → MaaS | glm-5.3 primary, glm-5.2 fallback |
+| **LiteLLM-Balanced** (cost-effective) | Proxy → MaaS | glm-5.1 primary, glm-5.2/glm-5.3 fallback |
+| **Huawei-MaaS-Default** (quality) | Direct → MaaS | glm-5.3 primary, glm-5.2 fallback |
+| **Huawei-MaaS-Balanced** (cost-effective) | Direct → MaaS | glm-5.1 primary, glm-5.2/glm-5.3 fallback |
 
-Switch at runtime: `/preset LiteLLM-Extended`
+Switch at runtime: `/preset LiteLLM-Balanced`
 
 ### Agent → Model Mapping
 
 `A → B` = fallback chain. `(variant)` = reasoning effort. Model names omit
 the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 
-| Agent | LiteLLM-Default | LiteLLM-Extended | MaaS-Default | MaaS-Extended |
+| Agent | LiteLLM-Default | LiteLLM-Balanced | MaaS-Default | MaaS-Balanced |
 |-------|-----------------|------------------|--------------|---------------|
-| orchestrator | `glm-5.3` (high) | `glm-5.3` (high) | `glm-5.3` (high) | `glm-5.3` (high) |
-| oracle | `glm-5.3` → `glm-5.2` (high) | `glm-5.3` → `deepseek-v4-flash` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.3` → `deepseek-v4-flash` (high) |
-| council | `glm-5.3` → `glm-5.2` (high) | `glm-5.3` → `deepseek-v4-flash` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.3` → `deepseek-v4-flash` (high) |
-| librarian | `glm-5.1` (low) | `deepseek-v4-flash` (low) | `glm-5.1` (low) | `deepseek-v4-flash` (low) |
-| explorer | `glm-5.1` (low) | `deepseek-v4-flash` (low) | `glm-5.1` (low) | `deepseek-v4-flash` (low) |
-| designer | `glm-5.3` → `glm-5.2` (medium) | `glm-5.3` → `deepseek-v4-flash` (medium) | `glm-5.3` → `glm-5.2` (medium) | `glm-5.3` → `deepseek-v4-flash` (medium) |
-| fixer | `glm-5.3` (high) | `glm-5.3` → `deepseek-v4-flash` (high) | `glm-5.3` (high) | `glm-5.3` → `deepseek-v4-flash` (high) |
+| orchestrator | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
+| oracle | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.3` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.3` (high) |
+| council | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
+| librarian | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) |
+| explorer | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) |
+| designer | `glm-5.3` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.3` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) |
+| fixer | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
+
+> **Note:** In Balanced presets, glm-5.1 (primary) does not support
+> `reasoning_effort` — the variant is silently ignored. Reasoning only
+> activates on fallback to glm-5.2/glm-5.3. In Default presets, glm-5.3
+> always thinks (cannot disable); `low` = enhanced, `high` = deep.
 
 ### Council
 
@@ -509,7 +514,7 @@ Set in the `env` block of `~/.claude/settings.json`:
 | `ANTHROPIC_BASE_URL` | `http://127.0.0.1:4000` | LiteLLM proxy URL (no `/v1`) |
 | `ANTHROPIC_API_KEY` | `sk-...` (virtual key) | LiteLLM auth (alias: claude-code) |
 | `ANTHROPIC_MODEL` | `claude-glm-5.3` | Primary model |
-| `ANTHROPIC_SMALL_FAST_MODEL` | `claude-deepseek-v4-flash` | Fast model for background tasks |
+| `ANTHROPIC_SMALL_FAST_MODEL` | `claude-glm-5.1` | Fast model for background tasks |
 | `CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL` | `1` | Prevent VSCode extension auto-install |
 
 ### VSCode Extension Disabled
