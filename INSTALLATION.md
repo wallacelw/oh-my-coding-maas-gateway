@@ -65,7 +65,7 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 | `prereqs.sh` | all steps | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install labeled with `[LOG_TAG]`. |
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
 | `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`, `log_action`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
-| `models.sh` | 02, 03d, 04 | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array — model catalog and time-based differential pricing sourced by 02_litellm.sh and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Update `slim.json.template` only if agents should use the new model. |
+| `models.sh` | 02, 03d, 04 | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array — model catalog and time-based differential pricing sourced by 02_litellm.sh, 03d_pi.sh, and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model supports `reasoning_effort`; add to `OFF_PEAK_PRICING` if it has off-peak pricing. Update `slim.json.template` only if agents should use the new model. |
 | `skills.sh` | 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
 
 ---
@@ -453,14 +453,16 @@ and `OPENCODE_ENABLE_EXA=1` in the environment activate it for custom providers.
 ```bash
 codex
 codex --model deepseek-v4-pro    # deep reasoning
-codex --model deepseek-v4-flash      # fast
+codex --model deepseek-v4-flash  # fast
+codex --model glm-5.1            # cost-efficient
 ```
 
 ### Using Claude Code CLI
 
 ```bash
 claude --bare
-claude --bare --model claude-deepseek-v4-pro    # deep reasoning
+claude --bare --model claude-deepseek-v4-pro  # deep reasoning
+claude --bare --model claude-glm-5.1          # cost-efficient
 ```
 
 ### Using Pi agent
@@ -468,6 +470,7 @@ claude --bare --model claude-deepseek-v4-pro    # deep reasoning
 ```bash
 pi
 # Switch model at runtime via Pi's model selection UI
+# For cost-efficient operation: select glm-5.1 in the model picker
 ```
 
 ### Monitoring
@@ -514,7 +517,7 @@ group, `ufw allow from <your-ip> to any port 4000`).
 |---------|-----|------|---------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key | API gateway |
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key | View keys, spend, deployments |
-| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 39-panel observability dashboard |
+| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 44-panel observability dashboard |
 | Prometheus | `http://127.0.0.1:9090` | None | Metrics storage |
 | PostgreSQL | `localhost:5432` (internal) | — | LiteLLM database |
 

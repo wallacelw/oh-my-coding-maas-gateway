@@ -5,8 +5,10 @@
 # 02_litellm.sh (config generation) and 04_validate.sh (validation).
 #
 # To add/remove a model: edit this file, then update config.yaml.template,
-# opencode.json.template, and model_catalog.json. Update slim.json.template
-# only if agents should be assigned the new model.
+# opencode.json.template, and model_catalog.json. If the model supports
+# reasoning_effort, add it to REASONING_MODELS. If it has off-peak pricing,
+# add it to OFF_PEAK_PRICING. Update slim.json.template only if agents
+# should be assigned the new model.
 #
 # Format: model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost:cache_read_cost:cache_creation_cost
 # cache_read_cost: cost per token for cache hit (0 if no cache support)

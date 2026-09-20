@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.2] - 2026-09-20
+
+### Fixed
+
+- **SKILL.md list-models command broken** — `grep -E '^\s*"'` matched
+  OFF_PEAK_PRICING/REASONING_MODELS entries, producing garbage like
+  `glm-5.2|13`. Replaced with array-scoped `sed -n '/^MODELS=(/,/^)/p'`.
+- **SKILL.md metric names wrong** — `litellm_total_requests` etc. →
+  `litellm_proxy_total_requests_metric_total` etc. (verified against live
+  Prometheus: 17/21/12 series respectively).
+- **SKILL.md add-model instructions** — missing REASONING_MODELS and
+  OFF_PEAK_PRICING steps. Added to SKILL.md, models.sh header, REFERENCE.md
+  and INSTALLATION.md helpers tables.
+- **INSTALLATION.md stale panel count** — "39-panel" → "44-panel" (line
+  475 already said 44).
+- **REFERENCE.md config.yaml example stale** — predates v1.15/v1.16;
+  added off_peak_pricing, capability flags, description, organization.
+- **REFERENCE.md model_info table** — added 7 missing field rows.
+- **SKILL.md off-peak verification runbook** — new "Verify Spend and
+  Off-Peak Discount" section with live-verified `/spend/logs` endpoint
+  docs, off-peak window math, and real examples.
+- **REFERENCE.md glm-5.1 tier bias** — documented that tracked spend
+  uses ≥32K-tier rates for all requests; actual bill ~25-40% cheaper
+  for <32K requests.
+- **INSTALLATION.md cost-efficient usage** — added `--model glm-5.1`
+  examples for Codex, Claude Code, and Pi.
+- **SKILL.md deployment count** — "N deployments" → "2N deployments"
+  (N OpenAI + N Anthropic per model).
+- **Helpers table** — added 03d_pi.sh and REASONING_MODELS to models.sh
+  description in INSTALLATION.md and REFERENCE.md.
+
 ## [1.17.1] - 2026-09-20
 
 ### Fixed

@@ -125,7 +125,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key) |
-| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh + 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Update `slim.json.template` only if agents should use the new model. |
+| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model supports `reasoning_effort`; add to `OFF_PEAK_PRICING` if it has off-peak pricing. Update `slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
 
 ### Models
@@ -140,7 +140,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 
 **Pricing notes:**
 - Peak (Period 1: 08:00–20:59 GMT+8) and off-peak (Period 2: 21:00–07:59, 70% of peak) are modeled via LiteLLM `off_peak_pricing` in `model_info` for glm-5.2 and glm-5.1. GLM-5.3 and DeepSeek models have flat pricing.
-- glm-5.1 uses ≥32K token tier. <32K tier: input $0.809, output $2.265, cache hit $0.175 (per 1M tokens).
+- glm-5.1 uses ≥32K token tier. <32K tier: input $0.809, output $2.265, cache hit $0.175 (per 1M tokens). Tracked spend applies ≥32K-tier rates to all glm-5.1 requests, so requests under 32K tokens bill ~25-40% less than tracked — tracked spend is an upper bound for glm-5.1.
 - Cache hit pricing applies only to glm-5.3, glm-5.2, and glm-5.1. DeepSeek models have no cache support.
 - Off-peak pricing applies only to glm-5.2 and glm-5.1. GLM-5.3 and DeepSeek have flat pricing (no time-based differential).
 - Source: [Huawei MaaS pricing](https://support.huaweicloud.com/intl/en-us/price-maas/price-maas-0002.html)
@@ -181,6 +181,18 @@ model_list:
       max_output_tokens: 128000
       input_cost_per_token: 0.0000014
       output_cost_per_token: 0.0000044
+      cache_read_input_token_cost: 0.00000026  # omitted when 0 (deepseek)
+      off_peak_pricing:                    # omitted when no off-peak rates
+        hours_utc: "13:00-00:00"
+        input_cost_per_token: 0.00000098
+        output_cost_per_token: 0.00000308
+        cache_read_input_token_cost: 0.000000182
+      mode: chat
+      supports_function_calling: true
+      supports_prompt_caching: true        # false for models without cache support
+      supports_reasoning: true             # true only for REASONING_MODELS entries
+      description: "glm-5.2 on Huawei Cloud MaaS"
+      organization: Huawei Cloud
 
   # ── Anthropic deployments (for Claude Code CLI) ──
   - model_name: claude-glm-5.2             # claude- prefix
@@ -190,12 +202,7 @@ model_list:
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 1000000
       rpm: 100
-    model_info:
-      max_tokens: 1000000
-      max_input_tokens: 1000000
-      max_output_tokens: 128000
-      input_cost_per_token: 0.0000014
-      output_cost_per_token: 0.0000044
+    model_info: ...                        # identical model_info to the OpenAI deployment
 
 litellm_settings:
   num_retries: 3
@@ -260,6 +267,13 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `output_cost_per_token` | Cost per output token (USD) |
 | `cache_read_input_token_cost` | Cost per cached input token on cache hit (USD) |
 | `cache_creation_input_token_cost` | Cost per token for cache creation (USD) |
+| `off_peak_pricing` | Nested block with discounted off-peak rates (`hours_utc`, `input_cost_per_token`, `output_cost_per_token`, `cache_read_input_token_cost`) — present only for models with off-peak pricing |
+| `mode` | Model mode (always "chat") |
+| `supports_function_calling` | Whether function calling is supported |
+| `supports_prompt_caching` | Whether prompt caching is supported |
+| `supports_reasoning` | Whether reasoning_effort is passed through |
+| `description` | Human-readable model description |
+| `organization` | Provider organization name |
 
 ### Settings
 

@@ -233,14 +233,16 @@ Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4-pro`,
 
 **List models**:
 ```bash
-grep -E '^\s*"' scripts/helpers/models.sh | sed 's/^\s*"//; s/:.*//' | sort
+sed -n '/^MODELS=(/,/^)/p' scripts/helpers/models.sh | grep -E '^\s*"' | sed 's/^\s*"//; s/:.*//' | sort
 ```
 
 **Add a model**: add a line to the `MODELS` array in `scripts/helpers/models.sh`,
 then update `configs/litellm/config.yaml.template`, `configs/opencode/opencode.json.template`,
-and `configs/codex/model_catalog.json` with the new model. Update
+and `configs/codex/model_catalog.json` with the new model. If the model supports
+`reasoning_effort`, add it to the `REASONING_MODELS` array. If it has off-peak
+pricing, add it to the `OFF_PEAK_PRICING` array. Update
 `configs/opencode/oh-my-opencode-slim.json.template` only if agents should be
-assigned the new model. Then regenerate (this creates N deployments per model,
+assigned the new model. Then regenerate (this creates 2N deployments per model,
 one per API key):
 ```bash
 ./scripts/02_litellm.sh
@@ -276,12 +278,51 @@ curl -X POST http://127.0.0.1:4000/v1/chat/completions \
 ## View Metrics
 
 ```bash
-curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_total_requests' | jq .
-curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_spend' | jq .
-curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_total_errors[5m])' | jq .
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_proxy_total_requests_metric_total' | jq .
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_spend_metric_total' | jq .
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_deployment_failure_responses_total[5m])' | jq .
 ```
 
 Grafana: `http://127.0.0.1:3000` — 44-panel dashboard (8 row headers + 36 visualization panels).
+
+## Verify Spend and Off-Peak Discount
+
+LiteLLM tracks per-request spend in its database. Fetch recent requests with
+the master key:
+
+```bash
+MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
+curl -s "http://127.0.0.1:4000/spend/logs" -H "Authorization: Bearer $MASTER_KEY" \
+  | jq '[.[] | {model: .model_group, start: .startTime, spend: .spend,
+                tokens_in: .prompt_tokens, tokens_out: .completion_tokens}] | .[0:10]'
+```
+
+The response is a bare JSON array, newest first, up to 10000 entries. A
+`limit` query param is ignored — slice with jq as above. Each entry's
+`startTime` is an ISO 8601 UTC string; `spend` is USD; `cache_hit` is a
+string (`"True"`/`"False"`/`"None"`), not a boolean.
+
+**Off-peak window**: glm-5.2 and glm-5.1 bill at 70% of peak rates from
+13:00 to 00:00 UTC (21:00–07:59 Beijing). LiteLLM checks the window when the
+request completes, so a request started at 23:59 UTC bills at peak if it
+finishes after 00:00 UTC.
+
+**Verify the discount**: recompute a request's cost from the peak rates and
+compare — off-peak spend is exactly 70% of the peak cost for the same tokens.
+Observed examples (small requests, no cache):
+
+```text
+peak:      01:39 UTC  glm-5.2  13 in / 38 out   → $0.0001854 = 13×$1.4/M  + 38×$4.4/M
+off-peak:  23:58 UTC  glm-5.2  13 in / 252 out  → $0.0007889 = 13×$0.98/M + 252×$3.08/M
+```
+
+Large requests rarely match the simple formula — cached input tokens are
+billed at the (also 70%-scaled) cache-hit rate. To verify the discount, use
+small requests or compare spend-per-token across the window boundary.
+
+If a request inside the off-peak window bills at 100% of peak, the running
+container may have loaded a config without `off_peak_pricing` blocks — check
+`configs/litellm/config.yaml` and `docker compose restart litellm`.
 
 ---
 
