@@ -47,9 +47,9 @@
   "council": {
     "presets": {
       "default": {
-        "alpha": { "model": "LiteLLM/glm-5.3", "variant": "high", "prompt": "Focus on deep reasoning, logical correctness, and identifying subtle bugs or edge cases." },
-        "beta":  { "model": "LiteLLM/glm-5.3", "variant": "high", "prompt": "Focus on architecture, maintainability, trade-offs, and long-term implications." },
-        "gamma": { "model": "LiteLLM/glm-5.3", "variant": "high", "prompt": "Focus on practical implementation, cost-efficiency, and concrete verification steps." }
+        "alpha": { "model": ["LiteLLM/glm-5.3", "LiteLLM/glm-5.2"], "variant": "high", "prompt": "Focus on deep reasoning, logical correctness, and identifying subtle bugs or edge cases." },
+        "beta":  { "model": ["LiteLLM/glm-5.3", "LiteLLM/glm-5.2"], "variant": "high", "prompt": "Focus on architecture, maintainability, trade-offs, and long-term implications." },
+        "gamma": { "model": ["LiteLLM/glm-5.3", "LiteLLM/glm-5.2"], "variant": "high", "prompt": "Focus on practical implementation, cost-efficiency, and concrete verification steps." }
       }
     },
     "timeout": 180000,

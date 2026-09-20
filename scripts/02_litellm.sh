@@ -144,7 +144,75 @@ supports_reasoning() {
   return 1
 }
 
+# ── Validate catalog before generating config ──
+if ! validate_catalog; then
+  log_error "Model catalog validation failed — fix models.sh before proceeding"
+  exit 1
+fi
+
 # ── Generate config ──
+
+# emit_deployment <model_entry> <key_idx> <name_prefix> <provider_prefix> <api_base_env> <bridge>
+# Emits one LiteLLM deployment block. bridge="true" adds use_chat_completions_api (OpenAI only).
+emit_deployment() {
+  local model_entry="$1" i="$2" name_prefix="$3" provider_prefix="$4" api_base_env="$5" bridge="$6"
+  IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost cache_read_cost cache_creation_cost <<< "$model_entry"
+
+  if [ "$KEY_COUNT" -gt 1 ]; then
+    echo "  # ── deployment $i (key _${i}) ──"
+  fi
+  echo "  - model_name: ${name_prefix}${model_name}"
+  echo "    litellm_params:"
+  echo "      model: ${provider_prefix}${model_name}"
+  echo "      api_base: os.environ/${api_base_env}"
+  echo "      api_key: os.environ/HUAWEI_MAAS_API_KEY_$i"
+  if [ "$bridge" = "true" ]; then
+    echo "      use_chat_completions_api: true"
+  fi
+  echo "      tpm: $tpm"
+  echo "      rpm: $rpm"
+  echo "    model_info:"
+  echo "      max_tokens: $max_tokens"
+  echo "      max_input_tokens: $max_input"
+  echo "      max_output_tokens: $max_output"
+  echo "      input_cost_per_token: $input_cost"
+  echo "      output_cost_per_token: $output_cost"
+  if [ "${cache_read_cost:-0}" != "0" ]; then
+    echo "      cache_read_input_token_cost: $cache_read_cost"
+  fi
+  if [ "${cache_creation_cost:-0}" != "0" ]; then
+    echo "      cache_creation_input_token_cost: $cache_creation_cost"
+  fi
+  # Off-peak pricing (if configured for this model)
+  OFF_PEAK=$(get_off_peak_pricing "$model_name") || true
+  if [ -n "$OFF_PEAK" ]; then
+    IFS='|' read -r op_hours op_input op_output op_cache <<< "$OFF_PEAK"
+    echo "      off_peak_pricing:"
+    echo "        hours_utc: \"$op_hours\""
+    echo "        input_cost_per_token: $op_input"
+    echo "        output_cost_per_token: $op_output"
+    if [ "${op_cache:-0}" != "0" ]; then
+      echo "        cache_read_input_token_cost: $op_cache"
+    fi
+  fi
+  # Capability flags and metadata
+  echo "      mode: chat"
+  echo "      supports_function_calling: true"
+  if [ "${cache_read_cost:-0}" != "0" ]; then
+    echo "      supports_prompt_caching: true"
+  else
+    echo "      supports_prompt_caching: false"
+  fi
+  if supports_reasoning "$model_name"; then
+    echo "      supports_reasoning: true"
+  else
+    echo "      supports_reasoning: false"
+  fi
+  echo "      description: \"$model_name on Huawei Cloud MaaS\""
+  echo "      organization: Huawei Cloud"
+  echo ""
+}
+
 {
   echo "model_list:"
   echo ""
@@ -153,60 +221,8 @@ supports_reasoning() {
   echo ""
 
   for model_entry in "${MODELS[@]}"; do
-    IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost cache_read_cost cache_creation_cost <<< "$model_entry"
-
     for i in $(seq 0 $((KEY_COUNT - 1))); do
-      if [ "$KEY_COUNT" -gt 1 ]; then
-        echo "  # ── deployment $i (key _${i}) ──"
-      fi
-      echo "  - model_name: $model_name"
-      echo "    litellm_params:"
-      echo "      model: openai/$model_name"
-      echo "      api_base: os.environ/HUAWEI_MAAS_API_BASE"
-      echo "      api_key: os.environ/HUAWEI_MAAS_API_KEY_$i"
-      echo "      use_chat_completions_api: true"
-      echo "      tpm: $tpm"
-      echo "      rpm: $rpm"
-      echo "    model_info:"
-      echo "      max_tokens: $max_tokens"
-      echo "      max_input_tokens: $max_input"
-      echo "      max_output_tokens: $max_output"
-      echo "      input_cost_per_token: $input_cost"
-      echo "      output_cost_per_token: $output_cost"
-      if [ "${cache_read_cost:-0}" != "0" ]; then
-        echo "      cache_read_input_token_cost: $cache_read_cost"
-      fi
-      if [ "${cache_creation_cost:-0}" != "0" ]; then
-        echo "      cache_creation_input_token_cost: $cache_creation_cost"
-      fi
-      # Off-peak pricing (if configured for this model)
-      OFF_PEAK=$(get_off_peak_pricing "$model_name") || true
-      if [ -n "$OFF_PEAK" ]; then
-        IFS='|' read -r op_hours op_input op_output op_cache <<< "$OFF_PEAK"
-        echo "      off_peak_pricing:"
-        echo "        hours_utc: \"$op_hours\""
-        echo "        input_cost_per_token: $op_input"
-        echo "        output_cost_per_token: $op_output"
-        if [ "${op_cache:-0}" != "0" ]; then
-          echo "        cache_read_input_token_cost: $op_cache"
-        fi
-      fi
-      # Capability flags and metadata
-      echo "      mode: chat"
-      echo "      supports_function_calling: true"
-      if [ "${cache_read_cost:-0}" != "0" ]; then
-        echo "      supports_prompt_caching: true"
-      else
-        echo "      supports_prompt_caching: false"
-      fi
-      if supports_reasoning "$model_name"; then
-        echo "      supports_reasoning: true"
-      else
-        echo "      supports_reasoning: false"
-      fi
-      echo "      description: \"$model_name on Huawei Cloud MaaS\""
-      echo "      organization: Huawei Cloud"
-      echo ""
+      emit_deployment "$model_entry" "$i" "" "openai/" "HUAWEI_MAAS_API_BASE" "true"
     done
   done
 
@@ -219,59 +235,8 @@ supports_reasoning() {
   echo ""
 
   for model_entry in "${MODELS[@]}"; do
-    IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost cache_read_cost cache_creation_cost <<< "$model_entry"
-
     for i in $(seq 0 $((KEY_COUNT - 1))); do
-      if [ "$KEY_COUNT" -gt 1 ]; then
-        echo "  # ── deployment $i (key _${i}) ──"
-      fi
-      echo "  - model_name: claude-$model_name"
-      echo "    litellm_params:"
-      echo "      model: anthropic/$model_name"
-      echo "      api_base: os.environ/HUAWEI_MAAS_ANTHROPIC_API_BASE"
-      echo "      api_key: os.environ/HUAWEI_MAAS_API_KEY_$i"
-      echo "      tpm: $tpm"
-      echo "      rpm: $rpm"
-      echo "    model_info:"
-      echo "      max_tokens: $max_tokens"
-      echo "      max_input_tokens: $max_input"
-      echo "      max_output_tokens: $max_output"
-      echo "      input_cost_per_token: $input_cost"
-      echo "      output_cost_per_token: $output_cost"
-      if [ "${cache_read_cost:-0}" != "0" ]; then
-        echo "      cache_read_input_token_cost: $cache_read_cost"
-      fi
-      if [ "${cache_creation_cost:-0}" != "0" ]; then
-        echo "      cache_creation_input_token_cost: $cache_creation_cost"
-      fi
-      # Off-peak pricing (if configured for this model)
-      OFF_PEAK=$(get_off_peak_pricing "$model_name") || true
-      if [ -n "$OFF_PEAK" ]; then
-        IFS='|' read -r op_hours op_input op_output op_cache <<< "$OFF_PEAK"
-        echo "      off_peak_pricing:"
-        echo "        hours_utc: \"$op_hours\""
-        echo "        input_cost_per_token: $op_input"
-        echo "        output_cost_per_token: $op_output"
-        if [ "${op_cache:-0}" != "0" ]; then
-          echo "        cache_read_input_token_cost: $op_cache"
-        fi
-      fi
-      # Capability flags and metadata
-      echo "      mode: chat"
-      echo "      supports_function_calling: true"
-      if [ "${cache_read_cost:-0}" != "0" ]; then
-        echo "      supports_prompt_caching: true"
-      else
-        echo "      supports_prompt_caching: false"
-      fi
-      if supports_reasoning "$model_name"; then
-        echo "      supports_reasoning: true"
-      else
-        echo "      supports_reasoning: false"
-      fi
-      echo "      description: \"$model_name on Huawei Cloud MaaS\""
-      echo "      organization: Huawei Cloud"
-      echo ""
+      emit_deployment "$model_entry" "$i" "claude-" "anthropic/" "HUAWEI_MAAS_ANTHROPIC_API_BASE" "false"
     done
   done
 

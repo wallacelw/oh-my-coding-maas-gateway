@@ -41,3 +41,41 @@ REASONING_MODELS=(
   "glm-5.3"
   "glm-5.2"
 )
+
+# ── Catalog validation ──
+# Verifies cross-array consistency. Call before config generation or validation.
+# Returns 0 if valid, 1 with error message on stderr if not.
+validate_catalog() {
+  local errors=0
+  local model_names=()
+  for entry in "${MODELS[@]}"; do
+    local name="${entry%%:*}"
+    model_names+=("$name")
+    # Verify 10 fields
+    local field_count
+    field_count=$(echo "$entry" | tr ':' '\n' | wc -l)
+    if [ "$field_count" -ne 10 ]; then
+      echo "validate_catalog: $name has $field_count fields (expected 10)" >&2
+      ((errors++))
+    fi
+  done
+
+  # Verify OFF_PEAK_PRICING names ⊆ MODELS names
+  for entry in "${OFF_PEAK_PRICING[@]}"; do
+    local name="${entry%%|*}"
+    if ! printf '%s\n' "${model_names[@]}" | grep -qxF "$name"; then
+      echo "validate_catalog: OFF_PEAK_PRICING model '$name' not in MODELS" >&2
+      ((errors++))
+    fi
+  done
+
+  # Verify REASONING_MODELS names ⊆ MODELS names
+  for name in "${REASONING_MODELS[@]}"; do
+    if ! printf '%s\n' "${model_names[@]}" | grep -qxF "$name"; then
+      echo "validate_catalog: REASONING_MODELS model '$name' not in MODELS" >&2
+      ((errors++))
+    fi
+  done
+
+  [ "$errors" -eq 0 ]
+}

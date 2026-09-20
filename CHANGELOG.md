@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] - 2026-09-20
+
+### Added
+
+- **emit_deployment() function** — extracted 60-line duplication in
+  02_litellm.sh (OpenAI/Anthropic blocks were copy-pasted). Config output
+  verified byte-identical.
+- **validate_catalog()** — cross-validates MODELS/OFF_PEAK_PRICING/
+  REASONING_MODELS arrays in models.sh. Checks field counts, name
+  membership (OFF_PEAK/REASONING ⊆ MODELS). Wired into 02_litellm.sh
+  (pre-generation guard) and 04_validate.sh (A0 check).
+- **Preset drift validation** — B4b checks verify Huawei-MaaS-* presets
+  match LiteLLM-* with prefix substitution. Catches drift when one
+  preset is updated but the other isn't.
+- **Council fallback arrays** — councillors now have 2-model fallback
+  arrays (e.g., `["LiteLLM/glm-5.3", "LiteLLM/glm-5.2"]`) matching the
+  v1.13.0 fallback treatment every other agent received. Schema-verified
+  (slim @2.2.21 `additionalProperties: {}` allows arrays).
+
+### Changed
+
+- **02_litellm.sh** — emit_deployment() takes 6 params (model_entry,
+  key_idx, name_prefix, provider_prefix, api_base_env, bridge). Both
+  config generation loops are now one-liners.
+- **04_validate.sh** — council model assertions updated from string
+  equality to array index + length checks.
+
 ## [1.18.0] - 2026-09-20
 
 ### Added

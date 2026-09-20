@@ -138,6 +138,14 @@ if [ "$RUN_LITELLM" = true ]; then
   log_step "A. LiteLLM Proxy"
 
   echo ""
+  log_info "A0. Model catalog validation"
+  if validate_catalog 2>/dev/null; then
+    pass "Model catalog cross-validation passed"
+  else
+    fail "Model catalog cross-validation failed (run validate_catalog for details)"
+  fi
+
+  echo ""
   log_info "A1. .env completeness and permissions"
   if [ -f "$PROJECT_DIR/.env" ]; then
     pass ".env exists"
@@ -534,9 +542,12 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Fallback has no chains (v2 format)" '(.fallback.chains // null) == null' \
       "Council presets defined" '.council.presets' \
       "Council has 3 councillors" '(.council.presets.default | keys | length) == 3' \
-      "Council alpha model is LiteLLM/glm-5.3" '.council.presets.default.alpha.model == "LiteLLM/glm-5.3"' \
-      "Council beta model is LiteLLM/glm-5.3" '.council.presets.default.beta.model == "LiteLLM/glm-5.3"' \
-      "Council gamma model is LiteLLM/glm-5.3" '.council.presets.default.gamma.model == "LiteLLM/glm-5.3"' \
+      "Council alpha model is LiteLLM/glm-5.3" '.council.presets.default.alpha.model[0] == "LiteLLM/glm-5.3"' \
+      "Council alpha has fallback array" '(.council.presets.default.alpha.model | length) == 2' \
+      "Council beta model is LiteLLM/glm-5.3" '.council.presets.default.beta.model[0] == "LiteLLM/glm-5.3"' \
+      "Council beta has fallback array" '(.council.presets.default.beta.model | length) == 2' \
+      "Council gamma model is LiteLLM/glm-5.3" '.council.presets.default.gamma.model[0] == "LiteLLM/glm-5.3"' \
+      "Council gamma has fallback array" '(.council.presets.default.gamma.model | length) == 2' \
       "Huawei-MaaS-Default orchestrator model set" '.presets["Huawei-MaaS-Default"].orchestrator.model' \
       "Huawei-MaaS-Balanced orchestrator model set" '.presets["Huawei-MaaS-Balanced"].orchestrator.model' \
       "Balanced orchestrator primary is glm-5.1" '.presets["LiteLLM-Balanced"].orchestrator.model[0] == "LiteLLM/glm-5.1"' \
@@ -550,6 +561,22 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Default explorer has 2-model array" '(.presets["LiteLLM-Default"].explorer.model | length) == 2' \
       "Default designer has 2-model array" '(.presets["LiteLLM-Default"].designer.model | length) == 2' \
       "Default fixer has 2-model array" '(.presets["LiteLLM-Default"].fixer.model | length) == 2'
+
+    # B4b: Verify Huawei-MaaS presets match LiteLLM presets (prefix substitution)
+    LL_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Default"]' | sed 's|LiteLLM/|Huawei-MaaS/|g')
+    HM_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["Huawei-MaaS-Default"]')
+    if [ "$LL_DEF" = "$HM_DEF" ]; then
+      pass "Huawei-MaaS-Default = LiteLLM-Default (prefix substitution)"
+    else
+      fail "Huawei-MaaS-Default drifts from LiteLLM-Default"
+    fi
+    LL_BAL=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Balanced"]' | sed 's|LiteLLM/|Huawei-MaaS/|g')
+    HM_BAL=$(echo "$CLEAN_SLIM" | jq -c '.presets["Huawei-MaaS-Balanced"]')
+    if [ "$LL_BAL" = "$HM_BAL" ]; then
+      pass "Huawei-MaaS-Balanced = LiteLLM-Balanced (prefix substitution)"
+    else
+      fail "Huawei-MaaS-Balanced drifts from LiteLLM-Balanced"
+    fi
 
     PERMS=$(file_perms "$SLIM_CONFIG")
     if [ "$PERMS" = "600" ]; then
