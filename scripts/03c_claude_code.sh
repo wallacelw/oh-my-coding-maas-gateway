@@ -86,7 +86,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CLAUDE_SETTINGS" ]; then
          -H "x-api-key: $EXISTING_KEY" \
          -H "Content-Type: application/json" \
          -H "anthropic-version: 2023-06-01" \
-         -d '{"model":"claude-deepseek-v4-flash","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
+         -d '{"model":"claude-glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
@@ -140,14 +140,14 @@ if [ -f "$CLAUDE_SETTINGS" ]; then
       if [ -n "$NON_ENV_KEYS" ]; then
         log_warn "Overwriting existing settings with keys: $(echo "$NON_ENV_KEYS" | tr '\n' ' ')"
       fi
-      cp "$CLAUDE_SETTINGS" "$CLAUDE_SETTINGS.bak.$(date +%Y%m%d%H%M%S)"
+      backup_with_prune "$CLAUDE_SETTINGS" >/dev/null
       echo "$MERGED_SETTINGS" > "$CLAUDE_SETTINGS"
       chmod 600 "$CLAUDE_SETTINGS"
       log_ok "Updated: $CLAUDE_SETTINGS (backup saved, merged env block)"
     fi
   else
     log_warn "Existing settings.json is invalid JSON — creating backup and overwriting"
-    cp "$CLAUDE_SETTINGS" "$CLAUDE_SETTINGS.bak.$(date +%Y%m%d%H%M%S)"
+    backup_with_prune "$CLAUDE_SETTINGS" >/dev/null
     echo "$NEW_ENV_BLOCK" > "$CLAUDE_SETTINGS"
     chmod 600 "$CLAUDE_SETTINGS"
     log_ok "Written: $CLAUDE_SETTINGS (backup saved)"

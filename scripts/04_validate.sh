@@ -601,7 +601,7 @@ if [ "$RUN_OPENCODE" = true ]; then
         MODEL_LIST=$(printf '%s' "$MODELS_JSON" | jq -r '.data[].id' 2>/dev/null)
         log_dim "Discovered $LITELLM_MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
 
-        SMOKE_MODEL="deepseek-v4-flash"
+        SMOKE_MODEL="glm-5.1"
         if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
             -H "Authorization: Bearer $VIRTUAL_KEY" \
             -H "Content-Type: application/json" \
@@ -831,7 +831,7 @@ if [ "$RUN_CODEX" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Responses API smoke test"
   elif [ -n "$CODEX_VK" ]; then
-    SMOKE_MODEL="deepseek-v4-flash"
+    SMOKE_MODEL="glm-5.1"
     if curl -sf -m 30 "$LITELLM_URL/v1/responses" \
         -H "Authorization: Bearer $CODEX_VK" \
         -H "Content-Type: application/json" \
@@ -914,7 +914,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Messages API smoke test"
   elif [ -n "$CLAUDE_VK" ]; then
-    SMOKE_MODEL="claude-deepseek-v4-flash"
+    SMOKE_MODEL="claude-glm-5.1"
     if curl -sf -m 30 "$LITELLM_URL/v1/messages" \
         -H "x-api-key: $CLAUDE_VK" \
         -H "Content-Type: application/json" \
@@ -1005,7 +1005,7 @@ if [ "$RUN_PI" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Inference smoke test"
   elif [ -n "${PI_API_KEY:-}" ]; then
-    SMOKE_MODEL="deepseek-v4-flash"
+    SMOKE_MODEL="glm-5.1"
     if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
         -H "Authorization: Bearer $PI_API_KEY" \
         -H "Content-Type: application/json" \

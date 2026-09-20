@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.3] - 2026-09-20
+
+### Fixed
+
+- **Smoke-test model switched to glm-5.1** — validation and install scripts
+  used deepseek-v4-flash (RPM 3) for smoke tests; back-to-back runs caused
+  429s misread as "key invalid" → unnecessary key rotation. Switched to
+  glm-5.1 (RPM 100) in 04_validate.sh (B5/D4/E4/F4) and 03a/03b/03c/03d
+  key-reuse probes. A5 all-models loop unchanged.
+- **backup_with_prune() helper** — .bak files accumulated at 9 sites
+  without pruning (only 02_litellm.sh capped at 3). Extracted shared
+  helper to common.sh with glob-based prune (space-safe). Replaced all
+  9 call sites. Accumulated .bak piles pruned to 3.
+- **SKILL.md runbook smoke model** — example still used
+  deepseek-v4-flash; switched to glm-5.1.
+- **Helpers tables** — added backup_with_prune to common.sh description
+  in INSTALLATION.md and REFERENCE.md.
+
 ## [1.17.2] - 2026-09-20
 
 ### Fixed

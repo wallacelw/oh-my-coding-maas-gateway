@@ -369,7 +369,7 @@ update_component() {
         return 1
       fi
       log_warn "Updating SLIM_VERSION in tracked file scripts/03a_opencode.sh"
-      cp "$SCRIPT_DIR/03a_opencode.sh" "$SCRIPT_DIR/03a_opencode.sh.bak.$(date +%Y%m%d%H%M%S)"
+      backup_with_prune "$SCRIPT_DIR/03a_opencode.sh" >/dev/null
       sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$new_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
       git -C "$PROJECT_DIR" commit --only scripts/03a_opencode.sh -m "Bump SLIM_VERSION to $new_ver" --quiet 2>/dev/null \
         || log_warn "Commit failed for scripts/03a_opencode.sh"
@@ -392,7 +392,7 @@ update_component() {
 
       # Update image tag in docker-compose.yml (repo file mutation)
       log_warn "Updating image tag in tracked file docker-compose.yml"
-      cp "$PROJECT_DIR/docker-compose.yml" "$PROJECT_DIR/docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
+      backup_with_prune "$PROJECT_DIR/docker-compose.yml" >/dev/null
       sed -i "s|image: ${image_prefix}:${tag_prefix}.*|image: ${image_prefix}:${tag_prefix}${new_ver}|" "$PROJECT_DIR/docker-compose.yml"
       git -C "$PROJECT_DIR" commit --only docker-compose.yml -m "Bump ${image_prefix} to ${tag_prefix}${new_ver}" --quiet 2>/dev/null \
         || log_warn "Commit failed for docker-compose.yml"

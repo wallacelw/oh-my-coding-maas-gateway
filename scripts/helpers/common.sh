@@ -9,6 +9,7 @@
 #   retry_curl curl_args...  — retry curl with backoff (3 attempts)
 #   strip_jsonc <file>         — strip // and /* */ comments outside strings
 #   mask_key <key>             — print first8...last4 of a key
+#   backup_with_prune <file> [keep] — backup to <file>.bak.<timestamp>, prune to newest N (default 3)
 #
 #   ── Logging (colored, action-labeled) ──
 #   log_step "title"           — bold green box-drawing section header
@@ -120,6 +121,22 @@ mask_key() {
   else
     echo "$key"
   fi
+}
+
+# Backup <file> to <file>.bak.<timestamp>, keeping only the newest N (default 3).
+# Prints the backup path. No-op (returns 0) if the file doesn't exist.
+# Usage: backup_with_prune <file> [keep=3]
+backup_with_prune() {
+  local file="$1" keep="${2:-3}"
+  [ -f "$file" ] || return 0
+  local backup="$file.bak.$(date +%Y%m%d%H%M%S)"
+  cp "$file" "$backup"
+  # Prune oldest backups beyond keep count (glob loop — safe with spaces)
+  local old; local backups=()
+  for old in "$file".bak.*; do [ -e "$old" ] && backups+=("$old"); done
+  local i
+  for ((i = 0; i < ${#backups[@]} - keep; i++)); do rm -f -- "${backups[i]}" 2>/dev/null || true; done
+  echo "$backup"
 }
 
 # ── Logging functions ────────────────────────────────────────

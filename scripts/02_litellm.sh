@@ -117,12 +117,9 @@ MODEL_COUNT=${#MODELS[@]}
 TOTAL_DEPLOYMENTS=$((KEY_COUNT * MODEL_COUNT * 2))
 
 # ── Backup existing config ──
-if [ -f "$CONFIG_FILE" ]; then
-  BACKUP="${CONFIG_FILE}.bak.$(date +%Y%m%d%H%M%S)"
-  cp "$CONFIG_FILE" "$BACKUP"
+BACKUP=$(backup_with_prune "$CONFIG_FILE")
+if [ -n "$BACKUP" ]; then
   log_info "Backed up existing config to $(basename "$BACKUP")"
-  # Keep only the last 3 backups
-  ls -t "$CONFIG_FILE".bak.* 2>/dev/null | tail -n +4 | xargs rm -f 2>/dev/null || true
 fi
 
 # Look up off-peak pricing for a model from OFF_PEAK_PRICING array

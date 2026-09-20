@@ -121,7 +121,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$OPENCODE_CONFIG" ]; then
     elif retry_curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/v1/chat/completions" \
          -H "Authorization: Bearer $EXISTING_KEY" \
          -H "Content-Type: application/json" \
-         -d '{"model":"deepseek-v4-flash","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
+         -d '{"model":"glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
@@ -191,7 +191,7 @@ if [ -f "$OPENCODE_CONFIG" ]; then
       log_ok "Fixed permissions: $OPENCODE_CONFIG (600)"
     fi
   else
-    cp "$OPENCODE_CONFIG" "$OPENCODE_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
+    backup_with_prune "$OPENCODE_CONFIG" >/dev/null
     echo "$NEW_CONFIG" > "$OPENCODE_CONFIG"
     chmod 600 "$OPENCODE_CONFIG"
     log_ok "Updated: $OPENCODE_CONFIG (backup saved)"
@@ -223,7 +223,7 @@ if [ -f "$SLIM_CONFIG" ]; then
       log_ok "Fixed permissions: $SLIM_CONFIG (600)"
     fi
   else
-    cp "$SLIM_CONFIG" "$SLIM_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
+    backup_with_prune "$SLIM_CONFIG" >/dev/null
     echo "$NEW_SLIM" > "$SLIM_CONFIG"
     chmod 600 "$SLIM_CONFIG"
     log_ok "Updated: $SLIM_CONFIG (backup saved)"

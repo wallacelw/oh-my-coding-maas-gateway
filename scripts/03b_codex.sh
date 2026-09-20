@@ -87,7 +87,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
     elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/responses" \
          -H "Authorization: Bearer $EXISTING_KEY" \
          -H "Content-Type: application/json" \
-         -d '{"model":"deepseek-v4-flash","input":"ok"}'; then
+         -d '{"model":"glm-5.1","input":"ok"}'; then
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
@@ -131,7 +131,7 @@ if [ -f "$CODEX_CONFIG" ]; then
   if [ "$NEW_CONFIG" = "$(cat "$CODEX_CONFIG")" ]; then
     log_info "Config unchanged — skipping write"
   else
-    cp "$CODEX_CONFIG" "$CODEX_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
+    backup_with_prune "$CODEX_CONFIG" >/dev/null
     echo "$NEW_CONFIG" > "$CODEX_CONFIG"
     chmod 600 "$CODEX_CONFIG"
     log_ok "Updated: $CODEX_CONFIG (backup saved)"

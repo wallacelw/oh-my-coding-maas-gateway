@@ -124,7 +124,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords |
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
-| — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key) |
+| — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
 | — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model supports `reasoning_effort`; add to `OFF_PEAK_PRICING` if it has off-peak pricing. Update `slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
 

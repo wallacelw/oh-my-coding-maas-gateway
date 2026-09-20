@@ -272,7 +272,7 @@ MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
 curl -X POST http://127.0.0.1:4000/v1/chat/completions \
   -H "Authorization: Bearer $MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "deepseek-v4-flash", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+  -d '{"model": "glm-5.1", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
 ```
 
 ## View Metrics
