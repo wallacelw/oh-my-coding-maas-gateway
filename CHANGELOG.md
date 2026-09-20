@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0] - 2026-09-20
+
+### Fixed
+
+- **Pre-commit hook was a no-op** — `grep -qF "^${file}$"` treated `^`/`$`
+  as literal characters; the `.env`-blocking control never fired. Fixed
+  to `grep -qxF "$file"` (exact fixed-string match).
+- **M6 catalog checks were dead code** — `04_validate.sh` re-fetched
+  `/v1/models` without auth header (401 → empty → 10 checks silently
+  skipped). Fixed to reuse the authenticated response. 10 previously-
+  skipped per-model catalog checks now run and pass.
+- **G1 shared-key detection never fired** — tool names concatenated
+  without separator but detection grepped for a space. Fixed with comma
+  separator and awk-based detection.
+- **update.sh auto-commits swept entire git index** — `git add && git
+  commit` committed all staged work, not just the bumped file. Changed
+  to `git commit --only`. Removed `|| true` that swallowed hook
+  rejections.
+- **Validation skipped on partial update failure** — `update.sh` gated
+  validation on `FAILED -eq 0`, skipping it exactly when most needed.
+  Now offers validation whenever any update ran.
+- **Grafana dashboard layout broken** — "Rate Limits & Budget" row at
+  y=76 collided with Cache panels (y=76–96). Row headers appeared after
+  their panels, breaking collapse grouping. Re-sequenced y-coordinates,
+  moved Cache row header before its panels. Fixed spend table query
+  (`instant: true`, `range: false`).
+
+### Added
+
+- **23 new validation checks** for v1.15/v1.16 features:
+  - Off-peak pricing block count (4×KEY_COUNT)
+  - Capability flag counts (mode, supports_function_calling,
+    supports_prompt_caching, supports_reasoning, description,
+    organization — each 10×KEY_COUNT)
+  - Off-peak placement verification (present for glm-5.2/glm-5.1,
+    absent for glm-5.3/deepseek)
+  - Balanced preset exact-match assertions (glm-5.1 primary, 2-model
+    fallback arrays, oracle fallback is glm-5.3)
+  - Default preset exact-match assertions (glm-5.3 primary, all 7
+    agents have 2-model arrays)
+  - Grafana panel count check (== 44)
+
+### Verified
+
+- **Off-peak billing empirically verified** — natural experiment across
+  the peak/off-peak boundary (07:49 → 08:23 Beijing):
+  - Off-peak request: spend exactly matched 70% rates (input, output,
+    AND cache_read)
+  - Peak request: spend matched standard rates
+  - The `"13:00-00:00"` UTC string format and midnight wrap work
+    correctly in LiteLLM 1.101.0
+
 ## [1.16.0] - 2026-09-20
 
 ### Added

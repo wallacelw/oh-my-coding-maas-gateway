@@ -357,6 +357,66 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
     else
       fail "LiteLLM: prometheus callback missing (metrics won't be emitted)"
     fi
+
+    # ── P4: v1.15/v1.16 feature coverage ──
+    # Off-peak pricing: 2 models (glm-5.2, glm-5.1) × 2 formats × keys
+    OFF_PEAK_COUNT=$(grep -c 'off_peak_pricing:' "$CONFIG_FILE" 2>/dev/null || true); OFF_PEAK_COUNT=${OFF_PEAK_COUNT:-0}
+    EXPECTED_OFF_PEAK=$((4 * KEY_COUNT))
+    if [ "$OFF_PEAK_COUNT" = "$EXPECTED_OFF_PEAK" ]; then
+      pass "Off-peak pricing blocks present (expected $EXPECTED_OFF_PEAK)"
+    else
+      fail "Off-peak pricing blocks: $OFF_PEAK_COUNT (expected $EXPECTED_OFF_PEAK)"
+    fi
+
+    # Capability flag counts: 5 models × 2 formats × keys
+    EXPECTED_CAP=$((10 * KEY_COUNT))
+    for flag in 'mode: chat' 'supports_function_calling: true' 'description:' 'organization: Huawei Cloud'; do
+      FLAG_COUNT=$(grep -c "$flag" "$CONFIG_FILE" 2>/dev/null || true); FLAG_COUNT=${FLAG_COUNT:-0}
+      if [ "$FLAG_COUNT" = "$EXPECTED_CAP" ]; then
+        pass "Capability flag '$flag' count: $FLAG_COUNT (expected $EXPECTED_CAP)"
+      else
+        fail "Capability flag '$flag' count: $FLAG_COUNT (expected $EXPECTED_CAP)"
+      fi
+    done
+
+    # supports_reasoning: glm-5.3 + glm-5.2 = 2 models × 2 formats × keys = true
+    # Remaining 3 models × 2 formats × keys = false
+    REASONING_TRUE_COUNT=$(grep -c 'supports_reasoning: true' "$CONFIG_FILE" 2>/dev/null || true); REASONING_TRUE_COUNT=${REASONING_TRUE_COUNT:-0}
+    EXPECTED_REASONING_TRUE=$((4 * KEY_COUNT))
+    if [ "$REASONING_TRUE_COUNT" = "$EXPECTED_REASONING_TRUE" ]; then
+      pass "supports_reasoning: true count: $REASONING_TRUE_COUNT (expected $EXPECTED_REASONING_TRUE)"
+    else
+      fail "supports_reasoning: true count: $REASONING_TRUE_COUNT (expected $EXPECTED_REASONING_TRUE)"
+    fi
+    REASONING_FALSE_COUNT=$(grep -c 'supports_reasoning: false' "$CONFIG_FILE" 2>/dev/null || true); REASONING_FALSE_COUNT=${REASONING_FALSE_COUNT:-0}
+    EXPECTED_REASONING_FALSE=$((6 * KEY_COUNT))
+    if [ "$REASONING_FALSE_COUNT" = "$EXPECTED_REASONING_FALSE" ]; then
+      pass "supports_reasoning: false count: $REASONING_FALSE_COUNT (expected $EXPECTED_REASONING_FALSE)"
+    else
+      fail "supports_reasoning: false count: $REASONING_FALSE_COUNT (expected $EXPECTED_REASONING_FALSE)"
+    fi
+
+    # Off-peak pricing only on glm-5.2 and glm-5.1 (both formats, all keys)
+    # Verify each expected model has at least one off_peak_pricing block per format.
+    # Pattern matches both OpenAI (glm-5.2) and Anthropic (claude-glm-5.2) variants.
+    for off_peak_model in 'glm-5.2' 'glm-5.1'; do
+      OFF_PEAK_FOR_MODEL=$(grep -A 20 "model_name: \\(claude-\\)\\?$off_peak_model" "$CONFIG_FILE" 2>/dev/null | grep -c 'off_peak_pricing:' || true); OFF_PEAK_FOR_MODEL=${OFF_PEAK_FOR_MODEL:-0}
+      EXPECTED_PER_MODEL=$((2 * KEY_COUNT))
+      if [ "$OFF_PEAK_FOR_MODEL" -ge "$EXPECTED_PER_MODEL" ]; then
+        pass "Off-peak pricing present for $off_peak_model ($OFF_PEAK_FOR_MODEL blocks)"
+      else
+        fail "Off-peak pricing missing for $off_peak_model ($OFF_PEAK_FOR_MODEL blocks, expected ≥ $EXPECTED_PER_MODEL)"
+      fi
+    done
+    # Verify off-peak pricing is NOT present for glm-5.3 or deepseek models
+    for no_off_peak_model in 'glm-5.3' 'deepseek-v4-pro' 'deepseek-v4-flash'; do
+      NO_OFF_PEAK=$(grep -A 20 "model_name: \\(claude-\\)\\?$no_off_peak_model" "$CONFIG_FILE" 2>/dev/null | grep -c 'off_peak_pricing:' || true); NO_OFF_PEAK=${NO_OFF_PEAK:-0}
+      if [ "$NO_OFF_PEAK" -eq 0 ]; then
+        pass "No off-peak pricing for $no_off_peak_model (correct)"
+      else
+        fail "Off-peak pricing incorrectly present for $no_off_peak_model ($NO_OFF_PEAK blocks)"
+      fi
+    done
   else
     warn "litellm_config.yaml not found — run scripts/02_litellm.sh"
   fi
@@ -478,7 +538,18 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Council beta model is LiteLLM/glm-5.3" '.council.presets.default.beta.model == "LiteLLM/glm-5.3"' \
       "Council gamma model is LiteLLM/glm-5.3" '.council.presets.default.gamma.model == "LiteLLM/glm-5.3"' \
       "Huawei-MaaS-Default orchestrator model set" '.presets["Huawei-MaaS-Default"].orchestrator.model' \
-      "Huawei-MaaS-Balanced orchestrator model set" '.presets["Huawei-MaaS-Balanced"].orchestrator.model'
+      "Huawei-MaaS-Balanced orchestrator model set" '.presets["Huawei-MaaS-Balanced"].orchestrator.model' \
+      "Balanced orchestrator primary is glm-5.1" '.presets["LiteLLM-Balanced"].orchestrator.model[0] == "LiteLLM/glm-5.1"' \
+      "Balanced orchestrator has 2-model fallback" '(.presets["LiteLLM-Balanced"].orchestrator.model | length) == 2' \
+      "Balanced oracle fallback is glm-5.3" '.presets["LiteLLM-Balanced"].oracle.model[1] == "LiteLLM/glm-5.3"' \
+      "Default orchestrator primary is glm-5.3" '.presets["LiteLLM-Default"].orchestrator.model[0] == "LiteLLM/glm-5.3"' \
+      "Default orchestrator has 2-model array" '(.presets["LiteLLM-Default"].orchestrator.model | length) == 2' \
+      "Default oracle has 2-model array" '(.presets["LiteLLM-Default"].oracle.model | length) == 2' \
+      "Default council has 2-model array" '(.presets["LiteLLM-Default"].council.model | length) == 2' \
+      "Default librarian has 2-model array" '(.presets["LiteLLM-Default"].librarian.model | length) == 2' \
+      "Default explorer has 2-model array" '(.presets["LiteLLM-Default"].explorer.model | length) == 2' \
+      "Default designer has 2-model array" '(.presets["LiteLLM-Default"].designer.model | length) == 2' \
+      "Default fixer has 2-model array" '(.presets["LiteLLM-Default"].fixer.model | length) == 2'
 
     PERMS=$(file_perms "$SLIM_CONFIG")
     if [ "$PERMS" = "600" ]; then
@@ -501,7 +572,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       fi
     fi
   else
-    fail_n 22 "No oh-my-opencode-slim config — skipping 22 preset checks"
+    fail_n 33 "No oh-my-opencode-slim config — skipping 33 preset checks"
   fi
 
   echo ""
@@ -541,7 +612,10 @@ if [ "$RUN_OPENCODE" = true ]; then
         fi
 
         # M6: Model catalog matches models.sh
-        MODEL_LIST=$(curl -sf -m 10 "$LITELLM_URL/v1/models" 2>/dev/null | jq -r '.data[].id' 2>/dev/null || true)
+        # MODEL_LIST was populated above from the authenticated /v1/models
+        # response. Do NOT re-fetch without auth — with auth required the
+        # unauthenticated request returns 401 and clobbers the good value,
+        # silently skipping every per-model catalog check below.
         if [ -n "$MODEL_LIST" ]; then
           for model_entry in "${MODELS[@]}"; do
             IFS=':' read -r model_name _ <<< "$model_entry"
@@ -556,6 +630,8 @@ if [ "$RUN_OPENCODE" = true ]; then
               fail "Model claude-$model_name missing from LiteLLM catalog"
             fi
           done
+        else
+          fail "Model list empty — catalog checks skipped"
         fi
       fi
     fi
@@ -664,12 +740,12 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
        DASHBOARD_JSON=$(curl -sf -m 5 --config - \
          "http://127.0.0.1:3000/api/dashboards/uid/oh-my-coding-maas-gateway" 2>/dev/null <<<"user = \"admin:${GRAFANA_ADMIN_PASSWORD:-admin}\"" || true)
        if [ -n "$DASHBOARD_JSON" ]; then
-         PANEL_COUNT=$(printf '%s' "$DASHBOARD_JSON" | jq '.dashboard.panels | length' 2>/dev/null || echo "0")
-         if [ "$PANEL_COUNT" -gt 0 ]; then
-           pass "Grafana dashboard has $PANEL_COUNT panels"
-         else
-           fail "Grafana dashboard has 0 panels (dashboard may be corrupted)"
-         fi
+          PANEL_COUNT=$(printf '%s' "$DASHBOARD_JSON" | jq '.dashboard.panels | length' 2>/dev/null || echo "0")
+          if [ "$PANEL_COUNT" = "44" ]; then
+            pass "Grafana dashboard has 44 panels (8 rows + 36 visualization)"
+          else
+            fail "Grafana dashboard has $PANEL_COUNT panels (expected 44 = 8 rows + 36 visualization)"
+          fi
        else
          skip "Grafana dashboard panel count (API not reachable)"
        fi
@@ -961,26 +1037,30 @@ if [ "$RUN_LITELLM" = true ]; then
 
   if [ -f "$HOME/.config/opencode/opencode.json" ]; then
     OC_KEY=$(strip_jsonc "$HOME/.config/opencode/opencode.json" 2>/dev/null | jq -r '.provider.LiteLLM.options.apiKey // empty' 2>/dev/null || true)
-    [ -n "$OC_KEY" ] && VK_TOOLS["$OC_KEY"]="${VK_TOOLS[$OC_KEY]:-}opencode"
+    [ -n "$OC_KEY" ] && VK_TOOLS["$OC_KEY"]="${VK_TOOLS[$OC_KEY]:-}opencode,"
   fi
   if [ -f "$HOME/.codex/.env" ]; then
     CODEX_KEY=$(sed -n 's/^LITELLM_CODEX_API_KEY=\(.*\)/\1/p' "$HOME/.codex/.env" 2>/dev/null || true)
-    [ -n "$CODEX_KEY" ] && VK_TOOLS["$CODEX_KEY"]="${VK_TOOLS[$CODEX_KEY]:-}codex"
+    [ -n "$CODEX_KEY" ] && VK_TOOLS["$CODEX_KEY"]="${VK_TOOLS[$CODEX_KEY]:-}codex,"
   fi
   if [ -f "$HOME/.claude/settings.json" ]; then
     CLAUDE_KEY=$(jq -r '.env.ANTHROPIC_API_KEY // empty' "$HOME/.claude/settings.json" 2>/dev/null || true)
-    [ -n "$CLAUDE_KEY" ] && VK_TOOLS["$CLAUDE_KEY"]="${VK_TOOLS[$CLAUDE_KEY]:-}claude"
+    [ -n "$CLAUDE_KEY" ] && VK_TOOLS["$CLAUDE_KEY"]="${VK_TOOLS[$CLAUDE_KEY]:-}claude,"
   fi
   if [ -f "$HOME/.pi/agent/models.json" ]; then
     PI_VKEY=$(jq -r '.providers.LiteLLM.apiKey // empty' "$HOME/.pi/agent/models.json" 2>/dev/null || true)
-    [ -n "$PI_VKEY" ] && VK_TOOLS["$PI_VKEY"]="${VK_TOOLS[$PI_VKEY]:-}pi"
+    [ -n "$PI_VKEY" ] && VK_TOOLS["$PI_VKEY"]="${VK_TOOLS[$PI_VKEY]:-}pi,"
   fi
 
   SHARED_FOUND=false
   for key in "${!VK_TOOLS[@]}"; do
     TOOLS="${VK_TOOLS[$key]}"
-    if echo "$TOOLS" | grep -q ' '; then
-      fail "Virtual key $(mask_key "$key") shared by: $TOOLS (should be unique per tool)"
+    # Each tool name is appended with a trailing comma separator. A key used
+    # by more than one tool produces a string with multiple comma-separated
+    # entries (e.g. "opencode,codex,"). Count the separators to detect sharing.
+    TOOL_COUNT=$(awk -F',' '{print NF-1}' <<< "$TOOLS")
+    if [ "$TOOL_COUNT" -gt 1 ]; then
+      fail "Virtual key $(mask_key "$key") shared by: ${TOOLS%,} (should be unique per tool)"
       SHARED_FOUND=true
     fi
   done

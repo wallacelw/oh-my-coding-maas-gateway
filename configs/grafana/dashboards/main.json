@@ -2,7 +2,7 @@
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
   "schemaVersion": 39,
-  "version": 15,
+  "version": 16,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -1618,7 +1618,7 @@
       "description": "Spend accumulation and rate per model. Use these to track cost trends and spot runaway spending in real time.",
       "gridPos": {
         "x": 0,
-        "y": 94,
+        "y": 96,
         "w": 24,
         "h": 1
       },
@@ -1632,7 +1632,7 @@
       "description": "Cumulative USD spent across all models since the proxy started, from litellm_spend_metric_total. This is a lifetime counter — use it for budget tracking.\n\nGOOD: Within budget.\nBAD: Approaching or exceeding budget — check Spend rate panel for real-time cost trajectory.",
       "gridPos": {
         "x": 0,
-        "y": 95,
+        "y": 97,
         "w": 6,
         "h": 8
       },
@@ -1698,7 +1698,7 @@
       "description": "Cumulative USD spend over time per model. Each line shows the running total for one model. Use this to identify which models cost the most over time.\n\nGOOD: Linear growth at expected rate.\nBAD: Sudden steep slope — runaway costs on a model; check for expensive model selection or excessive usage.",
       "gridPos": {
         "x": 6,
-        "y": 95,
+        "y": 97,
         "w": 12,
         "h": 8
       },
@@ -1753,7 +1753,7 @@
       "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate. Use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
       "gridPos": {
         "x": 18,
-        "y": 95,
+        "y": 97,
         "w": 6,
         "h": 8
       },
@@ -1800,6 +1800,20 @@
           "sort": "none"
         }
       }
+    },
+    {
+      "id": 47,
+      "type": "row",
+      "title": "Cache",
+      "description": "Cache hit/miss metrics from LiteLLM. Shows how effectively the proxy cache and provider-side prompt caching are reducing upstream calls and token processing.",
+      "gridPos": {
+        "x": 0,
+        "y": 75,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
     },
     {
       "id": 43,
@@ -2033,25 +2047,11 @@
       }
     },
     {
-      "id": 47,
-      "type": "row",
-      "title": "Cache",
-      "description": "Cache hit/miss metrics from LiteLLM. Shows how effectively the proxy cache and provider-side prompt caching are reducing upstream calls and token processing.",
-      "gridPos": {
-        "x": 0,
-        "y": 75,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false,
-      "panels": []
-    },
-    {
       "id": 48,
       "type": "row",
       "title": "Rate Limits & Budget",
       "description": "Deployment rate limits (TPM/RPM) from config, and spend attribution per coding tool. Use these to understand capacity headroom and cost distribution across opencode, Codex, Claude Code, and Pi.",
-      "gridPos": { "x": 0, "y": 76, "w": 24, "h": 1 },
+      "gridPos": { "x": 0, "y": 105, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
     },
@@ -2060,7 +2060,7 @@
       "type": "stat",
       "title": "Deployment TPM limits",
       "description": "Tokens-per-minute limit per model deployment, from litellm_deployment_tpm_limit (set in models.sh). Shows the provider-side rate ceiling for each model.\n\nHOW TO READ: GLM models allow 1M TPM; DeepSeek models are limited to 30K TPM. Compare against the 'TPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors; consider load-balancing keys or shifting work to higher-limit models.",
-      "gridPos": { "x": 0, "y": 77, "w": 6, "h": 5 },
+      "gridPos": { "x": 0, "y": 106, "w": 6, "h": 5 },
       "targets": [
         {
           "expr": "max by (litellm_model_name) (litellm_deployment_tpm_limit{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
@@ -2094,7 +2094,7 @@
       "type": "stat",
       "title": "Deployment RPM limits",
       "description": "Requests-per-minute limit per model deployment, from litellm_deployment_rpm_limit (set in models.sh). Shows the provider-side request rate ceiling.\n\nHOW TO READ: GLM models allow 100 RPM; DeepSeek models are limited to 3 RPM. Compare against the 'RPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors.",
-      "gridPos": { "x": 6, "y": 77, "w": 6, "h": 5 },
+      "gridPos": { "x": 6, "y": 106, "w": 6, "h": 5 },
       "targets": [
         {
           "expr": "max by (litellm_model_name) (litellm_deployment_rpm_limit{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
@@ -2128,7 +2128,7 @@
       "type": "piechart",
       "title": "Spend by tool",
       "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
-      "gridPos": { "x": 12, "y": 77, "w": 12, "h": 5 },
+      "gridPos": { "x": 12, "y": 106, "w": 12, "h": 5 },
       "targets": [
         {
           "expr": "sum by (api_key_alias) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
@@ -2158,7 +2158,7 @@
       "type": "table",
       "title": "Spend by tool × model",
       "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model.\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs librarian on glm-5.1. Useful for tuning preset assignments for cost efficiency.",
-      "gridPos": { "x": 0, "y": 82, "w": 24, "h": 8 },
+      "gridPos": { "x": 0, "y": 111, "w": 24, "h": 8 },
       "targets": [
         {
           "expr": "sum by (api_key_alias, model) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
@@ -2167,9 +2167,9 @@
           "hide": false,
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "editorMode": "code",
-          "range": true,
+          "range": false,
           "format": "table",
-          "instant": false
+          "instant": true
         }
       ],
       "fieldConfig": {

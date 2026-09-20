@@ -371,8 +371,8 @@ update_component() {
       log_warn "Updating SLIM_VERSION in tracked file scripts/03a_opencode.sh"
       cp "$SCRIPT_DIR/03a_opencode.sh" "$SCRIPT_DIR/03a_opencode.sh.bak.$(date +%Y%m%d%H%M%S)"
       sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$new_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
-      git -C "$PROJECT_DIR" add scripts/03a_opencode.sh 2>/dev/null && \
-        git -C "$PROJECT_DIR" commit -m "Bump SLIM_VERSION to $new_ver" --quiet 2>/dev/null || true
+      git -C "$PROJECT_DIR" commit --only scripts/03a_opencode.sh -m "Bump SLIM_VERSION to $new_ver" --quiet 2>/dev/null \
+        || log_warn "Commit failed for scripts/03a_opencode.sh"
       # Re-apply opencode configs from repo templates. The slim installer
       # preserves the existing config (stale $schema version) and rewrites
       # opencode.json with looser permissions; 03a_opencode.sh regenerates
@@ -394,8 +394,8 @@ update_component() {
       log_warn "Updating image tag in tracked file docker-compose.yml"
       cp "$PROJECT_DIR/docker-compose.yml" "$PROJECT_DIR/docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)"
       sed -i "s|image: ${image_prefix}:${tag_prefix}.*|image: ${image_prefix}:${tag_prefix}${new_ver}|" "$PROJECT_DIR/docker-compose.yml"
-      git -C "$PROJECT_DIR" add docker-compose.yml 2>/dev/null && \
-        git -C "$PROJECT_DIR" commit -m "Bump ${image_prefix} to ${tag_prefix}${new_ver}" --quiet 2>/dev/null || true
+      git -C "$PROJECT_DIR" commit --only docker-compose.yml -m "Bump ${image_prefix} to ${tag_prefix}${new_ver}" --quiet 2>/dev/null \
+        || log_warn "Commit failed for docker-compose.yml"
 
       # Pull and restart
       run_filtered "docker" docker compose pull "$service" || { log_error "$name pull failed"; return 1; }
@@ -507,7 +507,10 @@ if [ "$DRY_RUN" = false ]; then
 fi
 
 # Offer to run validation
-if [ "$DRY_RUN" = false ] && [ ${#SELECTED[@]} -gt 0 ] && [ $FAILED -eq 0 ]; then
+if [ "$DRY_RUN" = false ] && [ ${#SELECTED[@]} -gt 0 ]; then
+  if [ $FAILED -gt 0 ]; then
+    log_warn "Updates had failures — validation is especially important now"
+  fi
   echo ""
   RUN_VALIDATION=true
   if [ "${AUTO_YES:-false}" != true ]; then
