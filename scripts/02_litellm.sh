@@ -62,7 +62,8 @@ for port in 4000 5432 9090 3000; do
     stale_container=$(docker ps --filter "publish=${port}" --format '{{.Names}}' 2>/dev/null || true)
     if [ -n "$stale_container" ]; then
       log_warn "Port $port held by stale container(s): $stale_container — checking them"
-      echo "$stale_container" | while IFS= read -r c; do
+      # for-loop (not a pipe) so `exit 1` terminates the script, not a subshell
+      for c in $stale_container; do
         if [[ "$c" == litellm_* ]]; then
           log_dim "  Removing stale LiteLLM container: $c"
           docker rm -f "$c" 2>/dev/null || true

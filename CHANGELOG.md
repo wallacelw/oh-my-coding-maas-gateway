@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.1] - 2026-09-20
+
+### Fixed
+
+- **02_litellm.sh guard exit propagation** — `exit 1` inside
+  `echo | while read` pipeline only exited the subshell; script continued
+  to `docker compose up -d` which failed opaquely on foreign containers.
+  Replaced with `for` loop in main shell so `exit 1` terminates the script.
+- **03d_pi.sh stale 8-field comment/read** — documented and parsed 8 fields
+  while `models.sh` uses 10 since v1.9.0; `output_cost` silently absorbed
+  cache cost fields. Updated to 10-field format matching `models.sh:11`.
+- **Slim template $schema pin stale** — `oh-my-opencode-slim@2.2.18` in
+  committed template while `SLIM_VERSION="2.2.21"`; self-correcting at
+  install via sed but repo template was stale. Updated to `@2.2.21`.
+- **model_catalog.json reasoning contradictions** — deepseek-v4-pro/flash
+  had `supports_reasoning_effort: true` but `models.sh` and generated
+  `config.yaml` set `supports_reasoning: false`. Codex users saw reasoning
+  options for models that don't support them. Fixed to `false`/`[]`.
+- **glm-5.3 missing `low` reasoning level** — Huawei docs say high+low;
+  catalog listed only `high`. Added `low`.
+- **glm-5.2 missing reasoning levels** — `models.sh` documents 7 levels
+  (max/xhigh/high/medium/low/minimal/none); catalog listed only `high`.
+  Added all 7 levels. Verified against live MaaS API: all 7 return
+  HTTP 200 with reasoning_content.
+
 ## [1.17.0] - 2026-09-20
 
 ### Fixed

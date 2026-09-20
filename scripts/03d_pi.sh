@@ -171,10 +171,10 @@ fi
 mkdir -p "$PI_DIR"
 
 # Build models array from MODELS
-# Format: model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost
+# Format: model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost:cache_read_cost:cache_creation_cost
 MODELS_JSON="[]"
 for model_entry in "${MODELS[@]}"; do
-  IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost <<< "$model_entry"
+  IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost cache_read_cost cache_creation_cost <<< "$model_entry"
 
   # Use max_tokens as contextWindow (total context), max_output as maxTokens (output limit)
   MODELS_JSON=$(echo "$MODELS_JSON" | jq --arg id "$model_name" \

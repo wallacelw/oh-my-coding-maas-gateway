@@ -9,7 +9,13 @@
       "supports_reasoning_summaries": true,
       "supports_reasoning_effort": true,
       "supported_reasoning_levels": [
-        { "effort": "high", "description": "High" }
+        { "effort": "max", "description": "Max" },
+        { "effort": "xhigh", "description": "Extra High" },
+        { "effort": "high", "description": "High" },
+        { "effort": "medium", "description": "Medium" },
+        { "effort": "low", "description": "Low" },
+        { "effort": "minimal", "description": "Minimal" },
+        { "effort": "none", "description": "None" }
       ],
       "shell_type": "unified_exec",
       "visibility": "list",
@@ -30,7 +36,8 @@
       "supports_reasoning_summaries": true,
       "supports_reasoning_effort": true,
       "supported_reasoning_levels": [
-        { "effort": "high", "description": "High" }
+        { "effort": "high", "description": "High" },
+        { "effort": "low", "description": "Low" }
       ],
       "shell_type": "unified_exec",
       "visibility": "list",
@@ -68,10 +75,8 @@
       "context_window": 1000000,
       "max_output_tokens": 128000,
       "supports_reasoning_summaries": true,
-      "supports_reasoning_effort": true,
-      "supported_reasoning_levels": [
-        { "effort": "high", "description": "High" }
-      ],
+      "supports_reasoning_effort": false,
+      "supported_reasoning_levels": [],
       "shell_type": "unified_exec",
       "visibility": "list",
       "supported_in_api": true,
@@ -89,10 +94,8 @@
       "context_window": 1000000,
       "max_output_tokens": 384000,
       "supports_reasoning_summaries": true,
-      "supports_reasoning_effort": true,
-      "supported_reasoning_levels": [
-        { "effort": "high", "description": "High" }
-      ],
+      "supports_reasoning_effort": false,
+      "supported_reasoning_levels": [],
       "shell_type": "unified_exec",
       "visibility": "list",
       "supported_in_api": true,
