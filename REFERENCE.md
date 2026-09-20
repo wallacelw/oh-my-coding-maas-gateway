@@ -1,7 +1,7 @@
 # oh-my-coding-maas-gateway — Reference
 
-Reference documentation for both humans and agents. For the install procedure and per-script details, see **[INSTALLATION.md](./INSTALLATION.md)**. For the deterministic install procedure,
-see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
+Reference documentation for both humans and agents. For the install procedure and per-script details, see **[INSTALLATION.md](./INSTALLATION.md)**. For operational tasks (health checks, recovery, debugging), see
+**[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 **[README.md](./README.md)**.
 
 ---
@@ -123,6 +123,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | 05 | `05_skill.sh` | Install companion skill into detected coding agents (--dry-run, --no-skill, --yes) |
 | 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
 | — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords |
+| — | `install-skill.sh` | Install companion skill into a single agent (--agent opencode/codex/claude-code/pi, --dry-run, --yes). Called by 05_skill.sh for multi-agent install |
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
@@ -612,7 +613,7 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 | `unhealthy_count > 0` | Check MaaS key/model/region — may be transient |
 | Virtual key 403 | Check with `/key/info` — may be expired |
 | Port conflict | `ss -tlnp \| grep -E ':(4000\|5432\|9090\|3000) '` |
-| Validation fails | `./scripts/04_validate.sh` — see recovery table in [SKILL.md](./SKILL.md) Step 7 |
+| Validation fails | `./scripts/04_validate.sh` — see Recovery table in [SKILL.md](./SKILL.md) |
 | Prometheus not scraping | Check `docker compose logs prometheus --tail 20`; verify `litellm:4000` reachable from Prometheus container |
 | Grafana dashboard blank | Check datasource UID: `curl http://127.0.0.1:3000/api/datasources/name/Prometheus \| jq .uid` — must be `prometheus` |
 | Grafana not loading | `docker compose restart grafana` |

@@ -234,7 +234,7 @@ Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4-pro`,
 
 **List models**:
 ```bash
-sed -n '/^MODELS=(/,/^)/p' scripts/helpers/models.sh | grep -E '^\s*"' | sed 's/^\s*"//; s/:.*//' | sort
+sed -n '/^MODELS=(/,/^)/p' scripts/helpers/models.sh | grep -E '^[[:space:]]*"' | sed 's/^[[:space:]]*"//; s/:.*//' | sort
 ```
 
 **Add a model**: add a line to the `MODELS` array in `scripts/helpers/models.sh`,
@@ -244,7 +244,7 @@ and `configs/codex/model_catalog.json` with the new model. If the model supports
 pricing, add it to the `OFF_PEAK_PRICING` array. Update
 `configs/opencode/oh-my-opencode-slim.json.template` only if agents should be
 assigned the new model. Then regenerate (this creates 2N deployments per model,
-one per API key):
+two per API key — one per format):
 ```bash
 ./scripts/02_litellm.sh
 ./scripts/04_validate.sh

@@ -130,6 +130,17 @@ management, debug routing, observability, and recovery.
 
 ---
 
+## Backup
+
+```bash
+./scripts/06_backup.sh                  # dump LiteLLM DB (spend history, keys, budgets)
+./scripts/06_backup.sh --restore FILE   # restore from a dump
+```
+
+Run before `docker compose down -v` — the DB volume is destroyed otherwise.
+
+---
+
 ## Documentation
 
 | File | For | Description |

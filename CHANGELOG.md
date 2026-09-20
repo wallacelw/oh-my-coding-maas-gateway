@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.2] - 2026-09-21
+
+### Fixed
+
+- **SKILL.md `\s` portability fix actually applied** — v1.19.1 CHANGELOG
+  claimed this fix but the sed command failed due to quoting; `\s`
+  remained in SKILL.md:237. Now correctly replaced with `[[:space:]]`.
+- **pg_dump stderr redirect order** — `> file 2>&1` sent both streams
+  to the dump file, so DUMP_ERR was always empty. Changed to
+  `2>&1 > file` so stderr is captured and stdout goes to the file.
+- **emit_deployment local vars** — added `OFF_PEAK` and `op_*` to local
+  declaration (v1.19.1 only declared model-field vars).
+- **INSTALLATION.md "sections A–F"** → "A–G" (section G cross-tool key
+  isolation exists since v1.9.4).
+- **SKILL.md "one per API key"** → "two per API key — one per format"
+  (2N = N OpenAI + N Anthropic per key).
+- **REFERENCE.md stale SKILL.md description** — "deterministic install
+  procedure" → "operational tasks (health checks, recovery, debugging)".
+- **REFERENCE.md stale "Step 7"** → "Recovery table" (SKILL.md has no
+  numbered steps).
+- **REFERENCE.md scripts table** — added `install-skill.sh` row.
+- **INSTALLATION.md helpers table** — added `is_interactive`.
+- **README.md** — added Backup section with 06_backup.sh commands.
+
 ## [1.19.1] - 2026-09-21
 
 ### Fixed

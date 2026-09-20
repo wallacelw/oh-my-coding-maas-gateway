@@ -149,7 +149,7 @@ chmod 700 "$BACKUP_DIR"
 
 log_info "Dumping LiteLLM database..."
 DUMP_RC=0
-DUMP_ERR=$(docker compose -f "$COMPOSE_FILE" exec -T db pg_dump --clean --if-exists -U llmproxy -d litellm > "${OUT}.tmp" 2>&1) || DUMP_RC=$?
+DUMP_ERR=$(docker compose -f "$COMPOSE_FILE" exec -T db pg_dump --clean --if-exists -U llmproxy -d litellm 2>&1 > "${OUT}.tmp") || DUMP_RC=$?
 if [ "$DUMP_RC" -ne 0 ] || [ ! -s "${OUT}.tmp" ] || ! grep -q 'PostgreSQL database dump' "${OUT}.tmp"; then
   log_error "Backup failed: pg_dump exit $DUMP_RC, output empty or failed sanity check."
   [ -n "$DUMP_ERR" ] && log_dim "  pg_dump stderr: $DUMP_ERR"
