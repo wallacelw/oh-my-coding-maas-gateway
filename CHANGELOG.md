@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.0] - 2026-09-20
+
+### Added
+
+- **PostgreSQL backup script** (`scripts/06_backup.sh`) — `pg_dump` to
+  `backups/litellm_YYYYmmdd_HHMMSS.sql` with chmod 600, prune to `--keep N`
+  (default 10), `--restore FILE` with `ON_ERROR_STOP=1` and EXIT trap to
+  ensure LiteLLM restarts, `--dry-run` mode. `umask 077` prevents
+  world-readable tmp files. `backups/` added to `.gitignore`.
+- **Postgres in update.sh components** — display-only ("pinned — major
+  upgrades are manual; use 06_backup.sh restore procedure"). Never
+  auto-updated (PGDATA compatibility).
+
+### Fixed
+
+- **Restore false success** — psql without `ON_ERROR_STOP=1` exits 0 on
+  SQL errors; restore would report success even on corrupt dumps. Added
+  `-v ON_ERROR_STOP=1`.
+- **Dump tmp world-readable** — `${OUT}.tmp` created with default umask
+  (644); sensitive data readable during dump. Added `umask 077`.
+- **Restore can leave LiteLLM down** — abnormal exit between stop/restart
+  left gateway down. Added EXIT trap.
+- **`--keep 08` octal crash** — `$((KEEP + 1))` treated leading zero as
+  octal. Fixed with `$((10#$KEEP + 1))`.
+- **`--restore=` empty value** — silently ran backup instead of erroring.
+  Added empty-value check.
+- **AGENTS.md project structure** — updated `01-05` → `01-06`.
+
 ## [1.17.3] - 2026-09-20
 
 ### Fixed

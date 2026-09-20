@@ -121,6 +121,7 @@ see **[SKILL.md](./SKILL.md)**. For a human-friendly overview, see
 | 03d | `03d_pi.sh` | Install Pi agent + mint key + write models.json |
 | 04 | `04_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi for partial runs) |
 | 05 | `05_skill.sh` | Install companion skill into detected coding agents (--dry-run, --no-skill, --yes) |
+| 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
 | — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords |
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
@@ -629,7 +630,32 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 | Restart one service | `docker compose restart <service>` |
 | Restart all | `docker compose restart` |
 | View logs | `docker compose logs <service> --tail 50 -f` |
-| Full reset | `docker compose down -v; rm -f .env` (destroys all data) |
+| Full reset | Run `./scripts/06_backup.sh` first, then `docker compose down -v; rm -f .env` (destroys all data) |
+
+### Backup & Restore
+
+The PostgreSQL database holds spend history, virtual keys, and budgets.
+`docker compose down -v` destroys it — back up first.
+
+```bash
+./scripts/06_backup.sh                    # dump to backups/litellm_YYYYmmdd_HHMMSS.sql
+./scripts/06_backup.sh --keep 20          # keep the newest 20 dumps (default 10)
+./scripts/06_backup.sh --dry-run          # preview
+```
+
+Dumps are chmod 600 (they contain spend history and key hashes) and live
+in `backups/` (gitignored; removed by `uninstall.sh --repo`).
+
+Restore is a clean restore — wipe the DB volume, then restore into the
+empty database (recreates schema and data). `--restore` stops LiteLLM,
+pipes the dump into psql with `ON_ERROR_STOP=1`, and restarts LiteLLM:
+
+```bash
+docker compose stop litellm && docker compose rm -f db
+docker volume rm litellm_postgres_data
+docker compose up -d db          # wait ~10s for healthy
+./scripts/06_backup.sh --restore backups/litellm_20260101_120000.sql
+```
 
 ### Key Rotation (`--force`)
 

@@ -49,12 +49,17 @@ domain and is independently runnable.
 | 03d | `03d_pi.sh` | Pi agent | yes | Install Pi agent; mint virtual key; write `~/.pi/agent/models.json`. |
 | 04 | `04_validate.sh` | Validation | no | End-to-end validation of all installed components. |
 | 05 | `05_skill.sh` | Companion skill | yes | Install SKILL.md into detected coding agents (opencode, codex, claude, pi). |
+| 06 | `06_backup.sh` | PostgreSQL backup & restore | — | Dump the LiteLLM DB (spend history, virtual keys, budgets) to `backups/`; `--restore FILE` rebuilds it. Maintenance — not run by bootstrap. |
 
 ### Ordering
 
 `01 env` (everything needs `.env`) → `02 litellm` (tools need the proxy live)
 → `03a/03b/03c/03d` tools (independent, optional, any relative order) → `04 validate`
 (last, checks everything) → `05 skill` (companion skill into installed agents).
+
+`06_backup.sh` is a maintenance script (like `update.sh`) — run manually
+whenever a database backup or restore is needed; never part of the install
+sequence.
 
 ### Helpers (`scripts/helpers/`)
 
@@ -156,6 +161,20 @@ Skill locations:
 - codex: `~/.codex/skills/oh-my-coding-maas-gateway/SKILL.md`
 - pi: `~/.pi/agent/skills/oh-my-coding-maas-gateway/SKILL.md`
 - claude: `~/.claude/skills/oh-my-coding-maas-gateway/SKILL.md`
+
+### `06_backup.sh`
+
+Maintenance script (like `update.sh`) — not part of the install pipeline.
+Dumps the LiteLLM PostgreSQL database (spend history, virtual keys,
+budgets) to `backups/litellm_YYYYmmdd_HHMMSS.sql`, chmod 600, pruned to
+the newest 10 (`--keep N`). `docker compose down -v` destroys the
+database volume — run this first.
+
+Flags: `--dry-run`, `--restore FILE` (stops LiteLLM, restores, restarts;
+prompts unless `--yes`), `--keep N`.
+
+`backups/` is gitignored (dumps contain spend history and key hashes) and
+is removed by `uninstall.sh --repo` / `--all`.
 
 ---
 
@@ -399,7 +418,7 @@ the script automatically pulls and restarts the affected service.
 | `--tool=opencode,codex` | Subset of agent configs |
 | `--tool=all` | All agent configs |
 | `--docker` | Docker containers + volumes + images |
-| `--repo` | This repo (`.env`, configs, scripts) |
+| `--repo` | This repo (`.env`, configs, scripts, `backups/` — copy any DB dumps you want to keep elsewhere first) |
 | `--all` | Everything above |
 | `--dry-run` | Preview without deleting |
 | `--yes` | Skip confirmation |

@@ -149,9 +149,16 @@ check_components() {
 
   # 8. Grafana (Docker)
   name="grafana"
-  cur=$(grep 'image:.*grafana/grafana:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's/.*grafana://' | tr -d ' ')
+  cur=$(grep 'image:.*grafana/grafana:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's|.*grafana/grafana:||' | tr -d ' ')
   new=$(strip_v "$(github_latest grafana/grafana)")
   method="docker:grafana:grafana/grafana:"
+  _store_component "$name" "$cur" "$new" "$method" "infra"
+
+  # 9. PostgreSQL (display-only — pinned, never auto-updated)
+  name="postgres"
+  cur=$(grep 'image:.*postgres:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's/.*postgres://' | tr -d ' ')
+  new=""
+  method="pinned"
   _store_component "$name" "$cur" "$new" "$method" "infra"
 }
 
@@ -182,7 +189,10 @@ _print_row() {
   [ -z "$new" ] && new="${C_DIM}(unknown)${C_RESET}"
 
   local status
-  if [ "$avail" = "yes" ]; then
+  if [ "${UPDATE_METHODS[$i]}" = "pinned" ]; then
+    new="—"
+    status="${C_DIM}pinned — major upgrades are manual (data dir format changes; use 06_backup.sh restore procedure)${C_RESET}"
+  elif [ "$avail" = "yes" ]; then
     status="${C_YELLOW}update available${C_RESET}"
   elif [ -z "${CUR_VERSIONS[$i]}" ]; then
     status="${C_DIM}—${C_RESET}"

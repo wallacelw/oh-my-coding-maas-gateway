@@ -348,7 +348,7 @@ consistent, and readable. These standards apply to ALL scripts.
 ## Project Structure
 
 ```
-scripts/          — install pipeline (bootstrap + numbered steps 01-05, 03a-03d)
+scripts/          — install pipeline (bootstrap + numbered steps 01-06, 03a-03d)
 scripts/helpers/   — shared helper libraries (prereqs, keys, common, models, skills)
 configs/          — component configs grouped by service
 configs/litellm/   — LiteLLM config, entrypoint, template
