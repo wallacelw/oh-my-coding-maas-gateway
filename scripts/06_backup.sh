@@ -112,9 +112,11 @@ if [ -n "$RESTORE_FILE" ]; then
 
   log_info "Stopping LiteLLM (database must be idle during restore)..."
   docker compose -f "$COMPOSE_FILE" stop litellm
-  # Ensure LiteLLM comes back up even if the script exits abnormally below
-  # (idempotent no-op when it is already running).
+  # Ensure LiteLLM comes back up even if the script exits abnormally
+  # Signal traps exit → EXIT trap fires exactly once → guaranteed cleanup
   trap 'docker compose -f "$COMPOSE_FILE" up -d litellm 2>/dev/null || true' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 
   log_info "Restoring: $RESTORE_FILE"
   if ! docker compose -f "$COMPOSE_FILE" exec -T db psql -U llmproxy -d litellm -v ON_ERROR_STOP=1 < "$RESTORE_FILE"; then
@@ -147,9 +149,10 @@ chmod 700 "$BACKUP_DIR"
 
 log_info "Dumping LiteLLM database..."
 DUMP_RC=0
-docker compose -f "$COMPOSE_FILE" exec -T db pg_dump -U llmproxy -d litellm > "${OUT}.tmp" 2>/dev/null || DUMP_RC=$?
+DUMP_ERR=$(docker compose -f "$COMPOSE_FILE" exec -T db pg_dump --clean --if-exists -U llmproxy -d litellm > "${OUT}.tmp" 2>&1) || DUMP_RC=$?
 if [ "$DUMP_RC" -ne 0 ] || [ ! -s "${OUT}.tmp" ] || ! grep -q 'PostgreSQL database dump' "${OUT}.tmp"; then
   log_error "Backup failed: pg_dump exit $DUMP_RC, output empty or failed sanity check."
+  [ -n "$DUMP_ERR" ] && log_dim "  pg_dump stderr: $DUMP_ERR"
   log_dim "  Check: docker compose logs db --tail 20"
   rm -f "${OUT}.tmp"
   exit 1

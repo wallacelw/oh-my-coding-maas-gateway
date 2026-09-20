@@ -264,7 +264,7 @@ docker compose logs litellm --tail 100 | grep 401
 ```bash
 curl -sf http://127.0.0.1:4000/health/liveliness
 docker compose logs litellm --tail 100 | grep -i error
-curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_request_total_latency_seconds_sum' | jq .
+curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_request_total_latency_metric_sum' | jq .
 ```
 
 **Inference smoke test**:

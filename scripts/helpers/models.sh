@@ -56,16 +56,22 @@ validate_catalog() {
     field_count=$(echo "$entry" | tr ':' '\n' | wc -l)
     if [ "$field_count" -ne 10 ]; then
       echo "validate_catalog: $name has $field_count fields (expected 10)" >&2
-      ((errors++))
+      errors=$((errors + 1))
     fi
   done
 
-  # Verify OFF_PEAK_PRICING names ⊆ MODELS names
+  # Verify OFF_PEAK_PRICING names ⊆ MODELS names and 5-field format
   for entry in "${OFF_PEAK_PRICING[@]}"; do
     local name="${entry%%|*}"
     if ! printf '%s\n' "${model_names[@]}" | grep -qxF "$name"; then
       echo "validate_catalog: OFF_PEAK_PRICING model '$name' not in MODELS" >&2
-      ((errors++))
+      errors=$((errors + 1))
+    fi
+    local op_field_count
+    op_field_count=$(echo "$entry" | tr '|' '\n' | wc -l)
+    if [ "$op_field_count" -ne 5 ]; then
+      echo "validate_catalog: OFF_PEAK_PRICING '$name' has $op_field_count fields (expected 5: name|hours|input|output|cache)" >&2
+      errors=$((errors + 1))
     fi
   done
 
@@ -73,7 +79,7 @@ validate_catalog() {
   for name in "${REASONING_MODELS[@]}"; do
     if ! printf '%s\n' "${model_names[@]}" | grep -qxF "$name"; then
       echo "validate_catalog: REASONING_MODELS model '$name' not in MODELS" >&2
-      ((errors++))
+      errors=$((errors + 1))
     fi
   done
 

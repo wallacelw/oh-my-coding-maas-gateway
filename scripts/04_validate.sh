@@ -139,10 +139,10 @@ if [ "$RUN_LITELLM" = true ]; then
 
   echo ""
   log_info "A0. Model catalog validation"
-  if validate_catalog 2>/dev/null; then
+  if validate_catalog 2>&1 | sed 's/^/  /'; then
     pass "Model catalog cross-validation passed"
   else
-    fail "Model catalog cross-validation failed (run validate_catalog for details)"
+    fail "Model catalog cross-validation failed (see details above)"
   fi
 
   echo ""
@@ -563,19 +563,27 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Default fixer has 2-model array" '(.presets["LiteLLM-Default"].fixer.model | length) == 2'
 
     # B4b: Verify Huawei-MaaS presets match LiteLLM presets (prefix substitution)
-    LL_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Default"]' | sed 's|LiteLLM/|Huawei-MaaS/|g')
-    HM_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["Huawei-MaaS-Default"]')
-    if [ "$LL_DEF" = "$HM_DEF" ]; then
-      pass "Huawei-MaaS-Default = LiteLLM-Default (prefix substitution)"
+    if LL_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Default"]' 2>/dev/null) && \
+       HM_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["Huawei-MaaS-Default"]' 2>/dev/null); then
+      LL_DEF_SUB=$(echo "$LL_DEF" | sed 's|LiteLLM/|Huawei-MaaS/|g')
+      if [ "$LL_DEF_SUB" = "$HM_DEF" ]; then
+        pass "Huawei-MaaS-Default = LiteLLM-Default (prefix substitution)"
+      else
+        fail "Huawei-MaaS-Default drifts from LiteLLM-Default"
+      fi
     else
-      fail "Huawei-MaaS-Default drifts from LiteLLM-Default"
+      fail "B4b: cannot read presets (corrupt slim config)"
     fi
-    LL_BAL=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Balanced"]' | sed 's|LiteLLM/|Huawei-MaaS/|g')
-    HM_BAL=$(echo "$CLEAN_SLIM" | jq -c '.presets["Huawei-MaaS-Balanced"]')
-    if [ "$LL_BAL" = "$HM_BAL" ]; then
-      pass "Huawei-MaaS-Balanced = LiteLLM-Balanced (prefix substitution)"
+    if LL_BAL=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Balanced"]' 2>/dev/null) && \
+       HM_BAL=$(echo "$CLEAN_SLIM" | jq -c '.presets["Huawei-MaaS-Balanced"]' 2>/dev/null); then
+      LL_BAL_SUB=$(echo "$LL_BAL" | sed 's|LiteLLM/|Huawei-MaaS/|g')
+      if [ "$LL_BAL_SUB" = "$HM_BAL" ]; then
+        pass "Huawei-MaaS-Balanced = LiteLLM-Balanced (prefix substitution)"
+      else
+        fail "Huawei-MaaS-Balanced drifts from LiteLLM-Balanced"
+      fi
     else
-      fail "Huawei-MaaS-Balanced drifts from LiteLLM-Balanced"
+      fail "B4b: cannot read balanced presets (corrupt slim config)"
     fi
 
     PERMS=$(file_perms "$SLIM_CONFIG")
@@ -599,7 +607,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       fi
     fi
   else
-    fail_n 33 "No oh-my-opencode-slim config — skipping 33 preset checks"
+    fail_n 36 "No oh-my-opencode-slim config — skipping 36 preset checks"
   fi
 
   echo ""

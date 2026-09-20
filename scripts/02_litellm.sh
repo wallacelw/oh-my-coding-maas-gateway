@@ -156,6 +156,7 @@ fi
 # Emits one LiteLLM deployment block. bridge="true" adds use_chat_completions_api (OpenAI only).
 emit_deployment() {
   local model_entry="$1" i="$2" name_prefix="$3" provider_prefix="$4" api_base_env="$5" bridge="$6"
+  local model_name tpm rpm max_tokens max_input max_output input_cost output_cost cache_read_cost cache_creation_cost
   IFS=':' read -r model_name tpm rpm max_tokens max_input max_output input_cost output_cost cache_read_cost cache_creation_cost <<< "$model_entry"
 
   if [ "$KEY_COUNT" -gt 1 ]; then

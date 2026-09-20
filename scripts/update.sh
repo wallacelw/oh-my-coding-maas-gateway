@@ -381,8 +381,12 @@ update_component() {
       log_warn "Updating SLIM_VERSION in tracked file scripts/03a_opencode.sh"
       backup_with_prune "$SCRIPT_DIR/03a_opencode.sh" >/dev/null
       sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$new_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
-      git -C "$PROJECT_DIR" commit --only scripts/03a_opencode.sh -m "Bump SLIM_VERSION to $new_ver" --quiet 2>/dev/null \
-        || log_warn "Commit failed for scripts/03a_opencode.sh"
+      # Also update $schema pin in slim template to prevent repo drift
+      sed -i "s|oh-my-opencode-slim@[0-9.]*|oh-my-opencode-slim@${new_ver}|" \
+        "$PROJECT_DIR/configs/opencode/oh-my-opencode-slim.json.template"
+      git -C "$PROJECT_DIR" commit --only scripts/03a_opencode.sh configs/opencode/oh-my-opencode-slim.json.template \
+        -m "Bump SLIM_VERSION to $new_ver" --quiet 2>/dev/null \
+        || log_warn "Commit failed for slim version bump"
       # Re-apply opencode configs from repo templates. The slim installer
       # preserves the existing config (stale $schema version) and rewrites
       # opencode.json with looser permissions; 03a_opencode.sh regenerates

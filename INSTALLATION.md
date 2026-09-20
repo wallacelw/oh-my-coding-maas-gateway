@@ -69,7 +69,7 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 |------|---------|----------|
 | `prereqs.sh` | all steps | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install labeled with `[LOG_TAG]`. |
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
-| `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, `backup_with_prune`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`, `log_action`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
+| `common.sh` | all scripts | `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, `backup_with_prune`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
 | `models.sh` | 02, 03d, 04 | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array — model catalog and time-based differential pricing sourced by 02_litellm.sh, 03d_pi.sh, and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model supports `reasoning_effort`; add to `OFF_PEAK_PRICING` if it has off-peak pricing. Update `slim.json.template` only if agents should use the new model. |
 | `skills.sh` | 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
 
@@ -103,7 +103,7 @@ secrets (for key rotation).
 ### `02_litellm.sh`
 
 Generates `configs/litellm/config.yaml` from `.env` — N deployments per model
-per format (dual OpenAI + Anthropic), 8N total. Checks ports 4000/5432/9090/
+per format (dual OpenAI + Anthropic), 10N total. Checks ports 4000/5432/9090/
 3000 are free. Runs `docker compose up -d` (LiteLLM + PostgreSQL + Prometheus
 + Grafana). Waits up to 90s for LiteLLM to become healthy. Supports
 `--routing-strategy=` and `--dry-run`.
@@ -251,7 +251,6 @@ All scripts use a shared logging system from `helpers/common.sh`:
 - `log_done` — green dim completion line after each step
 - `log_ok` / `log_info` / `log_warn` / `log_error` — green ✓ / blue → / yellow ⚠ / red ✗
 - `log_dim` — dim secondary text
-- `log_action "who" "msg"` — dim `[tag]` prefix showing who's acting
 
 Each script sets a `LOG_TAG` (e.g. `bootstrap`, `env`, `litellm`, `opencode`,
 `codex`, `claude`, `validate`). Prerequisite installs are labeled:

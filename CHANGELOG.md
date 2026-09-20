@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.1] - 2026-09-21
+
+### Fixed
+
+- **Restore into non-empty DB** — `06_backup.sh` used plain `pg_dump` (no
+  DROP statements); restore into a populated DB failed on existing objects
+  despite the prompt saying "REPLACE". Added `--clean --if-exists` to
+  pg_dump so the dump includes DROP-then-CREATE.
+- **B4b crash on corrupt config** — unguarded `jq` under `set -euo pipefail`
+  killed validation with no summary if the slim config was corrupt JSON.
+  Added guard with `2>/dev/null` and fail message.
+- **validate_catalog OFF_PEAK gap** — missing field-count check for
+  OFF_PEAK_PRICING entries; malformed entry could generate invalid YAML
+  → gateway down. Added 5-field shape validation.
+- **`((errors++))` set -e landmine** — post-increment returns exit 1 when
+  errors=0; future bare callers under `set -e` would die silently. Changed
+  to `errors=$((errors + 1))`.
+- **update.sh slim $schema drift** — slim version bump sed'd 03a_opencode.sh
+  but not the template `$schema` pin, recreating the stale-template bug
+  on every bump. Now seds both files and commits them together.
+- **SKILL.md stale metric name** — `litellm_request_total_latency_seconds_sum`
+  (4th occurrence missed by v1.17.2). Fixed to
+  `litellm_request_total_latency_metric_sum`.
+- **Backup EXIT trap signals** — trap didn't cover Ctrl-C/SIGTERM. Added
+  `trap 'exit 130' INT` and `trap 'exit 143' TERM` so EXIT trap fires
+  exactly once on any exit path.
+- **pg_dump stderr discarded** — `2>/dev/null` threw away actionable
+  diagnostics. Now captured and printed on failure.
+- **A0 stderr suppressed** — validate_catalog errors were hidden; failure
+  message said "run validate_catalog" (a function, not a command). Now
+  prints stderr inline.
+- **fail_n 33 stale** — B4 now has 36 checks; updated count and message.
+- **Stale log_action references** — removed from INSTALLATION.md helpers
+  table and syntax docs (function removed in v1.9.8).
+- **"8N total" → "10N"** — INSTALLATION.md:106 stale from 4-model era.
+- **GNU \s portability** — SKILL.md list-models command used GNU-only
+  `\s`; changed to `[[:space:]]` for BSD/macOS compatibility.
+- **emit_deployment local vars** — `read` variables weren't `local`,
+  leaking to global scope. Added `local` declaration.
+
 ## [1.19.0] - 2026-09-20
 
 ### Added
