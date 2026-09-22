@@ -61,8 +61,7 @@
   "multiplexer": {
     "type": "auto",
     "layout": "main-vertical",
-    "main_pane_size": 60,
-    "zellij_pane_mode": "agent-tab"
+    "main_pane_size": 60
   },
   "backgroundJobs": {
     "maxSessionsPerAgent": 2,

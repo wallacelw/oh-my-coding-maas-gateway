@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.2] - 2026-09-23
+
+### Fixed
+
+- **Observer could not read images natively** — opencode's read tool
+  refused image files ("this model does not support image input") because
+  the provider config did not declare image support, so the observer
+  degraded to external OCR (tesseract). Added `"attachment": true` to the
+  deepseek-v4.1-flash entries in `opencode.json.template` (both provider
+  blocks), verified against the opencode config schema. Image routing
+  itself was already working (plugin intercept → @observer delegation).
+- **Deprecated `multiplexer.zellij_pane_mode` removed** from the slim
+  template — the plugin warned the key is ignored (the warning was visible
+  in the test screenshot that motivated this fix).
+- Add-a-model instructions (models.sh header, INSTALLATION.md,
+  REFERENCE.md, SKILL.md) now mention setting `"attachment": true` in
+  `opencode.json.template` for image-capable models.
+
 ## [1.21.1] - 2026-09-23
 
 ### Fixed
