@@ -120,7 +120,7 @@ Reference documentation for both humans and agents. For the install procedure an
 | 03c | `03c_claude_code.sh` | Install Claude Code CLI + mint key + write settings + disable VSCode ext |
 | 03d | `03d_pi.sh` | Install Pi agent + mint key + write models.json |
 | 04 | `04_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi for partial runs) |
-| 05 | `05_skill.sh` | Install companion skill into detected coding agents (--dry-run, --no-skill, --yes) |
+| 05 | `05_skill.sh` | Install/refresh companion skill in detected coding agents (--dry-run, --no-skill, --yes); stale copies are refreshed on re-run |
 | 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
 | — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords |
 | — | `install-skill.sh` | Install companion skill into a single agent (--agent opencode/codex/claude-code/pi, --dry-run, --yes). Called by 05_skill.sh for multi-agent install |

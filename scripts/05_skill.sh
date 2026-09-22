@@ -67,22 +67,49 @@ fi
 log_info "Detected coding agents: $(echo "$INSTALLED_TOOLS" | tr ' ' ',' | sed 's/,$//')"
 
 # ── Check which tools already have the skill ──
-EXISTING=""
+# NEW = not installed · STALE = installed but content differs from repo
+# SKILL.md (e.g. after an upgrade) · CURRENT = installed and identical
 NEW=""
+STALE=""
+CURRENT=""
 for tool in $INSTALLED_TOOLS; do
-  if "skill_exists_$tool" 2>/dev/null; then
-    EXISTING+="$tool "
-  else
+  if ! "skill_exists_$tool" 2>/dev/null; then
     NEW+="$tool "
+  elif ! cmp -s "$(skill_source_path)" "$(skill_dest_path "$tool")"; then
+    STALE+="$tool "
+  else
+    CURRENT+="$tool "
   fi
 done
 
-if [ -n "$EXISTING" ]; then
-  log_dim "Already installed: $(echo "$EXISTING" | tr ' ' ',' | sed 's/,$//')"
+if [ -n "$CURRENT" ]; then
+  log_dim "Up to date: $(echo "$CURRENT" | tr ' ' ',' | sed 's/,$//')"
+fi
+
+# ── Refresh stale installs (content drifts after upgrades) ──
+if [ -n "$STALE" ]; then
+  if [ "$DRY_RUN" = true ]; then
+    log_info "Would refresh stale skill in: $(echo "$STALE" | tr ' ' ',' | sed 's/,$//')"
+  else
+    log_info "Refreshing stale skill in: $(echo "$STALE" | tr ' ' ',' | sed 's/,$//')"
+    for tool in $STALE; do
+      if dest=$("skill_install_$tool" 2>/dev/null); then
+        log_ok "$tool: $dest"
+      else
+        log_error "$tool: refresh failed"
+      fi
+    done
+  fi
 fi
 
 if [ -z "$NEW" ]; then
-  log_ok "Companion skill already installed in all detected agents"
+  if [ "$DRY_RUN" = false ] && [ -n "$STALE" ]; then
+    echo ""
+    log_done "Companion skill refreshed"
+  fi
+  if [ -z "$STALE" ]; then
+    log_ok "Companion skill already installed and up to date in all detected agents"
+  fi
   exit 0
 fi
 

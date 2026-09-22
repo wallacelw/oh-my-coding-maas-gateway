@@ -20,73 +20,55 @@ skill_source_path() {
   echo "$(cd "$script_dir/../.." && pwd)/SKILL.md"
 }
 
+# ── Installed skill path per tool ──
+# Usage: skill_dest_path opencode → echoes installed SKILL.md path
+skill_dest_path() {
+  case "$1" in
+    opencode) echo "$HOME/.config/opencode/skills/$SKILL_NAME/SKILL.md" ;;
+    codex)    echo "$HOME/.codex/skills/$SKILL_NAME/SKILL.md" ;;
+    pi)       echo "$HOME/.pi/agent/skills/$SKILL_NAME/SKILL.md" ;;
+    claude)   echo "$HOME/.claude/skills/$SKILL_NAME/SKILL.md" ;;
+    *)        return 1 ;;
+  esac
+}
+
+# ── Shared install/exists/uninstall (paths come from skill_dest_path) ──
+_skill_install_one() {
+  local tool="$1" src dest
+  src=$(skill_source_path)
+  dest=$(skill_dest_path "$tool")
+  mkdir -p "$(dirname "$dest")"
+  cp "$src" "$dest"
+  echo "$dest"
+}
+
+_skill_exists_one() {
+  [ -f "$(skill_dest_path "$1")" ]
+}
+
+_skill_uninstall_one() {
+  rm -rf "$(dirname "$(skill_dest_path "$1")")"
+}
+
 # ── opencode ──
-skill_install_opencode() {
-  local src; src=$(skill_source_path)
-  local dest_dir="$HOME/.config/opencode/skills/$SKILL_NAME"
-  mkdir -p "$dest_dir"
-  cp "$src" "$dest_dir/SKILL.md"
-  echo "$dest_dir/SKILL.md"
-}
-
-skill_uninstall_opencode() {
-  rm -rf "$HOME/.config/opencode/skills/$SKILL_NAME"
-}
-
-skill_exists_opencode() {
-  [ -f "$HOME/.config/opencode/skills/$SKILL_NAME/SKILL.md" ]
-}
+skill_install_opencode()   { _skill_install_one opencode; }
+skill_exists_opencode()    { _skill_exists_one opencode; }
+skill_uninstall_opencode() { _skill_uninstall_one opencode; }
 
 # ── codex ──
-skill_install_codex() {
-  local src; src=$(skill_source_path)
-  local dest_dir="$HOME/.codex/skills/$SKILL_NAME"
-  mkdir -p "$dest_dir"
-  cp "$src" "$dest_dir/SKILL.md"
-  echo "$dest_dir/SKILL.md"
-}
-
-skill_uninstall_codex() {
-  rm -rf "$HOME/.codex/skills/$SKILL_NAME"
-}
-
-skill_exists_codex() {
-  [ -f "$HOME/.codex/skills/$SKILL_NAME/SKILL.md" ]
-}
+skill_install_codex()   { _skill_install_one codex; }
+skill_exists_codex()    { _skill_exists_one codex; }
+skill_uninstall_codex() { _skill_uninstall_one codex; }
 
 # ── pi ──
-skill_install_pi() {
-  local src; src=$(skill_source_path)
-  local dest_dir="$HOME/.pi/agent/skills/$SKILL_NAME"
-  mkdir -p "$dest_dir"
-  cp "$src" "$dest_dir/SKILL.md"
-  echo "$dest_dir/SKILL.md"
-}
-
-skill_uninstall_pi() {
-  rm -rf "$HOME/.pi/agent/skills/$SKILL_NAME"
-}
-
-skill_exists_pi() {
-  [ -f "$HOME/.pi/agent/skills/$SKILL_NAME/SKILL.md" ]
-}
+skill_install_pi()   { _skill_install_one pi; }
+skill_exists_pi()    { _skill_exists_one pi; }
+skill_uninstall_pi() { _skill_uninstall_one pi; }
 
 # ── claude ──
-skill_install_claude() {
-  local src; src=$(skill_source_path)
-  local dest_dir="$HOME/.claude/skills/$SKILL_NAME"
-  mkdir -p "$dest_dir"
-  cp "$src" "$dest_dir/SKILL.md"
-  echo "$dest_dir/SKILL.md"
-}
-
-skill_uninstall_claude() {
-  rm -rf "$HOME/.claude/skills/$SKILL_NAME"
-}
-
-skill_exists_claude() {
-  [ -f "$HOME/.claude/skills/$SKILL_NAME/SKILL.md" ]
-}
+skill_install_claude()   { _skill_install_one claude; }
+skill_exists_claude()    { _skill_exists_one claude; }
+skill_uninstall_claude() { _skill_uninstall_one claude; }
 
 # ── Unified install/uninstall ──
 # Usage: skill_install_all "opencode codex pi" → installs into each

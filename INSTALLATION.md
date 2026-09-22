@@ -48,7 +48,7 @@ domain and is independently runnable.
 | 03c | `03c_claude_code.sh` | Claude Code CLI | yes | Install Claude Code CLI; mint virtual key; write settings; disable VSCode extension. |
 | 03d | `03d_pi.sh` | Pi agent | yes | Install Pi agent; mint virtual key; write `~/.pi/agent/models.json`. |
 | 04 | `04_validate.sh` | Validation | no | End-to-end validation of all installed components. |
-| 05 | `05_skill.sh` | Companion skill | yes | Install SKILL.md into detected coding agents (opencode, codex, claude, pi). |
+| 05 | `05_skill.sh` | Companion skill | yes | Install SKILL.md into detected coding agents (opencode, codex, claude, pi); refreshes stale copies on re-run. |
 | 06 | `06_backup.sh` | PostgreSQL backup & restore | — | Dump the LiteLLM DB (spend history, virtual keys, budgets) to `backups/`; `--restore FILE` rebuilds it. Maintenance — not run by bootstrap. |
 
 ### Ordering
@@ -151,8 +151,9 @@ Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
 
 Prompts the user to install SKILL.md as a skill/command into each detected
 coding agent. Detects which tools are installed (opencode, codex, claude, pi)
-and installs only into those present. Idempotent — skips agents that already
-have the skill.
+and installs only into those present. Idempotent — copies identical to the
+repo SKILL.md are skipped; stale copies (content drifted after an upgrade)
+are refreshed in place.
 
 Flags: `--dry-run`, `--no-skill`, `--yes`.
 
