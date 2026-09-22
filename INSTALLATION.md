@@ -111,7 +111,7 @@ per format (dual OpenAI + Anthropic), 8N total. Checks ports 4000/5432/9090/
 ### `03a_opencode.sh`
 
 Installs the opencode binary (via curl, output filtered with `run_filtered`),
-the oh-my-opencode-slim plugin (v2.2.21, via bunx — 4 presets, 7 agents, output
+the oh-my-opencode-slim plugin (v2.2.21, via bunx — 4 presets, 8 agents, output
 filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.
@@ -454,10 +454,11 @@ opencode          # or:  codex  or:  claude --bare  or:  pi
 opencode
 # Switch preset: /preset LiteLLM-Balanced
 # Available presets:
-#   LiteLLM-Default   (default, quality — glm-5.3 primary, glm-5.2 fallback)
-#   LiteLLM-Balanced  (cost-effective — glm-5.1 primary, glm-5.2/glm-5.3 fallback)
+#   LiteLLM-Default   (default, quality — glm-5.3 reasoning core + deepseek-v4.1-flash recon/vision)
+#   LiteLLM-Balanced  (cost-effective — glm-5.1 reasoning core + deepseek-v4.1-flash recon/edits)
 #   Huawei-MaaS-Default           (direct, quality)
 #   Huawei-MaaS-Balanced          (direct, cost-effective)
+# Paste a screenshot (Ctrl-V) — observer reads it and reports back structured observations
 ```
 
 If opencode was already running, exit it first (`/exit` or Ctrl+C).
@@ -548,7 +549,7 @@ group, `ufw allow from <your-ip> to any port 4000`).
 | Pi agent | `pi` | OpenAI Chat Completions | `~/.pi/agent/models.json` |
 
 Each tool gets its own virtual key with unlimited budget and access to all
-models. opencode also gets 4 presets and 7 agents via the
+models. opencode also gets 4 presets and 8 agents via the
 oh-my-opencode-slim plugin.
 
 ### Install Modes

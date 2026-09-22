@@ -570,7 +570,8 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Explorer model set" '.presets["LiteLLM-Default"].explorer.model' \
       "Designer model set" '.presets["LiteLLM-Default"].designer.model' \
       "Fixer model set (array for fallback)" '.presets["LiteLLM-Default"].fixer.model' \
-      "Observer disabled" '.disabled_agents | index("observer")' \
+      "Observer model set" '.presets["LiteLLM-Default"].observer.model' \
+      "No agents disabled (observer enabled)" '.disabled_agents == []' \
       "Fallback enabled" '.fallback.enabled == true' \
       "Fallback has no chains (v2 format)" '(.fallback.chains // null) == null' \
       "Council presets defined" '.council.presets' \
@@ -593,7 +594,15 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Default librarian has 2-model array" '(.presets["LiteLLM-Default"].librarian.model | length) == 2' \
       "Default explorer has 2-model array" '(.presets["LiteLLM-Default"].explorer.model | length) == 2' \
       "Default designer has 2-model array" '(.presets["LiteLLM-Default"].designer.model | length) == 2' \
-      "Default fixer has 2-model array" '(.presets["LiteLLM-Default"].fixer.model | length) == 2'
+      "Default fixer has 2-model array" '(.presets["LiteLLM-Default"].fixer.model | length) == 2' \
+      "Default observer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Default"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
+      "Observer is single-model (no blind fallback)" '(.presets["LiteLLM-Default"].observer.model | length) == 1' \
+      "Balanced observer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
+      "Default explorer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Default"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
+      "Default librarian primary is deepseek-v4.1-flash" '.presets["LiteLLM-Default"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
+      "Balanced explorer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
+      "Balanced librarian primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
+      "Balanced fixer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].fixer.model[0] == "LiteLLM/deepseek-v4.1-flash"'
 
     # B4b: Verify Huawei-MaaS presets match LiteLLM presets (prefix substitution)
     if LL_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Default"]' 2>/dev/null) && \
@@ -640,7 +649,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       fi
     fi
   else
-    fail_n 36 "No oh-my-opencode-slim config — skipping 36 preset checks"
+    fail_n 45 "No oh-my-opencode-slim config — skipping 45 preset checks"
   fi
 
   echo ""

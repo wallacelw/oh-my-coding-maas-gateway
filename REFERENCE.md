@@ -57,7 +57,7 @@ Reference documentation for both humans and agents. For the install procedure an
   Claude Code ──→ /v1/messages         ──→ anthropic/ provider ──→ /anthropic/v1/messages
   Pi agent    ──→ /v1/chat/completions ──→ openai/ provider    ──→ /openai/v1/chat/completions
 
-  opencode: 7 agents (1 disabled), 4 presets (LiteLLM-Default default)
+  opencode: 8 agents, 4 presets (LiteLLM-Default default)
   Codex CLI: Responses API bridged to Chat Completions by LiteLLM
   Claude Code: Anthropic Messages API forwarded to MaaS Anthropic endpoint
   Pi agent: OpenAI Chat Completions API, all models from models.sh
@@ -388,19 +388,20 @@ determines routing.
 `oh-my-opencode-slim` (v2.2.21) installed via `bunx`. Provides:
 
 - **4 presets** — control routing (proxy vs direct) and model selection
-- **7 agents** (1 disabled) — orchestrator, oracle, council, librarian, explorer, designer, fixer (observer disabled)
+- **8 agents** — orchestrator, oracle, council, librarian, explorer, designer, fixer, observer
 - **Council** — 3 councillors running in parallel for consensus decisions
 - **Fallback chains** — each agent has a primary model and optional fallback
+- **Image analysis** — pasting a screenshot auto-routes it to the observer agent for visual analysis (see Image Analysis Workflow below)
 - **Websearch** — opencode's built-in EXA-backed web search tool (no API key required). Enabled via `OPENCODE_ENABLE_EXA=1` (env) + `"permission": {"websearch": "allow"}` (config). Required for custom providers; automatic with the default OpenCode provider.
 
 ### Presets
 
 | Preset | Route | Models |
 |--------|-------|--------|
-| **LiteLLM-Default** (default, quality) | Proxy → MaaS | glm-5.3 primary, glm-5.2 fallback |
-| **LiteLLM-Balanced** (cost-effective) | Proxy → MaaS | glm-5.1 primary, glm-5.2/glm-5.3 fallback |
-| **Huawei-MaaS-Default** (quality) | Direct → MaaS | glm-5.3 primary, glm-5.2 fallback |
-| **Huawei-MaaS-Balanced** (cost-effective) | Direct → MaaS | glm-5.1 primary, glm-5.2/glm-5.3 fallback |
+| **LiteLLM-Default** (default, quality) | Proxy → MaaS | glm-5.3 reasoning core + deepseek-v4.1-flash recon/vision |
+| **LiteLLM-Balanced** (cost-effective) | Proxy → MaaS | glm-5.1 reasoning core + deepseek-v4.1-flash recon/edits |
+| **Huawei-MaaS-Default** (quality) | Direct → MaaS | glm-5.3 reasoning core + deepseek-v4.1-flash recon/vision |
+| **Huawei-MaaS-Balanced** (cost-effective) | Direct → MaaS | glm-5.1 reasoning core + deepseek-v4.1-flash recon/edits |
 
 Switch at runtime: `/preset LiteLLM-Balanced`
 
@@ -414,15 +415,42 @@ the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 | orchestrator | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
 | oracle | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.3` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.3` (high) |
 | council | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
-| librarian | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) |
-| explorer | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) |
+| librarian | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) |
+| explorer | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) |
 | designer | `glm-5.3` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.3` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) |
-| fixer | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
+| fixer | `glm-5.3` → `glm-5.2` (high) | `deepseek-v4.1-flash` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `deepseek-v4.1-flash` → `glm-5.2` (high) |
+| observer | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) |
 
 > **Note:** In Balanced presets, glm-5.1 (primary) does not support
 > `reasoning_effort` — the variant is silently ignored. Reasoning only
 > activates on fallback to glm-5.2/glm-5.3. In Default presets, glm-5.3
 > always thinks (cannot disable); `low` = enhanced, `high` = deep.
+> deepseek-v4.1-flash variant mapping is unverified and may be silently
+> ignored (same precedent as glm-5.1).
+
+> **Note:** The observer agent is single-model by design: a blind glm
+> fallback would hallucinate confident-looking "observations", so observer
+> fails fast instead. LiteLLM still provides key-level resilience via 2N
+> deployments per model.
+
+### Image Analysis Workflow
+
+Paste a screenshot into the chat and the plugin routes it to the observer
+agent automatically:
+
+1. The plugin intercepts the image bytes, saves them to disk, and strips
+   them from the orchestrator message — raw image bytes stay out of the
+   main context window.
+2. The plugin nudges delegation to @observer.
+3. Observer (deepseek-v4.1-flash) interprets the image — screenshots,
+   PDFs, diagrams — OCR-extracts exact text, and returns structured
+   observations to the orchestrator.
+
+`image_routing` is omitted from the config and auto-resolves to "auto"
+when observer is enabled. If all deepseek-v4.1-flash deployments fail,
+vision is lost — observer fails fast rather than falling back to a blind
+glm model (by design). Zero cost in text-only sessions: nothing runs
+unless an image is pasted.
 
 ### Council
 

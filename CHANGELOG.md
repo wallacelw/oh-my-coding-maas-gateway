@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.0] - 2026-09-23
+
+### Added
+
+- **Observer agent enabled** (8th agent, from the oh-my-opencode-slim
+  plugin) — read-only visual analysis specialist ("The Silent Witness"):
+  interprets images/screenshots/PDFs/diagrams, OCR-extracts exact text,
+  returns structured observations. Runs on deepseek-v4.1-flash (the only
+  vision model), single-model by design — a blind glm fallback would
+  hallucinate confident-looking "observations"; LiteLLM already provides
+  key-level resilience via 2N deployments.
+- **Image auto-routing** — paste a screenshot and the plugin intercepts
+  the image bytes, saves them to disk, strips them from the orchestrator
+  message, and nudges delegation to @observer; structured text returns to
+  the orchestrator (raw image bytes stay out of the main context window).
+  `image_routing` omitted → auto-resolves to "auto". Zero cost in
+  text-only sessions.
+- **deepseek-v4.1-flash primary for explorer + librarian (both tiers)
+  and fixer (Balanced only)** — 1M context vs glm-5.1's 192K max input,
+  3.6× cheaper input, 9× cheaper cache hits. Fallback is glm-5.2 (not
+  glm-5.1) to preserve 1M context on failover. Designer unchanged
+  (observer owns vision, designer owns taste); orchestrator/oracle/
+  council unchanged (glm reasoning core).
+
+### Changed
+
+- **Preset cost profile** — Default −22%, Balanced −32% (modeled, peak
+  pricing; cache-hit and off-peak amplify).
+- **B4 validation** — 36 → 45 preset checks (+2 observer checks
+  replacing the disabled check, +8 deepseek drift assertions).
+
+### Removed
+
+- **Deprecated council config keys** — `timeout`,
+  `councillor_execution_mode`, `councillor_retries`: absent from the
+  pinned 2.2.21 schema, dead config (tolerated but meaningless).
+
+### Migration
+
+- Re-run `./scripts/03a_opencode.sh` to apply the new presets; restart
+  opencode (preset changes are not hot-reloaded).
+
 ## [1.20.0] - 2026-09-22
 
 ### Added

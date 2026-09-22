@@ -7,7 +7,7 @@ set -euo pipefail
 # Order:         03a (after LiteLLM proxy is live)
 # Optional:      yes (runs only if opencode is in the selection)
 # Description:   Install the opencode binary, the oh-my-opencode-slim plugin
-#                (4 presets, 7 agents), mint a LiteLLM virtual key (alias
+#                (4 presets, 8 agents), mint a LiteLLM virtual key (alias
 #                "opencode"), and write opencode.json + slim config pointing
 #                to the LiteLLM proxy.
 # Inputs:        .env (LITELLM_MASTER_KEY, HUAWEI_MAAS_API_KEY), --virtual-key,
@@ -236,5 +236,5 @@ fi
 
 echo ""
 log_step "opencode installation complete"
-log_dim "Preset: LiteLLM-Default (quality) — glm-5.3 primary, glm-5.2 fallback via LiteLLM"
+log_dim "Preset: LiteLLM-Default (quality) — glm-5.3 reasoning core, deepseek-v4.1-flash recon/vision, observer enabled"
 log_dim "Switch preset: /preset LiteLLM-Balanced (cost-effective)"

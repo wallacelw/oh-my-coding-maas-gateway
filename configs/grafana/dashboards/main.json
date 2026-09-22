@@ -2127,7 +2127,7 @@
       "id": 51,
       "type": "piechart",
       "title": "Spend by tool",
-      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
+      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1, light agents on deepseek-v4.1-flash).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
       "gridPos": { "x": 12, "y": 106, "w": 12, "h": 5 },
       "targets": [
         {
@@ -2157,7 +2157,7 @@
       "id": 52,
       "type": "table",
       "title": "Spend by tool × model",
-      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model.\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs librarian on glm-5.1. Useful for tuning preset assignments for cost efficiency.",
+      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model.\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs explorer on deepseek-v4.1-flash. Useful for tuning preset assignments for cost efficiency.",
       "gridPos": { "x": 0, "y": 111, "w": 24, "h": 8 },
       "targets": [
         {
