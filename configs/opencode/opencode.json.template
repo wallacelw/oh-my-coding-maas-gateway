@@ -23,12 +23,8 @@
           "name": "glm-5.1",
           "limit": { "context": 198000, "input": 192000, "output": 128000 }
         },
-        "deepseek-v4-pro": {
-          "name": "deepseek-v4-pro",
-          "limit": { "context": 1000000, "input": 1000000, "output": 128000 }
-        },
-        "deepseek-v4-flash": {
-          "name": "deepseek-v4-flash",
+        "deepseek-v4.1-flash": {
+          "name": "deepseek-v4.1-flash",
           "limit": { "context": 1000000, "input": 1000000, "output": 384000 }
         }
       }
@@ -53,12 +49,8 @@
           "name": "glm-5.1",
           "limit": { "context": 198000, "input": 192000, "output": 128000 }
         },
-        "deepseek-v4-pro": {
-          "name": "deepseek-v4-pro",
-          "limit": { "context": 1000000, "input": 1000000, "output": 128000 }
-        },
-        "deepseek-v4-flash": {
-          "name": "deepseek-v4-flash",
+        "deepseek-v4.1-flash": {
+          "name": "deepseek-v4.1-flash",
           "limit": { "context": 1000000, "input": 1000000, "output": 384000 }
         }
       }

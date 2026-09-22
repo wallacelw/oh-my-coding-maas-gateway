@@ -144,6 +144,15 @@ supports_reasoning() {
   return 1
 }
 
+# Check if a model accepts image input (multimodal)
+supports_vision() {
+  local model="$1"
+  for m in "${VISION_MODELS[@]}"; do
+    [ "$m" = "$model" ] && return 0
+  done
+  return 1
+}
+
 # ── Validate catalog before generating config ──
 if ! validate_catalog; then
   log_error "Model catalog validation failed — fix models.sh before proceeding"
@@ -208,6 +217,11 @@ emit_deployment() {
     echo "      supports_reasoning: true"
   else
     echo "      supports_reasoning: false"
+  fi
+  if supports_vision "$model_name"; then
+    echo "      supports_vision: true"
+  else
+    echo "      supports_vision: false"
   fi
   echo "      description: \"$model_name on Huawei Cloud MaaS\""
   echo "      organization: Huawei Cloud"

@@ -25,7 +25,8 @@ observability — all through a single local proxy.
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
 ```
 
-**5 models:** glm-5.3, glm-5.2, glm-5.1, deepseek-v4-pro, deepseek-v4-flash
+**4 models:** glm-5.3, glm-5.2, glm-5.1, deepseek-v4.1-flash (accepts image
+input — first multimodal model)
 
 ---
 

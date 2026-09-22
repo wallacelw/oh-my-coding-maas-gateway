@@ -367,17 +367,21 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
     fi
 
     # ── P4: v1.15/v1.16 feature coverage ──
-    # Off-peak pricing: 2 models (glm-5.2, glm-5.1) × 2 formats × keys
-    OFF_PEAK_COUNT=$(grep -c 'off_peak_pricing:' "$CONFIG_FILE" 2>/dev/null || true); OFF_PEAK_COUNT=${OFF_PEAK_COUNT:-0}
-    EXPECTED_OFF_PEAK=$((4 * KEY_COUNT))
-    if [ "$OFF_PEAK_COUNT" = "$EXPECTED_OFF_PEAK" ]; then
+    # Catalog-derived counts (from helpers/models.sh)
+    OFF_PEAK_COUNT=${#OFF_PEAK_PRICING[@]}
+    REASONING_COUNT=${#REASONING_MODELS[@]}
+    VISION_COUNT=${#VISION_MODELS[@]}
+    # Off-peak pricing: OFF_PEAK_COUNT models × 2 formats × keys
+    OFF_PEAK_BLOCKS=$(grep -c 'off_peak_pricing:' "$CONFIG_FILE" 2>/dev/null || true); OFF_PEAK_BLOCKS=${OFF_PEAK_BLOCKS:-0}
+    EXPECTED_OFF_PEAK=$((OFF_PEAK_COUNT * 2 * KEY_COUNT))
+    if [ "$OFF_PEAK_BLOCKS" = "$EXPECTED_OFF_PEAK" ]; then
       pass "Off-peak pricing blocks present (expected $EXPECTED_OFF_PEAK)"
     else
-      fail "Off-peak pricing blocks: $OFF_PEAK_COUNT (expected $EXPECTED_OFF_PEAK)"
+      fail "Off-peak pricing blocks: $OFF_PEAK_BLOCKS (expected $EXPECTED_OFF_PEAK)"
     fi
 
-    # Capability flag counts: 5 models × 2 formats × keys
-    EXPECTED_CAP=$((10 * KEY_COUNT))
+    # Capability flag counts: MODEL_COUNT models × 2 formats × keys
+    EXPECTED_CAP=$((MODEL_COUNT * 2 * KEY_COUNT))
     for flag in 'mode: chat' 'supports_function_calling: true' 'description:' 'organization: Huawei Cloud'; do
       FLAG_COUNT=$(grep -c "$flag" "$CONFIG_FILE" 2>/dev/null || true); FLAG_COUNT=${FLAG_COUNT:-0}
       if [ "$FLAG_COUNT" = "$EXPECTED_CAP" ]; then
@@ -387,27 +391,45 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
       fi
     done
 
-    # supports_reasoning: glm-5.3 + glm-5.2 = 2 models × 2 formats × keys = true
-    # Remaining 3 models × 2 formats × keys = false
+    # supports_reasoning: REASONING_COUNT models × 2 formats × keys = true
+    # Remaining (MODEL_COUNT - REASONING_COUNT) models × 2 formats × keys = false
     REASONING_TRUE_COUNT=$(grep -c 'supports_reasoning: true' "$CONFIG_FILE" 2>/dev/null || true); REASONING_TRUE_COUNT=${REASONING_TRUE_COUNT:-0}
-    EXPECTED_REASONING_TRUE=$((4 * KEY_COUNT))
+    EXPECTED_REASONING_TRUE=$((REASONING_COUNT * 2 * KEY_COUNT))
     if [ "$REASONING_TRUE_COUNT" = "$EXPECTED_REASONING_TRUE" ]; then
       pass "supports_reasoning: true count: $REASONING_TRUE_COUNT (expected $EXPECTED_REASONING_TRUE)"
     else
       fail "supports_reasoning: true count: $REASONING_TRUE_COUNT (expected $EXPECTED_REASONING_TRUE)"
     fi
     REASONING_FALSE_COUNT=$(grep -c 'supports_reasoning: false' "$CONFIG_FILE" 2>/dev/null || true); REASONING_FALSE_COUNT=${REASONING_FALSE_COUNT:-0}
-    EXPECTED_REASONING_FALSE=$((6 * KEY_COUNT))
+    EXPECTED_REASONING_FALSE=$(( (MODEL_COUNT - REASONING_COUNT) * 2 * KEY_COUNT ))
     if [ "$REASONING_FALSE_COUNT" = "$EXPECTED_REASONING_FALSE" ]; then
       pass "supports_reasoning: false count: $REASONING_FALSE_COUNT (expected $EXPECTED_REASONING_FALSE)"
     else
       fail "supports_reasoning: false count: $REASONING_FALSE_COUNT (expected $EXPECTED_REASONING_FALSE)"
     fi
 
-    # Off-peak pricing only on glm-5.2 and glm-5.1 (both formats, all keys)
+    # supports_vision: VISION_COUNT models × 2 formats × keys = true
+    # Remaining (MODEL_COUNT - VISION_COUNT) models × 2 formats × keys = false
+    VISION_TRUE_COUNT=$(grep -c 'supports_vision: true' "$CONFIG_FILE" 2>/dev/null || true); VISION_TRUE_COUNT=${VISION_TRUE_COUNT:-0}
+    EXPECTED_VISION_TRUE=$((VISION_COUNT * 2 * KEY_COUNT))
+    if [ "$VISION_TRUE_COUNT" = "$EXPECTED_VISION_TRUE" ]; then
+      pass "supports_vision: true count: $VISION_TRUE_COUNT (expected $EXPECTED_VISION_TRUE)"
+    else
+      fail "supports_vision: true count: $VISION_TRUE_COUNT (expected $EXPECTED_VISION_TRUE)"
+    fi
+    VISION_FALSE_COUNT=$(grep -c 'supports_vision: false' "$CONFIG_FILE" 2>/dev/null || true); VISION_FALSE_COUNT=${VISION_FALSE_COUNT:-0}
+    EXPECTED_VISION_FALSE=$(( (MODEL_COUNT - VISION_COUNT) * 2 * KEY_COUNT ))
+    if [ "$VISION_FALSE_COUNT" = "$EXPECTED_VISION_FALSE" ]; then
+      pass "supports_vision: false count: $VISION_FALSE_COUNT (expected $EXPECTED_VISION_FALSE)"
+    else
+      fail "supports_vision: false count: $VISION_FALSE_COUNT (expected $EXPECTED_VISION_FALSE)"
+    fi
+
+    # Off-peak pricing only on OFF_PEAK_PRICING models (both formats, all keys)
     # Verify each expected model has at least one off_peak_pricing block per format.
     # Pattern matches both OpenAI (glm-5.2) and Anthropic (claude-glm-5.2) variants.
-    for off_peak_model in 'glm-5.2' 'glm-5.1'; do
+    for off_peak_entry in "${OFF_PEAK_PRICING[@]}"; do
+      off_peak_model="${off_peak_entry%%|*}"
       OFF_PEAK_FOR_MODEL=$(grep -A 20 "model_name: \\(claude-\\)\\?$off_peak_model" "$CONFIG_FILE" 2>/dev/null | grep -c 'off_peak_pricing:' || true); OFF_PEAK_FOR_MODEL=${OFF_PEAK_FOR_MODEL:-0}
       EXPECTED_PER_MODEL=$((2 * KEY_COUNT))
       if [ "$OFF_PEAK_FOR_MODEL" -ge "$EXPECTED_PER_MODEL" ]; then
@@ -416,8 +438,19 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
         fail "Off-peak pricing missing for $off_peak_model ($OFF_PEAK_FOR_MODEL blocks, expected ≥ $EXPECTED_PER_MODEL)"
       fi
     done
-    # Verify off-peak pricing is NOT present for glm-5.3 or deepseek models
-    for no_off_peak_model in 'glm-5.3' 'deepseek-v4-pro' 'deepseek-v4-flash'; do
+    # Verify off-peak pricing is NOT present for models without an OFF_PEAK_PRICING entry
+    for model_entry in "${MODELS[@]}"; do
+      no_off_peak_model="${model_entry%%:*}"
+      model_has_off_peak=false
+      for off_peak_entry in "${OFF_PEAK_PRICING[@]}"; do
+        if [ "${off_peak_entry%%|*}" = "$no_off_peak_model" ]; then
+          model_has_off_peak=true
+          break
+        fi
+      done
+      if [ "$model_has_off_peak" = true ]; then
+        continue
+      fi
       NO_OFF_PEAK=$(grep -A 20 "model_name: \\(claude-\\)\\?$no_off_peak_model" "$CONFIG_FILE" 2>/dev/null | grep -c 'off_peak_pricing:' || true); NO_OFF_PEAK=${NO_OFF_PEAK:-0}
       if [ "$NO_OFF_PEAK" -eq 0 ]; then
         pass "No off-peak pricing for $no_off_peak_model (correct)"

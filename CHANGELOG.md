@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.0] - 2026-09-22
+
+### Added
+
+- **deepseek-v4.1-flash** — 1M context, 1M max input, 384K max output, 96K
+  max reasoning, 1M TPM / 100 RPM. Pricing: $0.30/M input, $1.20/M output,
+  $0.03/M cache-hit; off-peak (13:00–00:00 UTC = 21:00–07:59 GMT+8) at 50%:
+  $0.15/M input, $0.60/M output, $0.015/M cache-hit. First multimodal
+  model — image input (JPEG/PNG/GIF/WebP) verified end-to-end through the
+  gateway in both formats: OpenAI `image_url` content blocks and Anthropic
+  base64 `image` source blocks (the LiteLLM bridge translates correctly).
+  Thinking mode via `thinking: {"type": "enabled"|"disabled"}`; reasoning
+  surfaces as `reasoning_content`. `reasoning_effort` is accepted (HTTP 200)
+  but honoring is unverified — the codex catalog keeps
+  `supports_reasoning_effort: false` (conservative).
+- **VISION_MODELS catalog array** (models.sh) — plain-name list of models
+  accepting image input, mirroring REASONING_MODELS. `validate_catalog`
+  checks membership; `emit_deployment` emits `supports_vision: true/false`;
+  04_validate.sh adds `EXPECTED_VISION_TRUE/FALSE` checks.
+- **Dynamic capability validation** — 04_validate.sh A4 expected counts
+  (off-peak blocks, capability flags, reasoning true/false) are now derived
+  from catalog array lengths (MODEL_COUNT / OFF_PEAK_COUNT /
+  REASONING_COUNT / VISION_COUNT) instead of hardcoded model counts.
+
+### Removed
+
+- **deepseek-v4-pro, deepseek-v4-flash** — replaced by deepseek-v4.1-flash.
+  Catalog is now 4 models; total deployments are 4 models × N keys ×
+  2 formats = 8N (was 10N).
+
+### Migration
+
+- Rename `--model deepseek-v4-pro` / `deepseek-v4-flash` references to
+  `deepseek-v4.1-flash` (`claude-` prefixed variants likewise).
+- Regenerate the gateway config: `./scripts/02_litellm.sh`.
+- Re-run the tool config steps (`./scripts/03a_opencode.sh` … `03d_pi.sh`)
+  or the full bootstrap to refresh `opencode.json`, `model_catalog.json`,
+  and `models.json`.
+
 ## [1.19.2] - 2026-09-21
 
 ### Fixed

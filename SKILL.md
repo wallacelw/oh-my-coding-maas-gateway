@@ -224,13 +224,12 @@ Models are in `scripts/helpers/models.sh`. Format:
 model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost:cache_read_cost:cache_creation_cost
 ```
 `cache_read_cost` and `cache_creation_cost` are 0 for models without
-cache support (deepseek).
+cache support.
 Off-peak pricing is configured separately in the `OFF_PEAK_PRICING` array
 (format: `model_name|hours_utc|input_cost|output_cost|cache_read_cost`).
 Only models with off-peak pricing are listed; rates are absolute values.
 
-Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4-pro`,
-`deepseek-v4-flash`.
+Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4.1-flash`.
 
 **List models**:
 ```bash
@@ -239,9 +238,11 @@ sed -n '/^MODELS=(/,/^)/p' scripts/helpers/models.sh | grep -E '^[[:space:]]*"' 
 
 **Add a model**: add a line to the `MODELS` array in `scripts/helpers/models.sh`,
 then update `configs/litellm/config.yaml.template`, `configs/opencode/opencode.json.template`,
-and `configs/codex/model_catalog.json` with the new model. If the model supports
-`reasoning_effort`, add it to the `REASONING_MODELS` array. If it has off-peak
-pricing, add it to the `OFF_PEAK_PRICING` array. Update
+and `configs/codex/model_catalog.json` with the new model. If the model surfaces
+reasoning (`reasoning_effort` pass-through or thinking mode), add it to the
+`REASONING_MODELS` array. If it has off-peak
+pricing, add it to the `OFF_PEAK_PRICING` array. If it accepts image input,
+add it to the `VISION_MODELS` array. Update
 `configs/opencode/oh-my-opencode-slim.json.template` only if agents should be
 assigned the new model. Then regenerate (this creates 2N deployments per model,
 two per API key — one per format):

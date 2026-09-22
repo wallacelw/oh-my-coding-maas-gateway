@@ -230,6 +230,7 @@ fi
 LITELLM_URL="http://127.0.0.1:4000"
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
+source "$SCRIPT_DIR/helpers/models.sh"
 LOG_TAG="bootstrap"
 
 # ── Refresh PATH for binaries installed by 03x scripts ──
@@ -522,7 +523,7 @@ if [ "$DRY_RUN" = true ]; then
 else
   log_desc "Deploying LiteLLM proxy, Docker containers, and observability stack"
   "$SCRIPT_DIR/02_litellm.sh"
-  log_done "LiteLLM proxy running — 5 models, Grafana + Prometheus active"
+  log_done "LiteLLM proxy running — ${#MODELS[@]} models, Grafana + Prometheus active"
 fi
 
 # ── Step 03a: opencode (optional) ──

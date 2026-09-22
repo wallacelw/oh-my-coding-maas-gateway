@@ -62,9 +62,9 @@ Reference documentation for both humans and agents. For the install procedure an
   Claude Code: Anthropic Messages API forwarded to MaaS Anthropic endpoint
   Pi agent: OpenAI Chat Completions API, all models from models.sh
 
-  Each tool: separate virtual key (sk-...) · unlimited budget · all 5 models
+  Each tool: separate virtual key (sk-...) · unlimited budget · all 4 models
   LiteLLM: load-balances across N MaaS API keys · PostgreSQL (:5432)
-  Models: glm-5.3 · glm-5.2 · glm-5.1 · deepseek-v4-pro · deepseek-v4-flash
+  Models: glm-5.3 · glm-5.2 · glm-5.1 · deepseek-v4.1-flash
 
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
 ```
@@ -127,25 +127,32 @@ Reference documentation for both humans and agents. For the install procedure an
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
-| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model supports `reasoning_effort`; add to `OFF_PEAK_PRICING` if it has off-peak pricing. Update `slim.json.template` only if agents should use the new model. |
+| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input. Update `slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
 
 ### Models
 
-| Name | Input/Output | RPM | Cost (in/out per token) | Cache hit |
-|------|-------------|-----|------------------------|----------|
-| `glm-5.2` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ |
-| `glm-5.3` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ |
-| `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ | $0.270 × 10⁻⁶ |
-| `deepseek-v4-pro` | 1M/128K | 3 | $1.617 / $3.235 × 10⁻⁶ | — |
-| `deepseek-v4-flash` | 1M/384K | 3 | $0.135 / $0.270 × 10⁻⁶ | — |
+| Name | Input/Output | RPM | Cost (in/out per token) | Cache hit | Vision |
+|------|-------------|-----|------------------------|----------|--------|
+| `glm-5.2` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ | — |
+| `glm-5.3` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ | — |
+| `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ | $0.270 × 10⁻⁶ | — |
+| `deepseek-v4.1-flash` | 1M/384K | 100 | $0.300 / $1.200 × 10⁻⁶ | $0.030 × 10⁻⁶ | ✓ |
 
 **Pricing notes:**
-- Peak (Period 1: 08:00–20:59 GMT+8) and off-peak (Period 2: 21:00–07:59, 70% of peak) are modeled via LiteLLM `off_peak_pricing` in `model_info` for glm-5.2 and glm-5.1. GLM-5.3 and DeepSeek models have flat pricing.
+- Peak (Period 1: 08:00–20:59 GMT+8) and off-peak (Period 2: 21:00–07:59 GMT+8 = 13:00–00:00 UTC) are modeled via LiteLLM `off_peak_pricing` in `model_info` for glm-5.2, glm-5.1 (70% of peak), and deepseek-v4.1-flash (50% of peak). GLM-5.3 has flat pricing.
 - glm-5.1 uses ≥32K token tier. <32K tier: input $0.809, output $2.265, cache hit $0.175 (per 1M tokens). Tracked spend applies ≥32K-tier rates to all glm-5.1 requests, so requests under 32K tokens bill ~25-40% less than tracked — tracked spend is an upper bound for glm-5.1.
-- Cache hit pricing applies only to glm-5.3, glm-5.2, and glm-5.1. DeepSeek models have no cache support.
-- Off-peak pricing applies only to glm-5.2 and glm-5.1. GLM-5.3 and DeepSeek have flat pricing (no time-based differential).
+- Cache hit pricing applies to all four models.
+- Off-peak pricing applies to glm-5.2 and glm-5.1 at 70% of peak, and to deepseek-v4.1-flash at 50% of peak. GLM-5.3 has flat pricing (no time-based differential).
 - Source: [Huawei MaaS pricing](https://support.huaweicloud.com/intl/en-us/price-maas/price-maas-0002.html)
+
+**Multimodal usage:** deepseek-v4.1-flash accepts image input (JPEG, PNG,
+GIF, WebP) — the first multimodal model in the stack. OpenAI-format requests
+pass images as `image_url` content blocks; Anthropic-format requests pass
+them as base64 `image` source blocks. Both paths are verified end-to-end
+through the gateway (the LiteLLM bridge translates correctly). opencode,
+Codex CLI, Claude Code CLI, and Pi agent can attach images where the tool
+supports it.
 
 ### Core Rules
 
@@ -183,7 +190,7 @@ model_list:
       max_output_tokens: 128000
       input_cost_per_token: 0.0000014
       output_cost_per_token: 0.0000044
-      cache_read_input_token_cost: 0.00000026  # omitted when 0 (deepseek)
+      cache_read_input_token_cost: 0.00000026  # omitted when 0
       off_peak_pricing:                    # omitted when no off-peak rates
         hours_utc: "13:00-00:00"
         input_cost_per_token: 0.00000098
@@ -193,6 +200,7 @@ model_list:
       supports_function_calling: true
       supports_prompt_caching: true        # false for models without cache support
       supports_reasoning: true             # true only for REASONING_MODELS entries
+      supports_vision: false               # true only for VISION_MODELS entries
       description: "glm-5.2 on Huawei Cloud MaaS"
       organization: Huawei Cloud
 
@@ -254,7 +262,7 @@ Responses API → Chat Completions. This lets Codex CLI use `/v1/responses`
 N MaaS API keys → N deployments per model per format. LiteLLM uses
 `simple-shuffle` routing (round-robin with retry across deployments).
 
-Total deployments: 5 models × N keys × 2 formats = 10N.
+Total deployments: 4 models × N keys × 2 formats = 8N.
 
 ### model_info
 
@@ -273,7 +281,8 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `mode` | Model mode (always "chat") |
 | `supports_function_calling` | Whether function calling is supported |
 | `supports_prompt_caching` | Whether prompt caching is supported |
-| `supports_reasoning` | Whether reasoning_effort is passed through |
+| `supports_reasoning` | Whether the model surfaces reasoning (reasoning_effort pass-through or thinking mode) |
+| `supports_vision` | Whether the model accepts image input (multimodal) |
 | `description` | Human-readable model description |
 | `organization` | Provider organization name |
 
@@ -482,13 +491,12 @@ Why a custom provider:
 
 ### Model Selection
 
-Models use base names (e.g., `glm-5.3`). All 5 models are available. Switch
+Models use base names (e.g., `glm-5.3`). All 4 models are available. Switch
 at runtime with `--model`:
 
 ```bash
-codex --model deepseek-v4-pro    # deep reasoning
-codex --model glm-5.3            # general purpose (default)
-codex --model deepseek-v4-flash      # fast
+codex --model deepseek-v4.1-flash  # fast, accepts image input
+codex --model glm-5.3              # general purpose (default)
 ```
 
 ### Prerequisites
@@ -557,13 +565,12 @@ routes to the Anthropic deployment directly.
 ### Model Selection
 
 Models use `claude-` prefixed names (e.g., `claude-glm-5.3`) for the
-Anthropic endpoint. All 5 models are available. Switch at runtime with
+Anthropic endpoint. All 4 models are available. Switch at runtime with
 `--model`:
 
 ```bash
-claude --bare --model claude-deepseek-v4-pro    # deep reasoning
-claude --bare --model claude-glm-5.3            # general purpose (default)
-claude --bare --model claude-deepseek-v4-flash      # fast
+claude --bare --model claude-deepseek-v4.1-flash  # fast, accepts image input
+claude --bare --model claude-glm-5.3              # general purpose (default)
 ```
 
 ### Prerequisites
