@@ -96,6 +96,7 @@ if ! command -v pi &>/dev/null; then
       "$HOME/.local/bin" \
       "$HOME/.npm-global/bin" \
       "$HOME/.local/share/pi-node/current/bin" \
+      "$HOME/.pi/agent/bin" \
       "/usr/local/bin"; do
       [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
     done
@@ -103,9 +104,13 @@ if ! command -v pi &>/dev/null; then
     for _dir in $(ls -d "$HOME/.nvm/versions/node"/*/bin 2>/dev/null || true); do
       [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
     done
-    # Check pi-node versioned dirs
+    # Check pi-node versioned dirs — add when they hold pi OR node
+    # (the ~/.pi/agent/bin wrapper execs a managed binary whose shebang
+    # resolves node via PATH, so the managed node dir must be on PATH)
     for _dir in $(ls -d "$HOME/.local/share/pi-node"/*/bin 2>/dev/null || true); do
-      [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
+      if [ -x "$_dir/pi" ] || [ -x "$_dir/node" ]; then
+        export PATH="$_dir:$PATH"
+      fi
     done
     if ! command -v pi &>/dev/null; then
       log_error "pi binary not found after install."

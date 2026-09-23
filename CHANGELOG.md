@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.5] - 2026-09-24
+
+### Fixed
+
+- **Pi install failed on fresh machines** — the pi.dev installer now
+  installs the pi wrapper to `~/.pi/agent/bin`, but 03d_pi.sh's
+  post-install PATH refresh only checked the legacy locations
+  (~/.local/bin, ~/.npm-global/bin, pi-node dirs, /usr/local/bin), so a
+  fresh-machine install ended with "pi binary not found after install"
+  and exit 1 even though pi had installed successfully. `~/.pi/agent/bin`
+  is now in the refresh list.
+- **"Installed: unknown" after installer-path installs** — the
+  `~/.pi/agent/bin` wrapper execs a managed binary whose shebang resolves
+  node via PATH, but pi-node dirs were only added to PATH when they
+  contained pi (the installer puts only node there). The refresh now
+  adds pi-node dirs that contain node, so the freshly installed pi runs
+  immediately.
+- **uninstall.sh** now removes the pi.dev installer's managed binaries
+  (`~/.pi/agent/bin`) and cleans its `.bashrc` PATH entry — previously
+  only the legacy pi-node layout was cleaned.
+
 ## [1.21.4] - 2026-09-23
 
 ### Fixed

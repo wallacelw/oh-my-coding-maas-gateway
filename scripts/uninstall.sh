@@ -355,6 +355,7 @@ if [ "$REMOVE_PI" = true ]; then
   log_step "Removing Pi agent"
   remove_path "$HOME/.pi/agent/models.json" "config"
   remove_glob "$HOME/.pi/agent/models.json.bak.*" "config backup"
+  remove_path "$HOME/.pi/agent/bin" "pi installer binaries"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @earendil-works/pi-coding-agent"
   else
@@ -373,6 +374,8 @@ if [ "$REMOVE_PI" = true ]; then
       log_ok "Removed pi binary"
     fi
   fi
+  # Clean the .bashrc PATH entry added by the pi.dev installer
+  remove_bashrc_block ".pi/agent/bin"
   # Also remove pi-managed Node.js if present
   if [ "$DRY_RUN" != true ] && [ -d "$HOME/.local/share/pi-node" ]; then
     if [ "${AUTO_YES:-false}" = true ]; then
