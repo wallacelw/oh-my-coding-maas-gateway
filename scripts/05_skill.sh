@@ -72,6 +72,7 @@ log_info "Detected coding agents: $(echo "$INSTALLED_TOOLS" | tr ' ' ',' | sed '
 NEW=""
 STALE=""
 CURRENT=""
+REFRESH_FAILED=0
 for tool in $INSTALLED_TOOLS; do
   if ! "skill_exists_$tool" 2>/dev/null; then
     NEW+="$tool "
@@ -93,10 +94,14 @@ if [ -n "$STALE" ]; then
   else
     log_info "Refreshing stale skill in: $(echo "$STALE" | tr ' ' ',' | sed 's/,$//')"
     for tool in $STALE; do
-      if dest=$("skill_install_$tool" 2>/dev/null); then
+      # cmp verifies the copy landed: skill_install_* ends with echo, which
+      # masks cp/mkdir failures inside the $(...) substitution (set -e is
+      # ignored in tested contexts), so its exit status alone can't be trusted.
+      if dest=$("skill_install_$tool" 2>/dev/null) && cmp -s "$(skill_source_path)" "$(skill_dest_path "$tool")"; then
         log_ok "$tool: $dest"
       else
         log_error "$tool: refresh failed"
+        REFRESH_FAILED=$((REFRESH_FAILED + 1))
       fi
     done
   fi
@@ -105,6 +110,10 @@ fi
 if [ -z "$NEW" ]; then
   if [ "$DRY_RUN" = false ] && [ -n "$STALE" ]; then
     echo ""
+    if [ "$REFRESH_FAILED" -gt 0 ]; then
+      log_error "Companion skill refresh completed with $REFRESH_FAILED failure(s)"
+      exit 1
+    fi
     log_done "Companion skill refreshed"
   fi
   if [ -z "$STALE" ]; then
@@ -170,3 +179,7 @@ done
 
 echo ""
 log_done "Companion skill installed — agents can now help operate the gateway"
+if [ "$REFRESH_FAILED" -gt 0 ]; then
+  log_error "Companion skill refresh completed with $REFRESH_FAILED failure(s)"
+  exit 1
+fi

@@ -252,13 +252,30 @@ if [ "$REMOVE_OPENCODE" = true ]; then
   log_step "Removing opencode"
   remove_path "$HOME/.config/opencode/opencode.json" "config"
   remove_path "$HOME/.config/opencode/oh-my-opencode-slim.json" "slim plugin config"
+  remove_path "$HOME/.config/opencode/.oh-my-opencode-slim" "slim plugin state"
+  remove_path "$HOME/.config/opencode/tui.json" "TUI state"
+  remove_path "$HOME/.config/opencode/package.json" "plugin manifest"
+  remove_path "$HOME/.config/opencode/package-lock.json" "plugin lockfile"
   remove_glob "$HOME/.config/opencode/opencode.json.bak.*" "config backup"
+  remove_glob "$HOME/.config/opencode/opencode.json.bak" "config backup"
   remove_glob "$HOME/.config/opencode/oh-my-opencode-slim.json.bak.*" "slim config backup"
+  remove_glob "$HOME/.config/opencode/oh-my-opencode-slim.json.bak" "slim config backup"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would remove: $HOME/.opencode/ (binary)"
     log_dim "  Would remove: $HOME/.bun/ (runtime)"
+    log_dim "  Would remove: $HOME/.config/opencode/node_modules/ (plugin deps — prompted)"
   else
     [ -d "$HOME/.opencode" ] && rm -rf "$HOME/.opencode" && log_ok "Removed binary: $HOME/.opencode/"
+    if [ -d "$HOME/.config/opencode/node_modules" ]; then
+      if [ "${AUTO_YES:-false}" = true ]; then
+        rm -rf "$HOME/.config/opencode/node_modules"
+        log_ok "Removed plugin deps: $HOME/.config/opencode/node_modules/"
+      elif is_interactive && prompt_yesno "Remove opencode plugin node_modules? (may be used by other opencode projects)" n; then
+        rm -rf "$HOME/.config/opencode/node_modules" && log_ok "Removed plugin deps: $HOME/.config/opencode/node_modules/"
+      else
+        log_dim "Keeping plugin deps: $HOME/.config/opencode/node_modules/ (may be used by other opencode projects)"
+      fi
+    fi
     if [ -d "$HOME/.bun" ]; then
       if [ "${AUTO_YES:-false}" = true ]; then
         rm -rf "$HOME/.bun"

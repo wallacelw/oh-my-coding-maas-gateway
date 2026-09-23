@@ -366,7 +366,7 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
       fail "LiteLLM: prometheus callback missing (metrics won't be emitted)"
     fi
 
-    # ── P4: v1.15/v1.16 feature coverage ──
+    # ── P4: catalog-derived feature coverage ──
     # Catalog-derived counts (from helpers/models.sh)
     OFF_PEAK_COUNT=${#OFF_PEAK_PRICING[@]}
     REASONING_COUNT=${#REASONING_MODELS[@]}
@@ -523,6 +523,7 @@ if [ "$RUN_OPENCODE" = true ]; then
   log_info "B3. Provider configuration"
   if [ -n "$CONFIG_FILE" ]; then
     CLEAN_CONFIG=$(strip_jsonc "$CONFIG_FILE")
+    SLIM_PIN="oh-my-opencode-slim@$(grep 'SLIM_VERSION=' "$PROJECT_DIR/scripts/03a_opencode.sh" 2>/dev/null | head -1 | sed 's/.*="\([^"]*\)".*/\1/' || true)"
     check_jq "$CLEAN_CONFIG" \
       "LiteLLM provider defined" '.provider.LiteLLM' \
       "LiteLLM baseURL is 127.0.0.1:4000" '.provider.LiteLLM.options.baseURL == "http://127.0.0.1:4000"' \
@@ -531,7 +532,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Huawei-MaaS provider defined" '.provider["Huawei-MaaS"]' \
       "Huawei-MaaS has $MODEL_COUNT+ models" ".provider[\"Huawei-MaaS\"].models | keys | length >= $MODEL_COUNT" \
       "LiteLLM has $MODEL_COUNT+ models" ".provider.LiteLLM.models | keys | length >= $MODEL_COUNT" \
-      "oh-my-opencode-slim plugin" '.plugin | index("oh-my-opencode-slim")' \
+      "oh-my-opencode-slim plugin (version-pinned)" ".plugin | index(\"$SLIM_PIN\")" \
       "explore agent disabled" '.agent.explore.disable == true' \
       "general agent disabled" '.agent.general.disable == true' \
       "LSP enabled" '.lsp == true'

@@ -37,8 +37,8 @@ _skill_install_one() {
   local tool="$1" src dest
   src=$(skill_source_path)
   dest=$(skill_dest_path "$tool")
-  mkdir -p "$(dirname "$dest")"
-  cp "$src" "$dest"
+  mkdir -p "$(dirname "$dest")" || return 1
+  cp "$src" "$dest" || return 1
   echo "$dest"
 }
 

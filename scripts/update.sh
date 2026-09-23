@@ -13,7 +13,10 @@ set -euo pipefail
 #
 # Detects installed components, checks current vs latest versions, and
 # offers selective updates. Does NOT touch passwords, API keys, or
-# virtual keys — only updates binaries, npm packages, and Docker images.
+# virtual keys. Updates binaries, npm packages, and Docker images; the
+# slim and docker methods also bump pinned versions in tracked files
+# (03a_opencode.sh, config templates, docker-compose.yml), commit those
+# changes, and regenerate the affected tool configs.
 #
 # Standalone: yes — ./scripts/update.sh
 
@@ -384,7 +387,11 @@ update_component() {
       # Also update $schema pin in slim template to prevent repo drift
       sed -i "s|oh-my-opencode-slim@[0-9.]*|oh-my-opencode-slim@${new_ver}|" \
         "$PROJECT_DIR/configs/opencode/oh-my-opencode-slim.json.template"
-      git -C "$PROJECT_DIR" commit --only scripts/03a_opencode.sh configs/opencode/oh-my-opencode-slim.json.template \
+      # And the plugin spec pin in opencode.json.template so opencode
+      # resolves the exact version at runtime, not its package cache
+      sed -i "s|oh-my-opencode-slim@[0-9.]*|oh-my-opencode-slim@${new_ver}|" \
+        "$PROJECT_DIR/configs/opencode/opencode.json.template"
+      git -C "$PROJECT_DIR" commit --only scripts/03a_opencode.sh configs/opencode/oh-my-opencode-slim.json.template configs/opencode/opencode.json.template \
         -m "Bump SLIM_VERSION to $new_ver" --quiet 2>/dev/null \
         || log_warn "Commit failed for slim version bump"
       # Re-apply opencode configs from repo templates. The slim installer
@@ -424,8 +431,9 @@ log_step "Component Update Check"
 
 echo ""
 echo -e "  ${C_DIM}Checks current vs latest versions for all installed components.${C_RESET}"
-echo -e "  ${C_DIM}Updates binaries, npm packages, and Docker images only —${C_RESET}"
-echo -e "  ${C_DIM}passwords, API keys, and virtual keys are never touched.${C_RESET}"
+echo -e "  ${C_DIM}Updates binaries, npm packages, and Docker images; slim/docker methods${C_RESET}"
+echo -e "  ${C_DIM}also bump pinned versions in tracked files, commit, and re-apply configs.${C_RESET}"
+echo -e "  ${C_DIM}Passwords, API keys, and virtual keys are never touched.${C_RESET}"
 
 # Verify we're in the project directory
 if [ ! -f "$PROJECT_DIR/docker-compose.yml" ]; then

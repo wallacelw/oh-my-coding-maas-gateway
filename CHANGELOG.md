@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.4] - 2026-09-23
+
+### Fixed
+
+- **Slim plugin version now enforced at runtime** — the plugin spec in
+  `opencode.json.template` is pinned (`oh-my-opencode-slim@2.2.21`) so
+  opencode resolves the exact version instead of whatever its package
+  cache holds; `update.sh` bumps the pin alongside `SLIM_VERSION` and
+  the `$schema` URL on slim updates.
+- **update.sh help text** now accurately states that the slim and docker
+  methods also bump pinned versions in tracked files, commit them, and
+  regenerate tool configs.
+- **05_skill.sh refresh failures** are no longer swallowed — any failed
+  refresh produces an accurate error message and a non-zero exit.
+  `helpers/skills.sh` install helpers now propagate `cp`/`mkdir` failures
+  (`|| return 1`) instead of masking them, and 05_skill.sh verifies the
+  refreshed content with `cmp`.
+- **uninstall.sh** removes previously-escaped opencode artifacts:
+  `.oh-my-opencode-slim/` state dir, `tui.json`, `package.json`,
+  `package-lock.json` (node_modules prompted), and timestamp-less
+  `*.bak` config backups.
+- **REFERENCE.md** `install-skill.sh` row corrected (takes `--name=` /
+  `--source=`, installs into all detected agents; standalone utility,
+  not called by 05_skill.sh).
+- Stale "v1.15/v1.16" comment in 04_validate.sh updated; `.opencode/.gitignore`
+  now covers node_modules and package files.
+
 ## [1.21.3] - 2026-09-23
 
 ### Fixed
