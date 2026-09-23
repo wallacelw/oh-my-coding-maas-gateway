@@ -127,7 +127,7 @@ Reference documentation for both humans and agents. For the install procedure an
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
-| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `"attachment": true` on its `opencode.json.template` entries). Update `slim.json.template` only if agents should use the new model. |
+| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
 
 ### Models
@@ -452,10 +452,12 @@ vision is lost — observer fails fast rather than falling back to a blind
 glm model (by design). Zero cost in text-only sessions: nothing runs
 unless an image is pasted.
 
-Image input is declared to opencode via `attachment: true` on the
-deepseek-v4.1-flash model entries in `opencode.json` (both provider
-blocks). Without it, opencode's read tool refuses images and the observer
-degrades to external OCR.
+Image input is declared to opencode via `"modalities": { "input": ["text", "image"] }`
+on the deepseek-v4.1-flash model entries in `opencode.json` (both provider
+blocks). The `attachment` field does not work for this — opencode's read
+tool checks `capabilities.input.image`, populated only from
+`modalities.input`. Without it, the read tool refuses images and the
+observer degrades to external OCR.
 
 ### Council
 

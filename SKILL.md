@@ -242,8 +242,8 @@ and `configs/codex/model_catalog.json` with the new model. If the model surfaces
 reasoning (`reasoning_effort` pass-through or thinking mode), add it to the
 `REASONING_MODELS` array. If it has off-peak
 pricing, add it to the `OFF_PEAK_PRICING` array. If it accepts image input,
-add it to the `VISION_MODELS` array and set `"attachment": true` on its
-`opencode.json.template` entries. Update
+add it to the `VISION_MODELS` array and set `modalities` to include
+`image` in `input` on its `opencode.json.template` entries. Update
 `configs/opencode/oh-my-opencode-slim.json.template` only if agents should be
 assigned the new model. Then regenerate (this creates 2N deployments per model,
 two per API key — one per format):

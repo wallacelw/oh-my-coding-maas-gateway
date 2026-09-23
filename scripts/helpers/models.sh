@@ -9,7 +9,8 @@
 # reasoning (reasoning_effort pass-through or thinking mode), add it to
 # REASONING_MODELS. If it has off-peak pricing, add it to OFF_PEAK_PRICING.
 # If it accepts image input (multimodal), add it to VISION_MODELS and set
-# "attachment": true on its opencode.json.template entries. Update
+# modalities to include "image" in input on its opencode.json.template
+# entries. Update
 # slim.json.template only if agents should be assigned the new model.
 #
 # Format: model_name:tpm:rpm:max_tokens:max_input:max_output:input_cost:output_cost:cache_read_cost:cache_creation_cost
