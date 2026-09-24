@@ -59,7 +59,7 @@
     }
   },
   "plugin": [
-    "oh-my-opencode-slim@2.2.21"
+    "oh-my-opencode-slim@2.2.24"
   ],
   "agent": {
     "explore": { "disable": true },
