@@ -162,13 +162,34 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
     install_parent="$default_parent"
   fi
   target_dir="$install_parent/$REPO_NAME"
+  # Headless upgrades must proceed even when `git pull --ff-only` fails, but a
+  # hard reset silently discards local work — count what is lost and warn first.
+  # (Standalone block: common.sh not sourced yet, so raw echo + inline colors.)
+  warn_reset_loss() {
+    local diverged uncommitted
+    diverged=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)
+    uncommitted=$(git status --porcelain 2>/dev/null | wc -l || true)
+    diverged=$((diverged))
+    uncommitted=$((uncommitted))
+    if [ "$diverged" -gt 0 ] || [ "$uncommitted" -gt 0 ]; then
+      echo -e "  ${C_YELLOW}⚠ Discarding $diverged local commit(s) and $uncommitted uncommitted change(s) — resetting to origin/main${C_RESET}"
+    else
+      echo -e "  ${C_DIM}No local commits or uncommitted changes — resetting to origin/main${C_RESET}"
+    fi
+  }
   if [ -d "$target_dir/.git" ]; then
     echo "  Existing install found at $target_dir"
     show_version_info "$target_dir"
-    if [ "$AUTO_YES" = true ]; then
+    if [ "$DRY_RUN" = true ]; then
+      # Dry-run must never mutate (or destroy) the repo: skip the pull and
+      # the fresh-install menu; preview the currently-installed code as-is.
+      # (Standalone block: common.sh not sourced yet — raw echo + inline colors.)
+      echo -e "  ${C_DIM}Dry-run: would pull updates for the existing install — skipping${C_RESET}"
+      cd "$target_dir"
+    elif [ "$AUTO_YES" = true ]; then
       echo "  Pulling updates..."
       cd "$target_dir"
-      git pull --ff-only || git reset --hard origin/main
+      git pull --ff-only || { warn_reset_loss; git reset --hard origin/main; }
     elif is_interactive; then
       echo ""
       echo -e "  ${C_BOLD}1)${C_RESET} Pull updates (preserve existing config & data) ${C_DIM}[default]${C_RESET}"
@@ -193,13 +214,9 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
           echo "  Pulling updates..."
           cd "$target_dir"
           if ! git pull --ff-only; then
-            if [ "$AUTO_YES" = true ]; then
-              reset_choice="y"
-            else
-              echo ""
-              echo -e "  ${C_YELLOW}⚠ git pull failed.${C_RESET} Reset to origin/main? ${C_DIM}[y/N]${C_RESET}: "
-              read -r reset_choice < /dev/tty || reset_choice="n"
-            fi
+            echo ""
+            echo -e "  ${C_YELLOW}⚠ git pull failed.${C_RESET} Reset to origin/main? ${C_DIM}[y/N]${C_RESET}: "
+            read -r reset_choice < /dev/tty || reset_choice="n"
             case "$reset_choice" in
               y|Y|yes|YES)
                 echo "  Resetting to origin/main..."
@@ -216,9 +233,16 @@ if [ ! -f "$SCRIPT_DIR/helpers/common.sh" ]; then
     else
       echo "  Pulling updates..."
       cd "$target_dir"
-      git pull --ff-only || git reset --hard origin/main
+      git pull --ff-only || { warn_reset_loss; git reset --hard origin/main; }
     fi
   else
+    if [ "$DRY_RUN" = true ]; then
+      # Standalone block: common.sh not sourced yet — raw echo + inline colors.
+      # A standalone dry-run can't preview anything without cloning; be honest
+      # and side-effect-free.
+      echo -e "  ${C_DIM}Dry-run: would clone repository to $target_dir — re-run without --dry-run to install${C_RESET}"
+      exit 0
+    fi
     echo "  Cloning to $target_dir..."
     git clone "$REPO_URL" "$target_dir"
     cd "$target_dir"
@@ -232,7 +256,6 @@ source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
 source "$SCRIPT_DIR/helpers/versions.sh"
-LOG_TAG="bootstrap"
 
 # ── Refresh PATH for binaries installed by 03x scripts ──
 # Installers add to .bashrc, but that only takes effect on shell restart.
@@ -273,22 +296,11 @@ refresh_path() {
 }
 refresh_path
 
-# ── Track whether keys came from env vars (vs interactive prompts) ──
-# Used to decide if the security disclaimer is shown at the end.
-KEYS_FROM_ENV=false
-if [ -n "${HUAWEI_MAAS_API_KEY:-}" ] \
-   || [ -n "${HUAWEI_MAAS_API_KEY_COUNT:-}" ] \
-   || [ -n "${LITELLM_MASTER_KEY:-}" ] \
-   || [ -n "${VIRTUAL_KEY:-}" ]; then
-  KEYS_FROM_ENV=true
-fi
-# Also check for HUAWEI_MAAS_API_KEY_1..N
-for _v in "${!HUAWEI_MAAS_API_KEY_@}"; do
-  [ -n "${!_v}" ] && KEYS_FROM_ENV=true
-done
-
 # ── Prevent concurrent runs (flock) ──
-if ! command -v flock &>/dev/null; then
+# Dry-run creates no lock file (side-effect-free preview).
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping bootstrap lock"
+elif ! command -v flock &>/dev/null; then
   log_warn "flock not found — concurrent bootstrap protection disabled"
 else
   exec 9>"$PROJECT_DIR/.bootstrap.lock"
@@ -355,7 +367,7 @@ if [ "${BOOTSTRAP_STANDALONE:-}" = "1" ]; then
 elif [ "$AUTO_YES" = true ]; then
   install_parent="$current_parent"
 elif is_interactive; then
-  install_parent=$(prompt_input "Install directory (project will be in \$INSTALL_DIR/$REPO_NAME)" "$current_parent")
+  install_parent=$(prompt_input "Install directory (project will be in $current_parent/$REPO_NAME)" "$current_parent")
 else
   install_parent="$current_parent"
 fi
@@ -409,11 +421,16 @@ log_info "Project dir: $PROJECT_DIR"
 [ "$DRY_RUN" = true ] && log_warn "DRY RUN — no changes will be made"
 
 # ── Core prerequisites ──
+# Dry-run must be side-effect-free: never install packages (mirrors 02/03x).
 log_step "Core prerequisites"
-prereq_ensure_apt "git"     git     git     "git is needed to clone this repository and pull updates"
-prereq_ensure_apt "python3" python3 python3 "python3 is needed for config generation and validation scripts"
-prereq_ensure_apt "curl"    curl    curl    "curl is needed to download install scripts and make API calls"
-prereq_ensure_apt "jq"      jq      jq      "jq is needed to parse JSON from MaaS API and LiteLLM responses"
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping prerequisite installs"
+else
+  prereq_ensure_apt "git"     git     git     "git is needed to clone this repository and pull updates"
+  prereq_ensure_apt "python3" python3 python3 "python3 is needed for config generation and validation scripts"
+  prereq_ensure_apt "curl"    curl    curl    "curl is needed to download install scripts and make API calls"
+  prereq_ensure_apt "jq"      jq      jq      "jq is needed to parse JSON from MaaS API and LiteLLM responses"
+fi
 
 # ── Tool selection (menu if --tool= not given) ──
 if [ "$TOOL_SPECIFIED" = false ] && is_interactive && [ "$AUTO_YES" = false ]; then
@@ -426,28 +443,39 @@ if [ "$TOOL_SPECIFIED" = false ] && is_interactive && [ "$AUTO_YES" = false ]; t
     echo -e "  ${C_BOLD}5)${C_RESET} LiteLLM + Claude Code"
     echo -e "  ${C_BOLD}6)${C_RESET} LiteLLM + Pi"
     echo -e "  ${C_BOLD}7)${C_RESET} Custom — toggle each component"
+    echo -e "  ${C_DIM}Or combine: 3,5 (LiteLLM + opencode + Claude Code)${C_RESET}"
     echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[1]${C_RESET}: "
     choice=""
     read -r choice < /dev/tty || choice="1"
-    case "${choice:-1}" in
-      1) INSTALL_OPENCODE=true;  INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=true;  INSTALL_PI=true ;;
-      2) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
-      3) INSTALL_OPENCODE=true;  INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
-      4) INSTALL_OPENCODE=false; INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=false; INSTALL_PI=false ;;
-      5) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=true;  INSTALL_PI=false ;;
-      6) INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=true ;;
-      7)
-        log_dim "Custom selection (LiteLLM is always installed):"
-        if prompt_yesno "Install opencode?" y; then INSTALL_OPENCODE=true; else INSTALL_OPENCODE=false; fi
-        if prompt_yesno "Install Codex?" y; then INSTALL_CODEX=true; else INSTALL_CODEX=false; fi
-        if prompt_yesno "Install Claude Code?" y; then INSTALL_CLAUDE_CODE=true; else INSTALL_CLAUDE_CODE=false; fi
-        if prompt_yesno "Install Pi?" y; then INSTALL_PI=true; else INSTALL_PI=false; fi
-        ;;
-      *)
-        log_warn "Invalid choice: '${choice}'. Please enter a number 1-7."
-        continue
-        ;;
-    esac
+    choice="${choice//[[:space:]]/}"
+    choice="${choice:-1}"
+    # Accept a single option or a comma-separated combo (e.g. 1,3,5).
+    if ! [[ "$choice" =~ ^[1-7](,[1-7])*$ ]]; then
+      log_warn "Invalid choice: '${choice}'. Please enter 1-7, or a comma-separated combo like 3,5."
+      continue
+    fi
+    # Start from nothing selected, then union in each chosen option's preset.
+    INSTALL_OPENCODE=false; INSTALL_CODEX=false; INSTALL_CLAUDE_CODE=false; INSTALL_PI=false
+    _custom=false
+    IFS=',' read -ra _opts <<< "$choice"
+    for _opt in "${_opts[@]}"; do
+      case "$_opt" in
+        1) INSTALL_OPENCODE=true;  INSTALL_CODEX=true;  INSTALL_CLAUDE_CODE=true;  INSTALL_PI=true ;;
+        2) ;;
+        3) INSTALL_OPENCODE=true ;;
+        4) INSTALL_CODEX=true ;;
+        5) INSTALL_CLAUDE_CODE=true ;;
+        6) INSTALL_PI=true ;;
+        7) _custom=true ;;
+      esac
+    done
+    if [ "$_custom" = true ]; then
+      log_dim "Custom selection (LiteLLM is always installed):"
+      if prompt_yesno "Install opencode?" y; then INSTALL_OPENCODE=true; else INSTALL_OPENCODE=false; fi
+      if prompt_yesno "Install Codex?" y; then INSTALL_CODEX=true; else INSTALL_CODEX=false; fi
+      if prompt_yesno "Install Claude Code?" y; then INSTALL_CLAUDE_CODE=true; else INSTALL_CLAUDE_CODE=false; fi
+      if prompt_yesno "Install Pi?" y; then INSTALL_PI=true; else INSTALL_PI=false; fi
+    fi
 
     # ── Show selected scope ──
     echo ""
@@ -520,7 +548,7 @@ fi
 # ── Step 02: LiteLLM proxy + observability ──
 if [ "$DRY_RUN" = true ]; then
   log_step "Step 02: LiteLLM proxy + observability"
-  log_dim "Would run: scripts/02_litellm.sh --dry-run"
+  log_dim "Would run: scripts/02_litellm.sh"
 else
   log_desc "Deploying LiteLLM proxy, Docker containers, and observability stack"
   "$SCRIPT_DIR/02_litellm.sh"
@@ -531,10 +559,13 @@ fi
 if [ "$INSTALL_OPENCODE" = true ]; then
   OPENCODE_ARGS=()
   [ -n "$VIRTUAL_KEY" ] && OPENCODE_ARGS+=("--virtual-key=$VIRTUAL_KEY")
-  [ "$DRY_RUN" = true ] && OPENCODE_ARGS+=("--dry-run")
   if [ "$DRY_RUN" = true ]; then
     log_step "Step 03a: opencode"
-    log_dim "Would run: scripts/03a_opencode.sh ${OPENCODE_ARGS[*]}"
+    if [ ${#OPENCODE_ARGS[@]} -gt 0 ]; then
+      log_dim "Would run: scripts/03a_opencode.sh ${OPENCODE_ARGS[*]}"
+    else
+      log_dim "Would run: scripts/03a_opencode.sh"
+    fi
   else
     log_desc "Installing opencode + oh-my-opencode-slim plugin"
     "$SCRIPT_DIR/03a_opencode.sh" "${OPENCODE_ARGS[@]}"
@@ -547,14 +578,12 @@ fi
 
 # ── Step 03b: Codex CLI (optional) ──
 if [ "$INSTALL_CODEX" = true ]; then
-  CODEX_ARGS=()
-  [ "$DRY_RUN" = true ] && CODEX_ARGS+=("--dry-run")
   if [ "$DRY_RUN" = true ]; then
     log_step "Step 03b: Codex CLI"
-    log_dim "Would run: scripts/03b_codex.sh ${CODEX_ARGS[*]}"
+    log_dim "Would run: scripts/03b_codex.sh"
   else
     log_desc "Installing Codex CLI and configuring LiteLLM virtual key"
-    "$SCRIPT_DIR/03b_codex.sh" "${CODEX_ARGS[@]}"
+    "$SCRIPT_DIR/03b_codex.sh"
     log_done "Codex CLI configured — LiteLLM virtual key minted"
   fi
 else
@@ -563,14 +592,12 @@ fi
 
 # ── Step 03c: Claude Code CLI (optional) ──
 if [ "$INSTALL_CLAUDE_CODE" = true ]; then
-  CLAUDE_ARGS=()
-  [ "$DRY_RUN" = true ] && CLAUDE_ARGS+=("--dry-run")
   if [ "$DRY_RUN" = true ]; then
     log_step "Step 03c: Claude Code CLI"
-    log_dim "Would run: scripts/03c_claude_code.sh ${CLAUDE_ARGS[*]}"
+    log_dim "Would run: scripts/03c_claude_code.sh"
   else
     log_desc "Installing Claude Code CLI and configuring LiteLLM virtual key"
-    "$SCRIPT_DIR/03c_claude_code.sh" "${CLAUDE_ARGS[@]}"
+    "$SCRIPT_DIR/03c_claude_code.sh"
     log_done "Claude Code CLI configured — LiteLLM virtual key minted"
   fi
 else
@@ -579,14 +606,12 @@ fi
 
 # ── Step 03d: Pi agent (optional) ──
 if [ "$INSTALL_PI" = true ]; then
-  PI_ARGS=()
-  [ "$DRY_RUN" = true ] && PI_ARGS+=("--dry-run")
   if [ "$DRY_RUN" = true ]; then
     log_step "Step 03d: Pi agent"
-    log_dim "Would run: scripts/03d_pi.sh ${PI_ARGS[*]}"
+    log_dim "Would run: scripts/03d_pi.sh"
   else
     log_desc "Installing Pi coding agent and configuring LiteLLM virtual key"
-    "$SCRIPT_DIR/03d_pi.sh" "${PI_ARGS[@]}"
+    "$SCRIPT_DIR/03d_pi.sh"
     log_done "Pi agent configured — LiteLLM virtual key minted"
     refresh_path
   fi
@@ -596,14 +621,17 @@ fi
 
 # ── Step 04: Validate ──
 VALIDATE_ARGS=()
-[ "$DRY_RUN" = true ] && VALIDATE_ARGS+=("--dry-run")
 [ "$INSTALL_OPENCODE" = false ] && VALIDATE_ARGS+=("--skip-opencode")
 [ "$INSTALL_CODEX" = false ] && VALIDATE_ARGS+=("--skip-codex")
 [ "$INSTALL_CLAUDE_CODE" = false ] && VALIDATE_ARGS+=("--skip-claude-code")
 [ "$INSTALL_PI" = false ] && VALIDATE_ARGS+=("--skip-pi")
 if [ "$DRY_RUN" = true ]; then
   log_step "Step 04: Validate"
-  log_dim "Would run: scripts/04_validate.sh ${VALIDATE_ARGS[*]}"
+  if [ ${#VALIDATE_ARGS[@]} -gt 0 ]; then
+    log_dim "Would run: scripts/04_validate.sh ${VALIDATE_ARGS[*]}"
+  else
+    log_dim "Would run: scripts/04_validate.sh"
+  fi
   VALIDATE_RC=0
 else
   log_desc "Running end-to-end validation of all components"
@@ -619,30 +647,27 @@ else
 fi
 
 # ── Step 05: Companion skill ──
-SKILL_ARGS=()
-[ "$DRY_RUN" = true ] && SKILL_ARGS+=("--dry-run")
-[ "$NO_SKILL" = true ] && SKILL_ARGS+=("--no-skill")
 if [ "$NO_SKILL" = true ]; then
   log_dim "(skipping companion skill)"
+  SKILL_RC=0
 elif [ "$DRY_RUN" = true ]; then
   log_step "Step 05: Companion skill"
-  log_dim "Would run: scripts/05_skill.sh ${SKILL_ARGS[*]}"
+  log_dim "Would run: scripts/05_skill.sh"
+  SKILL_RC=0
 else
   log_desc "Installing companion skill into coding agents"
-  set +e
-  "$SCRIPT_DIR/05_skill.sh" "${SKILL_ARGS[@]}"
-  set -e
+  "$SCRIPT_DIR/05_skill.sh" && SKILL_RC=0 || SKILL_RC=$?
 fi
 
 # ── Summary ──
 echo ""
-if [ "$VALIDATE_RC" -eq 0 ]; then
+if [ "$VALIDATE_RC" -eq 0 ] && [ "$SKILL_RC" -eq 0 ]; then
   echo -e "${C_BOLD}${C_GREEN}  ✓ Bootstrap complete${C_RESET}"
-else
+elif [ "$VALIDATE_RC" -ne 0 ]; then
   echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with validation failures${C_RESET}"
+else
+  echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with skill-install failures${C_RESET}"
 fi
-echo ""
-printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Version:"           "v${PROJECT_VERSION}"
 show_installed_versions "$PROJECT_DIR"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Project dir:"       "$PROJECT_DIR"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM proxy:"     "$LITELLM_URL"
@@ -688,4 +713,7 @@ echo ""
 echo -e "  ${C_DIM}Tip: If you shared your MaaS API key with a coding agent or CI system,"
 echo -e "  consider rotating it at https://console.huaweicloud.com/modelarts/ to stay secure.${C_RESET}"
 
-exit "$VALIDATE_RC"
+if [ "$VALIDATE_RC" -ne 0 ]; then
+  exit "$VALIDATE_RC"
+fi
+exit "$SKILL_RC"

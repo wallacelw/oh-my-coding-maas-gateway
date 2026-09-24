@@ -37,9 +37,6 @@ else
   C_RED="" C_GREEN="" C_YELLOW="" C_BLUE="" C_CYAN=""
 fi
 
-# Action tag — each script overrides after sourcing.
-LOG_TAG="${LOG_TAG:-bootstrap}"
-
 # Load .env (if present) into the environment so scripts are self-sufficient.
 # Usage: source_env "$PROJECT_DIR"
 source_env() {
@@ -52,10 +49,26 @@ source_env() {
 
 # Retry curl with backoff (3 attempts, 2s/4s delays).
 # Usage: retry_curl curl_args...
+# With `--config -`, stdin (the config heredoc) is buffered once and
+# re-fed on each attempt — the first curl consumes the heredoc, and
+# retries would otherwise send the request without the config headers.
 retry_curl() {
   local max_attempts=3 delay=2 attempt=1 err=""
+  local cfg="" feed_stdin=false prev="" arg
+  for arg in "$@"; do
+    if [ "$prev" = "--config" ] && [ "$arg" = "-" ]; then
+      cfg=$(cat)
+      feed_stdin=true
+      break
+    fi
+    prev="$arg"
+  done
   while [ $attempt -le $max_attempts ]; do
-    err=$(curl "$@" 2>&1) && return 0
+    if [ "$feed_stdin" = true ]; then
+      err=$(printf '%s' "$cfg" | curl "$@" 2>&1) && return 0
+    else
+      err=$(curl "$@" 2>&1) && return 0
+    fi
     [ $attempt -lt $max_attempts ] && sleep $delay
     attempt=$((attempt + 1))
   done
@@ -112,14 +125,19 @@ sys.stdout.write(''.join(result))
 " < "$1" 2>/dev/null || cat "$1"
 }
 
-# Print a masked form of a key: first8...last4
+# Print a masked form of a key: first8...last4 (short keys are never
+# revealed in full).
 # Usage: mask_key "sk-abcdef..."
 mask_key() {
   local key="$1"
-  if [ -n "$key" ] && [ ${#key} -ge 12 ]; then
+  if [ -z "$key" ]; then
+    echo ""
+  elif [ ${#key} -ge 12 ]; then
     echo "${key:0:8}...${key: -4}"
+  elif [ ${#key} -ge 8 ]; then
+    echo "${key:0:4}...${key: -2}"
   else
-    echo "$key"
+    echo "****"
   fi
 }
 
@@ -231,6 +249,7 @@ prompt_input() {
 # If non-TTY: echoes the default.
 # Usage: prompt_password "DB_PASSWORD" "$auto_generated_value" [prefix]
 # When prefix is given, custom input must start with it (re-prompts on mismatch).
+# Custom input cannot be empty (re-prompts).
 prompt_password() {
   local label="$1" default="$2" prefix="${3:-}"
   if ! is_interactive; then
@@ -250,6 +269,10 @@ prompt_password() {
     fi
     local answer
     read -r answer < /dev/tty
+    if [ -z "$answer" ]; then
+      log_dim "Value cannot be empty. Please try again."
+      continue
+    fi
     if [ -n "$prefix" ] && [ "${answer#$prefix}" = "$answer" ]; then
       log_warn "Value must start with '$prefix'. Please try again."
       continue

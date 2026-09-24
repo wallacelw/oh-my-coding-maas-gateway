@@ -41,31 +41,56 @@ for arg in "$@"; do
   esac
 done
 
+# ── Validate routing strategy (fail fast — an invalid value would only
+# surface later as a LiteLLM startup failure) ──
+case "$ROUTING_STRATEGY" in
+  simple-shuffle|least-busy|latency-based-routing|usage-based-routing|cost-based-routing)
+    ;;
+  *)
+    log_error "Invalid routing strategy: '$ROUTING_STRATEGY'"
+    log_dim "  Valid values: simple-shuffle, least-busy, latency-based-routing, usage-based-routing, cost-based-routing"
+    exit 1
+    ;;
+esac
+
 log_step "Step 02 — LiteLLM proxy + observability"
 
 # ── Prerequisites (system-level, not LiteLLM-specific) ──
-prereq_ensure_apt "curl" curl curl "curl is needed for LiteLLM health checks and API calls"
-prereq_ensure_docker "Docker Engine runs the LiteLLM proxy, Prometheus, and Grafana containers"
+# Dry-run must be side-effect-free: never install packages or start daemons.
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping prerequisite installs"
+else
+  prereq_ensure_apt "curl" curl curl "curl is needed for LiteLLM health checks and API calls"
+  prereq_ensure_docker "Docker Engine runs the LiteLLM proxy, Prometheus, and Grafana containers"
+fi
 
 # ── Port conflict check ──
 echo ""
+our_containers=""
+our_containers_loaded=false
 for port in 4000 5432 9090 3000; do
   port_in_use=false
-  if command -v ss &>/dev/null && ss -tlnp 2>/dev/null | grep -qE ":${port}\b"; then
+  if command -v ss &>/dev/null && ss -tlnp 2>/dev/null | grep -qE "[:.]${port}([^0-9]|$)"; then
     port_in_use=true
-  elif command -v netstat &>/dev/null && netstat -tlnp 2>/dev/null | grep -qE ":${port}\b"; then
+  elif command -v netstat &>/dev/null && netstat -tlnp 2>/dev/null | grep -qE "[:.]${port}([^0-9]|$)"; then
     port_in_use=true
   fi
   if [ "$port_in_use" = true ] && [ "$DRY_RUN" != true ]; then
-    # Check if the port is held by one of our own stale containers
-    stale_container=""
-    stale_container=$(docker ps --filter "publish=${port}" --format '{{.Names}}' 2>/dev/null || true)
-    if [ -n "$stale_container" ]; then
-      log_warn "Port $port held by stale container(s): $stale_container — checking them"
+    # Look up this compose project's own containers (once) — the live
+    # stack holds these ports on every re-run and must never be removed.
+    if [ "$our_containers_loaded" != true ]; then
+      our_containers="$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --format '{{.Name}}' 2>/dev/null || true)"
+      our_containers_loaded=true
+    fi
+    # Any container publishing on this port: ours (live), stale litellm_*, or foreign
+    port_containers=$(docker ps --filter "publish=${port}" --format '{{.Names}}' 2>/dev/null || true)
+    if [ -n "$port_containers" ]; then
       # for-loop (not a pipe) so `exit 1` terminates the script, not a subshell
-      for c in $stale_container; do
-        if [[ "$c" == litellm_* ]]; then
-          log_dim "  Removing stale LiteLLM container: $c"
+      for c in $port_containers; do
+        if printf '%s\n' "$our_containers" | grep -qxF "$c"; then
+          log_dim "Port $port held by this stack's container $c — compose will handle it"
+        elif [[ "$c" == litellm_* ]]; then
+          log_warn "Port $port held by stale LiteLLM container: $c — removing it"
           docker rm -f "$c" 2>/dev/null || true
         else
           log_error "Port $port held by foreign container '$c' — refusing to remove."
@@ -116,10 +141,13 @@ done
 MODEL_COUNT=${#MODELS[@]}
 TOTAL_DEPLOYMENTS=$((KEY_COUNT * MODEL_COUNT * 2))
 
-# ── Backup existing config ──
-BACKUP=$(backup_with_prune "$CONFIG_FILE")
-if [ -n "$BACKUP" ]; then
-  log_info "Backed up existing config to $(basename "$BACKUP")"
+# ── Backup existing config (skipped in dry-run — no side effects) ──
+BACKUP=""
+if [ "$DRY_RUN" != true ]; then
+  BACKUP=$(backup_with_prune "$CONFIG_FILE")
+  if [ -n "$BACKUP" ]; then
+    log_info "Backed up existing config to $(basename "$BACKUP")"
+  fi
 fi
 
 # Look up off-peak pricing for a model from OFF_PEAK_PRICING array
@@ -228,6 +256,14 @@ emit_deployment() {
   echo ""
 }
 
+# In dry-run, render to a temp file — the live config is bind-mounted into
+# the running LiteLLM container and must not be touched.
+if [ "$DRY_RUN" = true ]; then
+  CONFIG_OUT=$(mktemp)
+else
+  CONFIG_OUT="$CONFIG_FILE"
+fi
+
 {
   echo "model_list:"
   echo ""
@@ -282,9 +318,22 @@ emit_deployment() {
   echo "  background_health_checks: true # periodically health-check all deployments"
   echo "  health_check_interval: 300 # seconds between background health checks"
 
-} > "$CONFIG_FILE"
+} > "$CONFIG_OUT"
 
-log_ok "Generated: $CONFIG_FILE"
+if [ "$DRY_RUN" = true ]; then
+  log_info "Would write configs/litellm/config.yaml ($(wc -l < "$CONFIG_OUT") lines)"
+  if [ -f "$CONFIG_FILE" ]; then
+    if diff -q "$CONFIG_FILE" "$CONFIG_OUT" &>/dev/null; then
+      log_dim "  No changes vs current configs/litellm/config.yaml"
+    else
+      CHANGED_LINES=$(diff "$CONFIG_FILE" "$CONFIG_OUT" | grep -cE '^[<>]' || true)
+      log_dim "  $CHANGED_LINES line(s) differ from current configs/litellm/config.yaml"
+    fi
+  fi
+  rm -f "$CONFIG_OUT"
+else
+  log_ok "Generated: $CONFIG_FILE"
+fi
 log_info "Deployments: ${TOTAL_DEPLOYMENTS} total (${KEY_COUNT} per model × ${MODEL_COUNT} models × 2 formats)"
 log_info "Routing strategy: $ROUTING_STRATEGY"
 if [ "$KEY_COUNT" -gt 1 ]; then
@@ -299,19 +348,40 @@ if [ "$KEY_COUNT" -gt 1 ]; then
 fi
 
 # ── Pre-flight MaaS key validation ──
-log_info "Validating MaaS API key..."
-MAAS_BASE="${HUAWEI_MAAS_API_BASE:-https://api-ap-southeast-1.modelarts-maas.com/openai/v1}"
-MAAS_KEY_0="${HUAWEI_MAAS_API_KEY_0:-${HUAWEI_MAAS_API_KEY:-}}"
-if [ -n "$MAAS_KEY_0" ] && [ "$DRY_RUN" != true ]; then
-  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "$MAAS_BASE/models" -H "Authorization: Bearer $MAAS_KEY_0" 2>/dev/null || echo "000")
-  if [ "$HTTP_CODE" = "200" ]; then
-    log_ok "MaaS API key valid"
-  elif [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
-    log_error "MaaS API key rejected (HTTP $HTTP_CODE). Check HUAWEI_MAAS_API_KEY in .env."
-    exit 1
-  else
-    log_warn "MaaS endpoint unreachable (HTTP $HTTP_CODE) — may be transient. Continuing (LiteLLM will retry)."
-  fi
+# Probe every key (0..KEY_COUNT-1) with the same request. Key 0 failure
+# aborts the install (existing behavior); extra-key failures only warn —
+# key 0 still serves traffic and per-deployment health shows in Grafana.
+# Never log the key value itself — only the env var name and HTTP status.
+if [ "$DRY_RUN" != true ]; then
+  log_info "Validating MaaS API keys (0..$((KEY_COUNT - 1)))..."
+  MAAS_BASE="${HUAWEI_MAAS_API_BASE:-https://api-ap-southeast-1.modelarts-maas.com/openai/v1}"
+  for i in $(seq 0 $((KEY_COUNT - 1))); do
+    KEY_VAR="HUAWEI_MAAS_API_KEY_$i"
+    MAAS_KEY="${!KEY_VAR:-}"
+    if [ "$i" -eq 0 ]; then
+      MAAS_KEY="${MAAS_KEY:-${HUAWEI_MAAS_API_KEY:-}}"
+    fi
+    if [ -z "$MAAS_KEY" ]; then
+      continue
+    fi
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "$MAAS_BASE/models" --config - 2>/dev/null <<CURLCFG
+header = "Authorization: Bearer $MAAS_KEY"
+CURLCFG
+) || HTTP_CODE="000"
+    if [ "$HTTP_CODE" = "200" ]; then
+      log_ok "$KEY_VAR valid"
+    elif [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "403" ]; then
+      if [ "$i" -eq 0 ]; then
+        log_error "MaaS API key rejected (HTTP $HTTP_CODE). Check HUAWEI_MAAS_API_KEY in .env."
+        exit 1
+      fi
+      log_warn "$KEY_VAR rejected (HTTP $HTTP_CODE) — continuing; its deployments will show unhealthy in Grafana."
+    else
+      log_warn "$KEY_VAR endpoint unreachable (HTTP $HTTP_CODE) — may be transient. Continuing (LiteLLM will retry)."
+    fi
+  done
+else
+  log_dim "Dry-run: skipping MaaS key validation"
 fi
 
 # ── Deploy Docker Compose ──

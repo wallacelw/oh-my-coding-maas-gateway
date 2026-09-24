@@ -2,7 +2,9 @@
 # models.sh — Shared model catalog
 #
 # Single source of truth for the Huawei MaaS model list. Sourced by
-# 02_litellm.sh (config generation) and 04_validate.sh (validation).
+# 02_litellm.sh (config generation), 04_validate.sh (validation),
+# 03d_pi.sh (Pi agent config), and bootstrap.sh (helper sourcing for
+# the install pipeline).
 #
 # To add/remove a model: edit this file, then update config.yaml.template,
 # opencode.json.template, and model_catalog.json. If the model surfaces

@@ -12,8 +12,9 @@
 #       Returns 1 if the key cannot be obtained.
 #
 #   mint_or_reuse_key <alias> [--models=M] [--budget=N] [--no-budget] [--duration=D] [--dry-run]
-#       Reuses an existing valid virtual key with the given alias if one exists,
-#       otherwise mints a new one. Prints the key (sk-...) to stdout.
+#       Mints a new virtual key for the alias and deletes the previous key
+#       with that alias (rotate-and-replace). Callers probe their own config
+#       first for reuse. Prints the key (sk-...) to stdout.
 #       Returns 1 on failure. Requires LITELLM_MASTER_KEY to be set.
 
 # Ensure logging helpers are available
@@ -61,8 +62,8 @@ resolve_master_key() {
   return 1
 }
 
-# Mint or reuse a scoped virtual key from LiteLLM.
-# Prints the key to stdout. Log messages go to stderr.
+# Mint a scoped virtual key from LiteLLM (rotates: deletes any previous key
+# with the same alias). Prints the key to stdout. Log messages go to stderr.
 mint_or_reuse_key() {
   local alias="$1"; shift
   local models="" budget="100" duration="" no_budget=false dry_run=false
@@ -110,11 +111,14 @@ mint_or_reuse_key() {
   local body
   body=$(jq -n "${jq_args[@]}" "$jq_filter")
 
-  # ── Try to reuse existing key with same alias ──
-  local existing_key="" existing_key_id=""
+  # ── Look up existing key with same alias (deleted after mint) ──
+  local existing_key_id=""
   local key_list
   key_list=$(curl -sf -m 10 "$litellm_url/key/list" \
-    -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
+    --config - 2>/dev/null <<CURLCFG || true
+header = "Authorization: Bearer $LITELLM_MASTER_KEY"
+CURLCFG
+)
   if [ -n "$key_list" ]; then
     local key_lookup_count=0
     local key_id key_info found_alias
@@ -125,11 +129,13 @@ mint_or_reuse_key() {
       fi
       key_lookup_count=$((key_lookup_count + 1))
       key_info=$(curl -sf -m 10 "$litellm_url/key/info?key=$key_id" \
-        -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
+        --config - 2>/dev/null <<CURLCFG || true
+header = "Authorization: Bearer $LITELLM_MASTER_KEY"
+CURLCFG
+)
       if [ -n "$key_info" ]; then
         found_alias=$(echo "$key_info" | jq -r '.info.key_alias // empty' 2>/dev/null)
         if [ "$found_alias" = "$alias" ]; then
-          existing_key=$(echo "$key_info" | jq -r '.info.key_name // empty' 2>/dev/null)
           existing_key_id="$key_id"
           break
         fi
@@ -142,9 +148,12 @@ mint_or_reuse_key() {
   local max_attempts=3 response=""
   for attempt in $(seq 1 $max_attempts); do
     response=$(curl -sf --connect-timeout 10 --max-time 30 -X POST "$litellm_url/key/generate" \
-      -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+      --config - \
       -H "Content-Type: application/json" \
-      -d "$body" 2>/dev/null) && break
+      -d "$body" 2>/dev/null <<CURLCFG
+header = "Authorization: Bearer $LITELLM_MASTER_KEY"
+CURLCFG
+) && break
     if [ "$attempt" -lt $max_attempts ]; then
       local delay=$((attempt * 5))
       log_info "Attempt $attempt failed. Retrying in ${delay}s..." >&2
@@ -163,9 +172,11 @@ mint_or_reuse_key() {
     delete_body=$(jq -nc --arg id "$existing_key_id" '{keys: [$id]}')
     local delete_rc
     curl -sf -m 10 -X POST "$litellm_url/key/delete" \
-      -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+      --config - \
       -H "Content-Type: application/json" \
-      -d "$delete_body" &>/dev/null && delete_rc=0 || delete_rc=$?
+      -d "$delete_body" &>/dev/null <<CURLCFG && delete_rc=0 || delete_rc=$?
+header = "Authorization: Bearer $LITELLM_MASTER_KEY"
+CURLCFG
     if [ "$delete_rc" -ne 0 ]; then
       log_warn "Failed to delete existing key with alias '$alias'. Old key may still be active." >&2
     fi

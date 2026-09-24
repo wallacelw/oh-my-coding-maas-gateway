@@ -58,6 +58,11 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash -s -- -y --api-key=sk-xxxx --tool=litellm,opencode
 ```
 
+Non-interactive upgrades discard local repo changes if `git pull` fails —
+bootstrap prints a warning counting what is being discarded before
+resetting to `origin/main`. Config and data in `.env`, `configs/`, and
+Docker volumes are preserved.
+
 Estimated time: ~5 min fresh, ~2 min upgrade. For flags and non-interactive
 usage, see [INSTALLATION.md](./INSTALLATION.md).
 
@@ -86,6 +91,10 @@ Or non-interactive:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash -s -- -y
 ```
+
+In non-interactive mode, if `git pull` fails, bootstrap warns about the
+local commits and uncommitted changes it is discarding, then resets to
+`origin/main` — `.env`, configs, and Docker volumes are preserved.
 
 After upgrade, restart any running coding tools — plugin/preset changes
 are not hot-reloaded.

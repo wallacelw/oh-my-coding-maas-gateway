@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077  # written configs hold API keys — deny group/world access
 
 # ─── 03b_codex.sh — Codex CLI tool (pipeline step 03b, optional) ────────────────
 #
@@ -26,7 +27,6 @@ CURL_TIMEOUT=15
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
-LOG_TAG="codex"
 source_env "$PROJECT_DIR"
 
 # ── Parse args ──
@@ -45,12 +45,18 @@ log_step "Step 03b — Codex CLI"
 
 # ── 1. Check prerequisites ──
 log_info "Checking prerequisites..."
-prereq_ensure_apt "curl" curl curl "curl is needed to download Codex CLI"
-prereq_ensure_npm "Node.js + npm are needed to install and run Codex CLI"
-prereq_ensure_apt "jq" jq jq "jq is needed to parse Codex config JSON"
-prereq_ensure_apt "bubblewrap" bwrap bubblewrap "bubblewrap provides sandboxing for Codex CLI execution"
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping prerequisite installs"
+else
+  prereq_ensure_apt "curl" curl curl "curl is needed to download Codex CLI"
+  prereq_ensure_npm "Node.js + npm are needed to install and run Codex CLI"
+  prereq_ensure_apt "jq" jq jq "jq is needed to parse Codex config JSON"
+  prereq_ensure_apt "bubblewrap" bwrap bubblewrap "bubblewrap provides sandboxing for Codex CLI execution"
+fi
 
-if curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping LiteLLM proxy check"
+elif curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"
 else
   log_error "LiteLLM proxy not reachable at $LITELLM_URL. Start it first."
@@ -85,9 +91,11 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
     if [ "$DRY_RUN" = true ]; then
       VIRTUAL_KEY="$EXISTING_KEY"
     elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/responses" \
-         -H "Authorization: Bearer $EXISTING_KEY" \
+         --config - \
          -H "Content-Type: application/json" \
-         -d '{"model":"glm-5.1","input":"ok"}'; then
+         -d '{"model":"glm-5.1","input":"ok"}' <<CURLCFG; then
+header = "Authorization: Bearer $EXISTING_KEY"
+CURLCFG
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
@@ -121,8 +129,19 @@ if [ "$DRY_RUN" = true ]; then
 fi
 
 mkdir -p "$CODEX_DIR"
-cp "$PROJECT_DIR/configs/codex/model_catalog.json" "$CODEX_DIR/model_catalog.json"
-log_ok "Written: $CODEX_DIR/model_catalog.json"
+
+if [ -f "$CODEX_DIR/model_catalog.json" ]; then
+  if cmp -s "$PROJECT_DIR/configs/codex/model_catalog.json" "$CODEX_DIR/model_catalog.json"; then
+    log_info "model_catalog.json unchanged — skipping write"
+  else
+    backup_with_prune "$CODEX_DIR/model_catalog.json" >/dev/null
+    cp "$PROJECT_DIR/configs/codex/model_catalog.json" "$CODEX_DIR/model_catalog.json"
+    log_ok "Updated: $CODEX_DIR/model_catalog.json (backup saved)"
+  fi
+else
+  cp "$PROJECT_DIR/configs/codex/model_catalog.json" "$CODEX_DIR/model_catalog.json"
+  log_ok "Written: $CODEX_DIR/model_catalog.json"
+fi
 
 TEMPLATE="$PROJECT_DIR/configs/codex/config.toml.template"
 NEW_CONFIG=$(sed "s|<CODEX_HOME>|$CODEX_DIR|g" "$TEMPLATE")

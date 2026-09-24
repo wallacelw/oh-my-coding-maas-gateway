@@ -8,8 +8,9 @@ set -euo pipefail
 # Optional:      no (core, always runs; scoped via --skip-*)
 # Description:   Validate all installed components: .env completeness, Docker
 #                services, LiteLLM health + config, observability (Prometheus +
-#                Grafana), and each coding tool (opencode, Codex, Claude Code).
-#                Sections are skipped via --skip-* or selected via --xxx-only.
+#                Grafana), and each coding tool (opencode, Codex, Claude Code,
+#                Pi). Sections are skipped via --skip-* or selected via
+#                --xxx-only.
 # Inputs:        .env, running Docker Compose stack, tool config files
 # Outputs:       pass/fail/warn counts to stdout; exit 0 on pass, 1 on fail
 # Standalone:    yes — ./scripts/04_validate.sh
@@ -18,7 +19,7 @@ set -euo pipefail
 #   ./04_validate.sh                       # full validation
 #   ./04_validate.sh --dry-run             # structure checks only (no network)
 #   ./04_validate.sh --litellm-only        # only LiteLLM proxy checks
-#   ./04_validate.sh --skip-opencode       # LiteLLM + Codex + Claude Code
+#   ./04_validate.sh --skip-opencode       # LiteLLM + Codex + Claude Code + Pi
 # ──────────────────────────────────────────────────────────────────────────────
 
 PASS=0
@@ -42,8 +43,6 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
-prereq_ensure_apt "curl" curl curl "curl is needed for API smoke tests"
-prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse validation JSON responses"
 
 for arg in "$@"; do
   case "$arg" in
@@ -60,6 +59,16 @@ for arg in "$@"; do
     *)                  log_error "Unknown flag: $arg"; exit 1 ;;
   esac
 done
+
+# ── Prerequisites ──
+# Dry-run only prints what would be checked — it needs no curl/jq installed
+# (mirrors the 02/03x dry-run contract).
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping prerequisite installs"
+else
+  prereq_ensure_apt "curl" curl curl "curl is needed for API smoke tests"
+  prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse validation JSON responses"
+fi
 
 # ── Mode exclusivity (only for --xxx-only flags) ──
 MODE_COUNT=0
@@ -286,7 +295,10 @@ if [ "$RUN_LITELLM" = true ]; then
     fi
 
     if [ -n "${LITELLM_MASTER_KEY:-}" ]; then
-      HEALTH_RESP=$(curl -s --connect-timeout 10 --max-time 15 "$LITELLM_URL/health" -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
+      HEALTH_RESP=$(curl -s --connect-timeout 10 --max-time 15 "$LITELLM_URL/health" --config - 2>/dev/null <<CURLCFG || true
+header = "Authorization: Bearer $LITELLM_MASTER_KEY"
+CURLCFG
+)
       HEALTH_ANALYSIS=$(echo "$HEALTH_RESP" | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
@@ -470,9 +482,11 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
     for model_entry in "${MODELS[@]}"; do
       IFS=':' read -r model_name _ <<< "$model_entry"
       if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
-          -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-          -H "Content-Type: application/json" \
-          -d "{\"model\":\"$model_name\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1; then
+           --config - \
+           -H "Content-Type: application/json" \
+           -d "{\"model\":\"$model_name\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1 <<CURLCFG; then
+header = "Authorization: Bearer $LITELLM_MASTER_KEY"
+CURLCFG
         pass "Inference ($model_name): responded"
       else
         fail "Inference ($model_name): did not respond"
@@ -508,7 +522,11 @@ if [ "$RUN_OPENCODE" = true ]; then
   if [ -n "$CONFIG_FILE" ]; then
     pass "opencode.json exists: $CONFIG_FILE"
     CLEAN_CONFIG=$(strip_jsonc "$CONFIG_FILE")
-    pass "Config parses as valid JSON"
+    if echo "$CLEAN_CONFIG" | jq -e . >/dev/null 2>&1; then
+      pass "Config parses as valid JSON"
+    else
+      fail "Config is not valid JSON — fix syntax or re-run: ./scripts/03a_opencode.sh"
+    fi
   else
     fail "opencode.json not found in $OPENCODE_DIR"
   fi
@@ -528,9 +546,22 @@ if [ "$RUN_OPENCODE" = true ]; then
       "LiteLLM provider defined" '.provider.LiteLLM' \
       "LiteLLM baseURL is 127.0.0.1:4000" '.provider.LiteLLM.options.baseURL == "http://127.0.0.1:4000"' \
       "LiteLLM apiKey set" '.provider.LiteLLM.options.apiKey' \
-      "LiteLLM apiKey starts with sk-" '(.provider.LiteLLM.options.apiKey | startswith("sk-"))' \
-      "Huawei-MaaS provider defined" '.provider["Huawei-MaaS"]' \
-      "Huawei-MaaS has $MODEL_COUNT+ models" ".provider[\"Huawei-MaaS\"].models | keys | length >= $MODEL_COUNT" \
+      "LiteLLM apiKey starts with sk-" '(.provider.LiteLLM.options.apiKey | startswith("sk-"))'
+
+    # Huawei-MaaS direct provider is optional — 03a_opencode.sh omits it when
+    # no direct MaaS key is given ("press Enter to skip direct provider").
+    # Only validate it when present; otherwise report as skipped.
+    # (stdout redirected: this is a presence gate, not a reported check)
+    if jqc "$CLEAN_CONFIG" '.provider["Huawei-MaaS"]' >/dev/null; then
+      check_jq "$CLEAN_CONFIG" \
+        "Huawei-MaaS provider defined" '.provider["Huawei-MaaS"]' \
+        "Huawei-MaaS has $MODEL_COUNT+ models" ".provider[\"Huawei-MaaS\"].models | keys | length >= $MODEL_COUNT"
+    else
+      skip "Huawei-MaaS provider defined (direct provider not configured)"
+      skip "Huawei-MaaS has $MODEL_COUNT+ models (direct provider not configured)"
+    fi
+
+    check_jq "$CLEAN_CONFIG" \
       "LiteLLM has $MODEL_COUNT+ models" ".provider.LiteLLM.models | keys | length >= $MODEL_COUNT" \
       "oh-my-opencode-slim plugin (version-pinned)" ".plugin | index(\"$SLIM_PIN\")" \
       "explore agent disabled" '.agent.explore.disable == true' \
@@ -650,7 +681,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       fi
     fi
   else
-    fail_n 45 "No oh-my-opencode-slim config — skipping 45 preset checks"
+    fail_n 49 "No oh-my-opencode-slim config — skipping 49 preset checks"
   fi
 
   echo ""
@@ -669,7 +700,10 @@ if [ "$RUN_OPENCODE" = true ]; then
       fail "No API key for model checks"
     else
       MODELS_JSON=$(curl -sf -m 10 "$LITELLM_URL/v1/models" \
-        -H "Authorization: Bearer $VIRTUAL_KEY" 2>/dev/null || true)
+        --config - 2>/dev/null <<CURLCFG || true
+header = "Authorization: Bearer $VIRTUAL_KEY"
+CURLCFG
+)
 
       if [ -z "$MODELS_JSON" ] || ! printf '%s' "$MODELS_JSON" | jq -e '.data | length > 0' >/dev/null 2>&1; then
         fail "Model catalog not reachable or empty"
@@ -681,9 +715,11 @@ if [ "$RUN_OPENCODE" = true ]; then
 
         SMOKE_MODEL="glm-5.1"
         if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
-            -H "Authorization: Bearer $VIRTUAL_KEY" \
+            --config - \
             -H "Content-Type: application/json" \
-            -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1; then
+            -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1 <<CURLCFG; then
+header = "Authorization: Bearer $VIRTUAL_KEY"
+CURLCFG
           pass "Inference smoke test: $SMOKE_MODEL responded"
         else
           fail "Inference smoke test: $SMOKE_MODEL did not respond"
@@ -733,21 +769,19 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     pass "Prometheus reachable at :9090"
 
     # M4: Prometheus retention applied
-    if [ "$DRY_RUN" = true ]; then
-      skip "Prometheus retention check"
-    else
-      EXPECTED_RET="${PROMETHEUS_RETENTION:-30d}"
-      ACTUAL_RET=$(curl -sf -m 5 http://127.0.0.1:9090/api/v1/status/flags 2>/dev/null \
-        | jq -r '.data."storage.tsdb.retention.time" // empty' 2>/dev/null || true)
-      if [ -n "$ACTUAL_RET" ]; then
-        if [ "$ACTUAL_RET" = "$EXPECTED_RET" ]; then
-          pass "Prometheus retention: $ACTUAL_RET (matches .env)"
-        else
-          warn "Prometheus retention: $ACTUAL_RET (expected $EXPECTED_RET from .env)"
-        fi
+    # (No dry-run guard needed: the elif above is only reached when DRY_RUN is
+    # false — the leading if branch already skipped dry runs.)
+    EXPECTED_RET="${PROMETHEUS_RETENTION:-30d}"
+    ACTUAL_RET=$(curl -sf -m 5 http://127.0.0.1:9090/api/v1/status/flags 2>/dev/null \
+      | jq -r '.data."storage.tsdb.retention.time" // empty' 2>/dev/null || true)
+    if [ -n "$ACTUAL_RET" ]; then
+      if [ "$ACTUAL_RET" = "$EXPECTED_RET" ]; then
+        pass "Prometheus retention: $ACTUAL_RET (matches .env)"
       else
-        skip "Prometheus retention (flags API not available)"
+        warn "Prometheus retention: $ACTUAL_RET (expected $EXPECTED_RET from .env)"
       fi
+    else
+      skip "Prometheus retention (flags API not available)"
     fi
   else
     fail "Prometheus not reachable at :9090"
@@ -911,9 +945,11 @@ if [ "$RUN_CODEX" = true ]; then
   elif [ -n "$CODEX_VK" ]; then
     SMOKE_MODEL="glm-5.1"
     if curl -sf -m 30 "$LITELLM_URL/v1/responses" \
-        -H "Authorization: Bearer $CODEX_VK" \
+        --config - \
         -H "Content-Type: application/json" \
-        -d "{\"model\":\"$SMOKE_MODEL\",\"input\":\"ok\"}" >/dev/null 2>&1; then
+        -d "{\"model\":\"$SMOKE_MODEL\",\"input\":\"ok\"}" >/dev/null 2>&1 <<CURLCFG; then
+header = "Authorization: Bearer $CODEX_VK"
+CURLCFG
       pass "Responses API smoke test: $SMOKE_MODEL responded"
     else
       fail "Responses API smoke test: $SMOKE_MODEL did not respond"
@@ -994,10 +1030,12 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
   elif [ -n "$CLAUDE_VK" ]; then
     SMOKE_MODEL="claude-glm-5.1"
     if curl -sf -m 30 "$LITELLM_URL/v1/messages" \
-        -H "x-api-key: $CLAUDE_VK" \
+        --config - \
         -H "Content-Type: application/json" \
         -H "anthropic-version: 2023-06-01" \
-        -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1; then
+        -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1 <<CURLCFG; then
+header = "x-api-key: $CLAUDE_VK"
+CURLCFG
       pass "Messages API smoke test: $SMOKE_MODEL responded"
     else
       fail "Messages API smoke test: $SMOKE_MODEL did not respond"
@@ -1085,9 +1123,11 @@ if [ "$RUN_PI" = true ]; then
   elif [ -n "${PI_API_KEY:-}" ]; then
     SMOKE_MODEL="glm-5.1"
     if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
-        -H "Authorization: Bearer $PI_API_KEY" \
+        --config - \
         -H "Content-Type: application/json" \
-        -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1; then
+        -d "{\"model\":\"$SMOKE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ok\"}],\"max_tokens\":1}" >/dev/null 2>&1 <<CURLCFG; then
+header = "Authorization: Bearer $PI_API_KEY"
+CURLCFG
       pass "Inference smoke test: $SMOKE_MODEL responded"
     else
       fail "Inference smoke test: $SMOKE_MODEL did not respond"
@@ -1102,7 +1142,9 @@ fi
 # ════════════════════════════════════════════════════════════════════════════
 # SECTION G: Cross-tool Key Isolation
 # ════════════════════════════════════════════════════════════════════════════
-if [ "$RUN_LITELLM" = true ]; then
+# G reads every coding tool's config, so it is in scope only when at least one
+# tool section is enabled — it does not run under --litellm-only.
+if [ "$RUN_OPENCODE" = true ] || [ "$RUN_CODEX" = true ] || [ "$RUN_CLAUDE_CODE" = true ] || [ "$RUN_PI" = true ]; then
   log_step "G. Cross-tool key isolation"
 
   echo ""
@@ -1157,7 +1199,10 @@ if [ "$RUN_LITELLM" = true ]; then
     for vk in "${!EXPECTED_ALIASES[@]}"; do
       EXPECTED="${EXPECTED_ALIASES[$vk]}"
       KEY_INFO=$(curl -sf -m 10 "$LITELLM_URL/key/info?key=$vk" \
-        -H "Authorization: Bearer $LITELLM_MASTER_KEY" 2>/dev/null || true)
+        --config - 2>/dev/null <<CURLCFG || true
+header = "Authorization: Bearer $LITELLM_MASTER_KEY"
+CURLCFG
+)
       ACTUAL_ALIAS=$(printf '%s' "$KEY_INFO" | jq -r '.info.key_alias // empty' 2>/dev/null || true)
       if [ "$ACTUAL_ALIAS" = "$EXPECTED" ]; then
         pass "$EXPECTED virtual key alias: correct"
@@ -1170,6 +1215,8 @@ if [ "$RUN_LITELLM" = true ]; then
   fi
 
   echo ""
+else
+  skip "G. Cross-tool key isolation (no coding-tool sections enabled)"
 fi
 
 # ── Summary ──

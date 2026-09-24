@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077  # written configs hold API keys — deny group/world access
 
 # ─── 03d_pi.sh — Pi coding agent (pipeline step 03d, optional) ──────────────────
 #
 # Domain:        @earendil-works/pi-coding-agent
 # Order:         03d (after LiteLLM proxy is live)
 # Optional:      yes (runs only if pi is in the selection)
-# Description:   Install the pi binary via curl|sh from pi.dev, mint a LiteLLM virtual key
+# Description:   Install the pi binary (via npm on Node 22+, else the pi.dev
+#                installer run from a temp file), mint a LiteLLM virtual key
 #                (alias "pi"), and write models.json pointing to the LiteLLM
 #                proxy with all available models.
 # Inputs:        .env (LITELLM_MASTER_KEY, HUAWEI_MAAS_API_KEY), --virtual-key, --dry-run
@@ -26,7 +28,6 @@ source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
-LOG_TAG="pi"
 source_env "$PROJECT_DIR"
 
 # ── Parse args ──
@@ -45,10 +46,16 @@ log_step "Step 03d — Pi coding agent"
 
 # ── 1. Check prerequisites ──
 log_info "Checking prerequisites..."
-prereq_ensure_apt "curl" curl curl "curl is needed to download the Pi agent installer"
-prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse Pi config JSON"
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping prerequisite installs"
+else
+  prereq_ensure_apt "curl" curl curl "curl is needed to download the Pi agent installer"
+  prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse Pi config JSON"
+fi
 
-if curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping LiteLLM proxy check"
+elif curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"
 else
   log_error "LiteLLM proxy not reachable at http://127.0.0.1:4000. Start it first."
@@ -66,8 +73,9 @@ if ! command -v pi &>/dev/null; then
     if [ "${AUTO_YES:-false}" = true ] && [ "$_node_major" -ge 22 ] 2>/dev/null; then
       # Node.js 22+ available — install Pi directly via npm, skip installer
       log_dim "Node.js $_node_major detected — installing Pi via npm directly"
-      npm install -g --ignore-scripts --min-release-age=0 @earendil-works/pi-coding-agent
-      _pi_rc=$?
+      # Capture rc without set -e termination so the PATH refresh and
+      # recovery guidance below still run on failure.
+      npm install -g --ignore-scripts --min-release-age=0 @earendil-works/pi-coding-agent && _pi_rc=0 || _pi_rc=$?
     else
       # Use installer script (handles Node.js installation if needed)
       PI_INSTALLER_TMP=$(mktemp)
@@ -82,11 +90,10 @@ if ! command -v pi &>/dev/null; then
         # create a pseudo-terminal so the installer can detect a tty.
         # Feed finite 'y' answers (not 'yes' which causes broken pipe
         # when installer exits, killing it mid-install under set -e).
-        printf 'y\ny\ny\ny\ny\n' | script -q -c "sh $PI_INSTALLER_TMP" /dev/null
+        printf 'y\ny\ny\ny\ny\n' | script -q -c "sh $PI_INSTALLER_TMP" /dev/null && _pi_rc=0 || _pi_rc=$?
       else
-        sh "$PI_INSTALLER_TMP"
+        sh "$PI_INSTALLER_TMP" && _pi_rc=0 || _pi_rc=$?
       fi
-      _pi_rc=$?
       rm -f "$PI_INSTALLER_TMP"
     fi
     # Refresh PATH — installer may have added ~/.local/bin or updated nvm
@@ -118,6 +125,10 @@ if ! command -v pi &>/dev/null; then
       log_dim "  Run: exec \"\$SHELL\"  then re-run this script."
       exit 1
     fi
+    if [ "$_pi_rc" -ne 0 ]; then
+      log_error "Pi install reported an error (exit code $_pi_rc) — see the output above."
+      exit 1
+    fi
     log_ok "Installed: $(pi --version 2>/dev/null || echo 'unknown')"
   fi
 else
@@ -137,9 +148,11 @@ elif [ -f "$PI_CONFIG" ]; then
     if [ "$DRY_RUN" = true ]; then
       VIRTUAL_KEY="$EXISTING_KEY"
     elif retry_curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/v1/chat/completions" \
-         -H "Authorization: Bearer $EXISTING_KEY" \
+         --config - \
          -H "Content-Type: application/json" \
-         -d '{"model":"glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
+         -d '{"model":"glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}' <<CURLCFG; then
+header = "Authorization: Bearer $EXISTING_KEY"
+CURLCFG
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else

@@ -35,8 +35,11 @@ show_installed_versions() {
   local v_project v_opencode v_slim v_codex v_claude v_pi
   local v_litellm v_postgres v_prometheus v_grafana
 
-  # project — first line of VERSION
+  # project — first line of VERSION, shown in the v-prefixed form (v1.22.0)
   v_project=$(head -1 "$project_dir/VERSION" 2>/dev/null || true)
+  if [ -n "$v_project" ]; then
+    v_project="v${v_project#v}"
+  fi
 
   # Coding tools (CLI on PATH)
   v_opencode=$(opencode --version 2>/dev/null || echo "")

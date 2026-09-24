@@ -20,7 +20,6 @@ BACKUP_DIR="$PROJECT_DIR/backups"
 COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
 
 source "$SCRIPT_DIR/helpers/common.sh"
-LOG_TAG="backup"
 
 usage() {
   cat <<'EOF'

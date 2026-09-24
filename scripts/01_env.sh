@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077  # .env holds secrets — deny group/world access to the temp file during write
 
 # ─── 01_env.sh — Environment & secrets (pipeline step 01, core) ───────────────
 #
@@ -26,7 +27,10 @@ ENV_EXAMPLE="$PROJECT_DIR/configs/.env.template"
 ENV_FILE="$PROJECT_DIR/.env"
 
 # ── Cleanup trap for temp file (R5) ──
-trap 'rm -f "$ENV_FILE.tmp" 2>/dev/null' EXIT INT TERM
+# Signal traps exit → EXIT trap fires → tmp file cleaned up exactly once.
+trap 'rm -f "$ENV_FILE.tmp" 2>/dev/null' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # ── Helpers ──
 source "$SCRIPT_DIR/helpers/prereqs.sh"
@@ -180,7 +184,10 @@ validate_maas_key() {
   local key="$1" base="$2"
   local http_code
   http_code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
-    "$base/models" -H "Authorization: Bearer $key" 2>/dev/null || echo "000")
+    "$base/models" --config - 2>/dev/null <<CURLCFG || echo "000"
+header = "Authorization: Bearer $key"
+CURLCFG
+)
   case "$http_code" in
     200) return 0 ;;
     401|403) return 1 ;;
@@ -189,12 +196,11 @@ validate_maas_key() {
 }
 
 MAAS_API_KEY="${HUAWEI_MAAS_API_KEY:-}"
-if [ -z "$MAAS_API_KEY" ] && [ -n "$EXISTING_MAAS_KEY" ]; then
-  MAAS_API_KEY="$EXISTING_MAAS_KEY"
-  log_ok "HUAWEI_MAAS_API_KEY preserved from existing .env"
-fi
 if [ -n "$MAAS_API_KEY" ]; then
   log_ok "HUAWEI_MAAS_API_KEY set from environment"
+elif [ -n "$EXISTING_MAAS_KEY" ]; then
+  MAAS_API_KEY="$EXISTING_MAAS_KEY"
+  log_ok "HUAWEI_MAAS_API_KEY preserved from existing .env"
 elif [ "${AUTO_YES:-false}" = true ]; then
   log_error "HUAWEI_MAAS_API_KEY is required. Use --api-key=KEY or set HUAWEI_MAAS_API_KEY env var."
   exit 1
@@ -244,7 +250,15 @@ if [ -n "${HUAWEI_MAAS_API_KEY_COUNT:-}" ]; then
     if [ "$actual_count" -ne "$HUAWEI_MAAS_API_KEY_COUNT" ]; then
       log_warn "HUAWEI_MAAS_API_KEY_COUNT=$HUAWEI_MAAS_API_KEY_COUNT but only $actual_count key(s) provided. Using actual count."
     fi
-    [ ${#EXTRA_KEYS[@]} -gt 0 ] && log_ok "${#EXTRA_KEYS[@]} extra MaaS key(s) from environment"
+  fi
+  # Never silently shrink the key set: if the environment carries fewer
+  # extra keys than the existing .env, preserve the existing keys instead.
+  if [ ${#EXISTING_EXTRA_KEYS[@]} -gt ${#EXTRA_KEYS[@]} ]; then
+    log_warn "Environment provides ${#EXTRA_KEYS[@]} extra key(s) but existing .env has ${#EXISTING_EXTRA_KEYS[@]} — preserving existing keys."
+    log_dim "  Export HUAWEI_MAAS_API_KEY_COUNT + HUAWEI_MAAS_API_KEY_1..N to replace them."
+    EXTRA_KEYS=("${EXISTING_EXTRA_KEYS[@]}")
+  elif [ ${#EXTRA_KEYS[@]} -gt 0 ]; then
+    log_ok "${#EXTRA_KEYS[@]} extra MaaS key(s) from environment"
   fi
 elif [ ${#EXISTING_EXTRA_KEYS[@]} -gt 0 ]; then
   EXTRA_KEYS=("${EXISTING_EXTRA_KEYS[@]}")
@@ -351,12 +365,15 @@ HUAWEI_MAAS_ANTHROPIC_API_BASE="${MAAS_ANTHROPIC_BASE}"
 BIND_ADDRESS="${BIND_ADDRESS}"
 EOF
 
-# Preserve unknown vars from existing .env (avoid silent data loss on re-run)
+# Preserve unknown vars and user comments from existing .env (avoid silent
+# data loss on re-run). Script-generated section headers ("# ──") and the
+# BIND_ADDRESS hint are excluded — they are rewritten fresh above — so
+# carrying them through would duplicate them on every re-run.
 if [ -f "$ENV_FILE" ]; then
-  unknown_vars=$(grep -vE '^(#|$|LITELLM_MASTER_KEY=|LITELLM_SALT_KEY=|DB_PASSWORD=|GRAFANA_ADMIN_PASSWORD=|PROMETHEUS_RETENTION=|HUAWEI_MAAS_API_KEY=|HUAWEI_MAAS_API_KEY_COUNT=|HUAWEI_MAAS_API_KEY_[0-9]+=|HUAWEI_MAAS_API_BASE=|HUAWEI_MAAS_ANTHROPIC_API_BASE=|BIND_ADDRESS=)' "$ENV_FILE" 2>/dev/null || true)
+  unknown_vars=$(grep -vE '^(# ──|# 127\.0\.0\.1 = localhost only|$|LITELLM_MASTER_KEY=|LITELLM_SALT_KEY=|DB_PASSWORD=|GRAFANA_ADMIN_PASSWORD=|PROMETHEUS_RETENTION=|HUAWEI_MAAS_API_KEY=|HUAWEI_MAAS_API_KEY_COUNT=|HUAWEI_MAAS_API_KEY_[0-9]+=|HUAWEI_MAAS_API_BASE=|HUAWEI_MAAS_ANTHROPIC_API_BASE=|BIND_ADDRESS=)' "$ENV_FILE" 2>/dev/null || true)
   if [ -n "$unknown_vars" ]; then
     echo "" >> "$ENV_FILE.tmp"
-    echo "# ── Custom variables (preserved from previous .env) ──" >> "$ENV_FILE.tmp"
+    echo "# ── Custom variables & comments (preserved from previous .env) ──" >> "$ENV_FILE.tmp"
     echo "$unknown_vars" >> "$ENV_FILE.tmp"
   fi
 fi

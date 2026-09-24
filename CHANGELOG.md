@@ -5,6 +5,116 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.0] - 2026-09-25
+
+### Fixed
+
+Round of fixes from a 3-seat end-to-end council review (~60 findings,
+live-verified before fixing; 0 HIGH issues remaining after a fresh oracle
+quality pass).
+
+**Agent runbooks (SKILL.md):**
+- Option 6a add-key runbook corrupted `.env` when followed verbatim
+  (missing quote-strip on `HUAWEI_MAAS_API_KEY_COUNT`).
+- Wrong project path (`~/…` → `/home/oh-my-coding-maas-gateway` with a
+  locate fallback), invalid `"models": ["all"]` key-mint example, missing
+  deepseek-v4.1-flash 50% off-peak tier, stale model names in the
+  recovery table.
+
+**Dry-run contract (now side-effect-free everywhere):**
+- 02_litellm.sh: dry-run no longer rewrites the live config.yaml
+  (bind-mounted into the running proxy) or creates backups — renders to
+  a temp file with a diff summary; skips prereq installs and key
+  validation.
+- 03a–03d: dry-run skips prereq installs and the live-proxy requirement
+  — a fresh machine can now preview a full install.
+- bootstrap.sh: dry-run skips core prereq installs, the bootstrap lock,
+  the standalone clone, and the standalone upgrade pull (the destructive
+  reset fallback is unreachable in dry-run); "Would run" lines show real
+  invocations.
+- 04_validate.sh: dry-run skips prereq installs (args now parsed before
+  the prereq block).
+
+**Upgrade path:**
+- 02_litellm.sh port handler no longer force-kills the live stack's own
+  containers on idempotent re-runs (live-confirmed: containers matching
+  `litellm_*` were `docker rm -f`'d on every upgrade, killing in-flight
+  requests); genuinely stale containers are still removed, foreign ones
+  still refused.
+- bootstrap.sh non-interactive upgrades warn loudly (counting discarded
+  commits/changes) before `git reset --hard`.
+- update.sh: docker compose invocations pass `-f` (previously worked
+  only from the project dir); npm updates detect non-writable prefixes
+  and use sudo (mirrors 03b/03c); slim bump validates the new version
+  before installing; slim bumps now also sync the version references in
+  INSTALLATION.md and REFERENCE.md (stops recurring doc drift); removed
+  a lingering RETURN trap and dead code.
+
+**Masked failures:**
+- 03c: jq failure on `~/.claude.json` no longer logs success.
+- 04_validate B2 "Config parses as valid JSON" now actually validates.
+- 03d: pi installer failures now reach the PATH-refresh/recovery
+  guidance instead of aborting silently.
+- bootstrap: 05_skill failures now reflected in the summary line and
+  exit code.
+- 03c "Overwriting existing settings" warning now describes the actual
+  merge (existing keys preserved).
+
+**Security:**
+- All 18 authenticated curl calls (`Authorization: Bearer` +
+  `x-api-key`) migrated to `curl --config -` stdin — keys no longer
+  visible in `ps` (extends the v1.9.8 Grafana-password pattern to every
+  call site).
+- 01_env.sh and 03x config writes now `umask 077` — secret temp files
+  are never world-readable during writes.
+- install-skill.sh validates `--name` (rejects `/`, `..`, whitespace).
+- prompt_password rejects empty input (empty DB/Grafana passwords
+  previously surfaced only as confusing compose failures).
+
+**Validation fairness:**
+- B3 no longer hard-fails the supported "no direct provider" config.
+- Section G (cross-tool key isolation) no longer runs under
+  `--litellm-only`.
+- `fail_n` skip counts reconciled with the actual check inventory.
+- Pre-flight now probes all MaaS keys (extras warn; key 0 still fails).
+
+**Grafana:**
+- "Cached input tokens" panel moved into the Tokens row for correct
+  collapse grouping (rendered in Tokens but was collapse-owned by
+  Cache).
+- Stale DeepSeek rate-limit text updated to v4.1-flash limits (1M TPM /
+  100 RPM).
+- "Models Healthy" counts a model healthy only when all its deployments
+  are healthy; the requested_model/litellm_model_name label mix is now
+  documented in the panel description.
+
+**Misc:**
+- LOG_TAG removed everywhere (dead code; docs described a mechanism that
+  never existed); KEYS_FROM_ENV dead block, dead AUTO_YES check, and a
+  dead DRY_RUN branch removed.
+- 01_env: Ctrl-C now actually interrupts (INT/TERM traps exit); an
+  exported key count no longer silently drops preserved extra keys;
+  `.env` user comments survive re-runs; key-provenance messages
+  accurate.
+- keys.sh `mint_or_reuse_key` documented as rotate-and-replace (what it
+  always did); dead variable removed.
+- bootstrap scope menu accepts comma-combos (`1,3,5`); install-dir
+  prompt shows the real path; project version no longer printed twice.
+- mask_key masks short keys; models.sh header lists all consumers; 03a
+  checks the installed plugin dir (not just the config entry); 03b backs
+  up model_catalog.json; 05_skill header matches actual headless
+  behavior; 02 validates routing strategy at entry; portable port-grep
+  (GNU `\b` removed).
+
+### Docs
+
+- INSTALLATION/REFERENCE/README truth-sync: slim 2.2.24, LOG_TAG claims
+  replaced with real output, non-interactive reset documented, dashboard
+  sections corrected (Tokens 4 / Cache 3 / Cost 3, render order), helper
+  tables completed, `--virtual-key=` flags documented, config.yaml
+  structure synced to the generator, mint description fixed, restore
+  behavior clarified, dry-run contract documented.
+
 ## [1.22.0] - 2026-09-24
 
 ### Added

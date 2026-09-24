@@ -32,11 +32,15 @@ the reference sections below.
 
 ## Project Location
 
-The gateway is at `~/oh-my-coding-maas-gateway`. `cd` there first:
+The gateway is at `/home/oh-my-coding-maas-gateway` (the default install
+location). `cd` there first:
 
 ```bash
-cd ~/oh-my-coding-maas-gateway
+cd /home/oh-my-coding-maas-gateway
 ```
+
+If installed elsewhere, locate the repo by finding the directory that
+contains `scripts/04_validate.sh`.
 
 ## Available Scripts
 
@@ -165,7 +169,7 @@ console, region ap-southeast-1, starts with `sk-`).
 
 **Step 2**: Read the current key count from `.env`:
 ```bash
-CURRENT_COUNT=$(grep '^HUAWEI_MAAS_API_KEY_COUNT=' .env | cut -d= -f2)
+CURRENT_COUNT=$(grep '^HUAWEI_MAAS_API_KEY_COUNT=' .env | cut -d= -f2 | tr -d '"')
 NEW_INDEX=$CURRENT_COUNT
 NEW_COUNT=$((CURRENT_COUNT + 1))
 ```
@@ -201,12 +205,13 @@ integration. Each virtual key has its own budget and access control.
 MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
 ```
 
-**Step 3**: Mint the key:
+**Step 3**: Mint the key (omitting `models` grants access to all models,
+matching `scripts/helpers/keys.sh`):
 ```bash
 curl -X POST http://127.0.0.1:4000/key/generate \
   -H "Authorization: Bearer $MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"key_alias": "<alias>", "models": ["all"], "max_budget": <budget>}'
+  -d '{"key_alias": "<alias>", "max_budget": <budget>}'
 ```
 
 **Step 4**: Show the returned key to the user and tell them to use it as
@@ -305,13 +310,15 @@ The response is a bare JSON array, newest first, up to 10000 entries. A
 `startTime` is an ISO 8601 UTC string; `spend` is USD; `cache_hit` is a
 string (`"True"`/`"False"`/`"None"`), not a boolean.
 
-**Off-peak window**: glm-5.2 and glm-5.1 bill at 70% of peak rates from
-13:00 to 00:00 UTC (21:00–07:59 Beijing). LiteLLM checks the window when the
-request completes, so a request started at 23:59 UTC bills at peak if it
-finishes after 00:00 UTC.
+**Off-peak window**: glm-5.2 and glm-5.1 bill at 70% of peak rates and
+deepseek-v4.1-flash at 50%, from 13:00 to 00:00 UTC (21:00–07:59 Beijing).
+glm-5.3 has flat pricing (no off-peak discount). LiteLLM checks the window
+when the request completes, so a request started at 23:59 UTC bills at peak
+if it finishes after 00:00 UTC.
 
 **Verify the discount**: recompute a request's cost from the peak rates and
-compare — off-peak spend is exactly 70% of the peak cost for the same tokens.
+compare — off-peak spend is exactly 70% (glm-5.2/glm-5.1) or 50%
+(deepseek-v4.1-flash) of the peak cost for the same tokens.
 Observed examples (small requests, no cache):
 
 ```text
@@ -320,8 +327,8 @@ off-peak:  23:58 UTC  glm-5.2  13 in / 252 out  → $0.0007889 = 13×$0.98/M + 2
 ```
 
 Large requests rarely match the simple formula — cached input tokens are
-billed at the (also 70%-scaled) cache-hit rate. To verify the discount, use
-small requests or compare spend-per-token across the window boundary.
+billed at the (also discount-scaled) cache-hit rate. To verify the discount,
+use small requests or compare spend-per-token across the window boundary.
 
 If a request inside the off-peak window bills at 100% of peak, the running
 container may have loaded a config without `off_peak_pricing` blocks — check
@@ -349,7 +356,7 @@ container may have loaded a config without `off_peak_pricing` blocks — check
 | Need to preserve spend history before a reset | `./scripts/06_backup.sh` first — then `docker compose down -v` is safe |
 | `git pull` conflicts on upgrade | `git stash && git pull && git stash pop` |
 | Coding tool outdated version | `./scripts/update.sh --check` to see available updates, then `./scripts/update.sh` to update |
-| Stale models in config (glm-5, deepseek-v3.2) | `./scripts/03a_opencode.sh && ./scripts/03d_pi.sh` to regenerate configs from current catalog |
+| Stale models in config (deepseek-v4-pro, deepseek-v4-flash) | `./scripts/03a_opencode.sh && ./scripts/03d_pi.sh` to regenerate configs from current catalog |
 
 ## Remote Access
 

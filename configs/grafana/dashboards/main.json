@@ -302,7 +302,7 @@
       "id": 6,
       "type": "stat",
       "title": "Error %",
-      "description": "Failed requests as a percentage of total requests, from litellm_deployment_failure_responses_total (deployment-level failures: 429 rate limits, 500 server errors, timeouts). This is the primary error health indicator.\n\nGOOD: <1% (green) — healthy error rate.\nWARNING: 1–5% (yellow) — elevated, monitor closely.\nBAD: >5% (red) — investigate upstream provider status, rate limits, or model availability.",
+      "description": "Failed requests as a percentage of total requests, from litellm_deployment_failure_responses_total (deployment-level failures: 429 rate limits, 500 server errors, timeouts). This is the primary error health indicator.\n\nGOOD: <1% (green) — healthy error rate.\nWARNING: 1–5% (yellow) — elevated, monitor closely.\nBAD: >5% (red) — investigate upstream provider status, rate limits, or model availability.\n\nNOTE: Failures are matched on requested_model and successes on litellm_model_name — LiteLLM does not emit litellm_model_name on internal health-check failure series, so aligning both sides on litellm_model_name would silently drop those failures from the rate.",
       "gridPos": {
         "x": 18,
         "y": 1,
@@ -500,7 +500,7 @@
       "id": 5,
       "type": "stat",
       "title": "Models Healthy",
-      "description": "Count of distinct models with at least one deployment in healthy state (deployment_state == 0). A model is healthy when its upstream deployments respond successfully to health checks.\n\nGOOD: Equals the total number of configured models.\nBAD: Less than total — one or more models have degraded or unavailable deployments. Check the Deployment health table for details.",
+      "description": "Count of distinct models with all deployments in healthy state (deployment_state == 0). A model is healthy only when every one of its upstream deployments responds successfully to health checks.\n\nGOOD: Equals the total number of configured models.\nBAD: Less than total — one or more models have degraded or unavailable deployments. Check the Deployment health table for details.",
       "gridPos": {
         "x": 0,
         "y": 5,
@@ -509,7 +509,7 @@
       },
       "targets": [
         {
-          "expr": "count(count by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"} == 0))",
+          "expr": "count(min by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}) == 0)",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -1144,7 +1144,7 @@
       "id": 36,
       "type": "stat",
       "title": "Total Requests (window)",
-      "description": "Absolute count of all requests (successful + failed) across all deployments in the selected Grafana time range. Should equal Successful Requests + Failed Requests.",
+      "description": "Absolute count of all requests (successful + failed) across all deployments in the selected Grafana time range. Should equal Successful Requests + Failed Requests.\n\nNOTE: Successes are matched on litellm_model_name and failures on requested_model — LiteLLM does not emit litellm_model_name on internal health-check failure series, so both label filters are required to keep this equal to Successful Requests + Failed Requests.",
       "gridPos": {
         "x": 0,
         "y": 47,
@@ -1460,6 +1460,61 @@
       "targets": [
         {
           "expr": "sum by (model) (rate(litellm_input_tokens_metric_total{model=~\"$model\"}[$window])) * 60",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tok/min",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "Cached input tokens",
+      "description": "Input tokens served from LiteLLM's proxy cache per minute per model. These tokens did not need to be reprocessed by the upstream model, reducing latency and cost. Compare with Input tokens to see what fraction of input tokens are cached. Higher is better.",
+      "gridPos": {
+        "x": 6,
+        "y": 63,
+        "w": 6,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "sum by (model) (rate(litellm_input_cached_tokens_metric_total{model=~\"$model\"}[$window])) * 60",
           "refId": "A",
           "legendFormat": "{{model}}",
           "hide": false,
@@ -1871,61 +1926,6 @@
       }
     },
     {
-      "id": 44,
-      "type": "timeseries",
-      "title": "Cached input tokens",
-      "description": "Input tokens served from LiteLLM's proxy cache per minute per model. These tokens did not need to be reprocessed by the upstream model, reducing latency and cost. Compare with Input tokens to see what fraction of input tokens are cached. Higher is better.",
-      "gridPos": {
-        "x": 6,
-        "y": 63,
-        "w": 6,
-        "h": 12
-      },
-      "targets": [
-        {
-          "expr": "sum by (model) (rate(litellm_input_cached_tokens_metric_total{model=~\"$model\"}[$window])) * 60",
-          "refId": "A",
-          "legendFormat": "{{model}}",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "tok/min",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
       "id": 45,
       "type": "timeseries",
       "title": "Provider cache reads",
@@ -2059,7 +2059,7 @@
       "id": 49,
       "type": "stat",
       "title": "Deployment TPM limits",
-      "description": "Tokens-per-minute limit per model deployment, from litellm_deployment_tpm_limit (set in models.sh). Shows the provider-side rate ceiling for each model.\n\nHOW TO READ: GLM models allow 1M TPM; DeepSeek models are limited to 30K TPM. Compare against the 'TPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors; consider load-balancing keys or shifting work to higher-limit models.",
+      "description": "Tokens-per-minute limit per model deployment, from litellm_deployment_tpm_limit (set in models.sh). Shows the provider-side rate ceiling for each model.\n\nHOW TO READ: All models (GLM and DeepSeek) allow 1M TPM. Compare against the 'TPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors; consider load-balancing keys or shifting work to higher-limit models.",
       "gridPos": { "x": 0, "y": 106, "w": 6, "h": 5 },
       "targets": [
         {
@@ -2093,7 +2093,7 @@
       "id": 50,
       "type": "stat",
       "title": "Deployment RPM limits",
-      "description": "Requests-per-minute limit per model deployment, from litellm_deployment_rpm_limit (set in models.sh). Shows the provider-side request rate ceiling.\n\nHOW TO READ: GLM models allow 100 RPM; DeepSeek models are limited to 3 RPM. Compare against the 'RPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors.",
+      "description": "Requests-per-minute limit per model deployment, from litellm_deployment_rpm_limit (set in models.sh). Shows the provider-side request rate ceiling.\n\nHOW TO READ: All models (GLM and DeepSeek) allow 100 RPM. Compare against the 'RPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors.",
       "gridPos": { "x": 6, "y": 106, "w": 6, "h": 5 },
       "targets": [
         {

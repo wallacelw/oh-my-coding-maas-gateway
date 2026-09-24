@@ -10,7 +10,9 @@ Reference documentation for both humans and agents. For the install procedure an
 
 ### Key Contract
 
-**Environment variables (`.env`):**
+**Key configuration variables** (all live in `.env` unless noted —
+`OPENCODE_ENABLE_EXA` is exported in `~/.bashrc`, and
+`LITELLM_DISABLE_NO_REDIS_WARNING` is fixed in `docker-compose.yml`):
 
 | Env var | Set by | Read by | Format | Rotate risk |
 |---------|--------|---------|--------|------------|
@@ -122,12 +124,12 @@ Reference documentation for both humans and agents. For the install procedure an
 | 04 | `04_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi for partial runs) |
 | 05 | `05_skill.sh` | Install/refresh companion skill in detected coding agents (--dry-run, --no-skill, --yes); stale copies are refreshed on re-run |
 | 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
-| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords |
+| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords; the slim and docker methods also bump pinned versions in tracked files (including the version references in these docs) and commit those changes |
 | — | `install-skill.sh` | Install any skill into all detected coding agents (--name=<name>, --source=<path-or-url>, --dry-run). Standalone utility — not called by 05_skill.sh (which uses helpers/skills.sh directly) |
-| — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
+| — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker), sourced by bootstrap.sh and steps 01–04 |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
-| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `slim.json.template` only if agents should use the new model. |
+| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
 | — | `helpers/versions.sh` | Component version table for the bootstrap install summary (show_installed_versions) |
 
@@ -219,13 +221,27 @@ litellm_settings:
   num_retries: 3
   request_timeout: 600
   stream_timeout: 60
+  drop_params: True
+  set_verbose: False
   callbacks: ["prometheus"]
   prometheus_initialize_budget_metrics: true
   require_auth_for_metrics_endpoint: false
+  ui_theme_config:                         # Admin UI branding (Huawei logo)
+    logo_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
+    favicon_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
 
 router_settings:
+  routing_strategy: simple-shuffle         # --routing-strategy= override
+  num_retries: 3
   cooldown_time: 30                        # seconds to cool down a failed deployment
   allowed_fails: 3                         # failures before cooldown kicks in
+
+general_settings:
+  database_connection_pool_limit: 10
+  database_connection_timeout: 60
+  allow_client_side_credentials: true
+  background_health_checks: true           # periodically health-check all deployments
+  health_check_interval: 300               # seconds between background health checks
 ```
 
 ### Provider Types
@@ -294,11 +310,21 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `num_retries` | 3 | Retry across deployments on failure |
 | `request_timeout` | 600 | Full request timeout (10 min) |
 | `stream_timeout` | 60 | TTFT timeout (60s) |
+| `drop_params` | `True` | Drop unsupported params instead of erroring |
+| `set_verbose` | `False` | Disable verbose LiteLLM logging |
 | `callbacks` | `["prometheus"]` | Enable Prometheus metrics export |
 | `prometheus_initialize_budget_metrics` | true | Emit budget metrics for all keys |
 | `require_auth_for_metrics_endpoint` | false | Allow unauthenticated `/metrics` |
+| `ui_theme_config` | Huawei logo URLs | Brand the Admin UI (logo + favicon) |
+| `router_settings.routing_strategy` | `simple-shuffle` | Routing strategy (override with `--routing-strategy=`) |
+| `router_settings.num_retries` | 3 | Router-level retries across deployments |
 | `router_settings.cooldown_time` | 30 | Seconds to cool down a failed deployment |
 | `router_settings.allowed_fails` | 3 | Failures before cooldown kicks in |
+| `general_settings.database_connection_pool_limit` | 10 | Max PostgreSQL connection pool size |
+| `general_settings.database_connection_timeout` | 60 | DB connection acquisition timeout (seconds) |
+| `general_settings.allow_client_side_credentials` | true | Allow client-side credential pass-through |
+| `general_settings.background_health_checks` | true | Periodically health-check all deployments |
+| `general_settings.health_check_interval` | 300 | Seconds between background health checks |
 
 ### Virtual Keys
 
@@ -312,10 +338,12 @@ Four virtual keys, all minted via `helpers/keys.sh` and tied to
 | `claude-code` | `03c_claude_code.sh` | `~/.claude/settings.json` (env.ANTHROPIC_API_KEY) | Unlimited | All models |
 | `pi` | `03d_pi.sh` | `~/.pi/agent/models.json` (providers.LiteLLM.apiKey) | Unlimited | All models |
 
-Each installer checks its own config file for an existing valid key first
-(tool-specific path), then calls `mint_or_reuse_key` from `helpers/keys.sh`
-which does alias lookup via `/key/list` + `/key/info` and mints a new key only
-if no valid key is found.
+Each installer probes its own config file for an existing valid key first
+(tool-specific path) and reuses it. Otherwise it calls `mint_or_reuse_key`
+from `helpers/keys.sh`, which rotates: it mints a new key for the alias,
+then deletes the previous key with that alias (found via `/key/list` +
+`/key/info` lookup). The mint happens before the delete, so a working key
+always exists.
 
 ### Observability
 
@@ -339,7 +367,7 @@ window, 30s refresh:
 2. **Latency** — TTFT by model, TPOT by model, End-to-end latency, LLM API latency, Proxy overhead, Queue wait (6 timeseries)
 3. **Errors & Health** — Errors by model, Error status codes (pie), Deployment state (state-timeline) (3 panels)
 4. **Throughput & Capacity** — Total/Successful/Failed Requests (window), RPM by model, TPM by model (5 panels)
-5. **Tokens** — Input tokens, Output tokens, Reasoning tokens, Cached input tokens (4 timeseries)
+5. **Tokens** — Input tokens, Cached input tokens, Output tokens, Reasoning tokens (4 timeseries)
 6. **Cache** — Cache misses/min, Provider cache reads, Cache hit ratio (stat) (3 panels)
 7. **Cost** — Total cost, Cost per model, Spend rate (3 panels)
 8. **Rate Limits & Budget** — Deployment TPM limits, Deployment RPM limits, Spend by tool (pie), Spend by tool × model (table) (4 panels)
@@ -386,7 +414,7 @@ determines routing.
 
 ### Plugin: oh-my-opencode-slim
 
-`oh-my-opencode-slim` (v2.2.21) installed via `bunx`. Provides:
+`oh-my-opencode-slim` (v2.2.24) installed via `bunx`. Provides:
 
 - **4 presets** — control routing (proxy vs direct) and model selection
 - **8 agents** — orchestrator, oracle, council, librarian, explorer, designer, fixer, observer
@@ -690,9 +718,13 @@ The PostgreSQL database holds spend history, virtual keys, and budgets.
 Dumps are chmod 600 (they contain spend history and key hashes) and live
 in `backups/` (gitignored; removed by `uninstall.sh --repo`).
 
-Restore is a clean restore — wipe the DB volume, then restore into the
-empty database (recreates schema and data). `--restore` stops LiteLLM,
-pipes the dump into psql with `ON_ERROR_STOP=1`, and restarts LiteLLM:
+`--restore` stops LiteLLM, pipes the dump into the existing database with
+`ON_ERROR_STOP=1`, and restarts LiteLLM. Dumps are taken with
+`pg_dump --clean --if-exists`, so each object is dropped before it is
+recreated — the dump replaces the current content without wiping the volume.
+If psql stops on an error, the database may be partially restored; the
+reliable recovery path is a clean restore — wipe the DB volume first, then
+re-run `--restore`:
 
 ```bash
 docker compose stop litellm && docker compose rm -f db

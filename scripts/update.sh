@@ -15,7 +15,8 @@ set -euo pipefail
 # offers selective updates. Does NOT touch passwords, API keys, or
 # virtual keys. Updates binaries, npm packages, and Docker images; the
 # slim and docker methods also bump pinned versions in tracked files
-# (03a_opencode.sh, config templates, docker-compose.yml), commit those
+# (03a_opencode.sh, config templates, docker-compose.yml, and — for slim —
+# the INSTALLATION.md/REFERENCE.md version references), commit those
 # changes, and regenerate the affected tool configs.
 #
 # Standalone: yes — ./scripts/update.sh
@@ -24,7 +25,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/helpers/common.sh"
 
-LOG_TAG="update"
 
 # Project version (display only)
 PROJECT_VERSION=$(sed -n '1p' "$PROJECT_DIR/VERSION" 2>/dev/null | tr -d '[:space:]' || true)
@@ -88,7 +88,7 @@ npm_latest() {
 
 # Strip leading 'v' from version strings
 strip_v() {
-  echo "$1" | sed 's/^v//; s/^rust-v//'
+  echo "$1" | sed 's/^v//'
 }
 
 # Compare versions: returns 0 if different (update available), 1 if same
@@ -357,7 +357,14 @@ update_component() {
   case "$method" in
     npm:*)
       local pkg="${method#npm:}"
-      run_filtered "npm" npm install -g "$pkg@latest" || { log_error "$name update failed"; return 1; }
+      local npm_prefix
+      npm_prefix=$(npm config get prefix 2>/dev/null || echo "")
+      if [ -n "$npm_prefix" ] && [ -w "$npm_prefix/lib/node_modules" ] 2>/dev/null; then
+        run_filtered "npm" npm install -g "$pkg@latest" || { log_error "$name update failed"; return 1; }
+      else
+        log_info "npm global prefix not writable — using sudo"
+        run_filtered "npm" sudo npm install -g "$pkg@latest" || { log_error "$name update failed"; return 1; }
+      fi
       log_ok "$name updated to $(npm_latest "$pkg")"
       ;;
 
@@ -365,12 +372,16 @@ update_component() {
       local url="${method#curl:}"
       local tmpfile
       tmpfile=$(mktemp /tmp/update_XXXXXX.sh)
-      trap 'rm -f "$tmpfile"' RETURN
       if curl -fsSL --max-time 60 "$url" -o "$tmpfile"; then
-        run_filtered "$name" bash "$tmpfile" || { log_error "$name update failed"; return 1; }
+        if ! run_filtered "$name" bash "$tmpfile"; then
+          rm -f "$tmpfile"
+          log_error "$name update failed"
+          return 1
+        fi
         hash -r 2>/dev/null || true
         log_ok "$name updated"
       else
+        rm -f "$tmpfile"
         log_error "Failed to download $name update"
         return 1
       fi
@@ -378,14 +389,16 @@ update_component() {
       ;;
 
     slim)
-      # Update slim plugin
-      run_filtered "slim" bunx "oh-my-opencode-slim@latest" install --companion=no \
-        || { log_error "oh-my-opencode-slim update failed"; return 1; }
-      # Update SLIM_VERSION in 03a_opencode.sh (repo file mutation)
+      # Fail early if the latest version is unknown — don't update the
+      # plugin before the repo pins can be bumped to match.
       if [ -z "$new_ver" ]; then
         log_error "Cannot update oh-my-opencode-slim: latest version unknown"
         return 1
       fi
+      # Update slim plugin
+      run_filtered "slim" bunx "oh-my-opencode-slim@latest" install --companion=no \
+        || { log_error "oh-my-opencode-slim update failed"; return 1; }
+      # Update SLIM_VERSION in 03a_opencode.sh (repo file mutation)
       log_warn "Updating SLIM_VERSION in tracked file scripts/03a_opencode.sh"
       backup_with_prune "$SCRIPT_DIR/03a_opencode.sh" >/dev/null
       sed -i "s/SLIM_VERSION=\"[^\"]*\"/SLIM_VERSION=\"$new_ver\"/" "$SCRIPT_DIR/03a_opencode.sh"
@@ -396,7 +409,13 @@ update_component() {
       # resolves the exact version at runtime, not its package cache
       sed -i "s|oh-my-opencode-slim@[0-9.]*|oh-my-opencode-slim@${new_ver}|" \
         "$PROJECT_DIR/configs/opencode/opencode.json.template"
-      git -C "$PROJECT_DIR" commit --only scripts/03a_opencode.sh configs/opencode/oh-my-opencode-slim.json.template configs/opencode/opencode.json.template \
+      # Keep doc version references in sync (INSTALLATION.md 03a section,
+      # REFERENCE.md plugin section) so pins and docs don't drift
+      sed -i 's|oh-my-opencode-slim plugin (v\?[0-9]\+\.[0-9]\+\.[0-9]\+|oh-my-opencode-slim plugin (v'"${new_ver}"'|' \
+        "$PROJECT_DIR/INSTALLATION.md"
+      sed -i 's|`oh-my-opencode-slim` (v\?[0-9]\+\.[0-9]\+\.[0-9]\+|`oh-my-opencode-slim` (v'"${new_ver}"'|' \
+        "$PROJECT_DIR/REFERENCE.md"
+      git -C "$PROJECT_DIR" commit --only scripts/03a_opencode.sh configs/opencode/oh-my-opencode-slim.json.template configs/opencode/opencode.json.template INSTALLATION.md REFERENCE.md \
         -m "Bump SLIM_VERSION to $new_ver" --quiet 2>/dev/null \
         || log_warn "Commit failed for slim version bump"
       # Re-apply opencode configs from repo templates. The slim installer
@@ -424,8 +443,8 @@ update_component() {
         || log_warn "Commit failed for docker-compose.yml"
 
       # Pull and restart
-      run_filtered "docker" docker compose pull "$service" || { log_error "$name pull failed"; return 1; }
-      run_filtered "docker" docker compose up -d "$service" || { log_error "$name restart failed"; return 1; }
+      run_filtered "docker" docker compose -f "$PROJECT_DIR/docker-compose.yml" pull "$service" || { log_error "$name pull failed"; return 1; }
+      run_filtered "docker" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d "$service" || { log_error "$name restart failed"; return 1; }
       log_ok "$name updated to $new_ver"
       ;;
   esac

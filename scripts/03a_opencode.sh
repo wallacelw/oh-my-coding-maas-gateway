@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077  # written configs hold API keys — deny group/world access
 
 # ─── 03a_opencode.sh — opencode tool (pipeline step 03a, optional) ──────────────
 #
@@ -31,7 +32,6 @@ CURL_TIMEOUT=15
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
-LOG_TAG="opencode"
 source_env "$PROJECT_DIR"
 
 # ── Parse args ──
@@ -50,11 +50,17 @@ log_step "Step 03a — opencode + oh-my-opencode-slim"
 
 # ── 1. Check prerequisites ──
 log_info "Checking prerequisites..."
-prereq_ensure_apt "curl" curl curl "curl is needed to download opencode and plugin assets"
-prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse opencode config JSON"
-prereq_ensure_bun "bun is the JavaScript runtime that opencode executes on"
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping prerequisite installs"
+else
+  prereq_ensure_apt "curl" curl curl "curl is needed to download opencode and plugin assets"
+  prereq_ensure_apt "jq"   jq   jq   "jq is needed to parse opencode config JSON"
+  prereq_ensure_bun "bun is the JavaScript runtime that opencode executes on"
+fi
 
-if curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping LiteLLM proxy check"
+elif curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"
 else
   log_error "LiteLLM proxy not reachable at http://127.0.0.1:4000. Start it first."
@@ -100,7 +106,10 @@ fi
 
 # ── 3. Install oh-my-opencode-slim plugin ──
 log_info "Installing oh-my-opencode-slim plugin (v${SLIM_VERSION})..."
-if [ -f "$OPENCODE_DIR/oh-my-opencode-slim.json" ] || [ -f "$OPENCODE_DIR/oh-my-opencode-slim.jsonc" ]; then
+# Config alone is not proof of install — the installer also drops runtime
+# deps into node_modules/. Only skip when both are present.
+if { [ -f "$OPENCODE_DIR/oh-my-opencode-slim.json" ] || [ -f "$OPENCODE_DIR/oh-my-opencode-slim.jsonc" ]; } \
+   && [ -d "$OPENCODE_DIR/node_modules" ]; then
   log_ok "Plugin already installed — skipping"
 elif [ "$DRY_RUN" = true ]; then
   log_info "Would run: bunx oh-my-opencode-slim@${SLIM_VERSION} install --companion=no"
@@ -119,9 +128,11 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$OPENCODE_CONFIG" ]; then
     if [ "$DRY_RUN" = true ]; then
       VIRTUAL_KEY="$EXISTING_KEY"
     elif retry_curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/v1/chat/completions" \
-         -H "Authorization: Bearer $EXISTING_KEY" \
+         --config - \
          -H "Content-Type: application/json" \
-         -d '{"model":"glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
+         -d '{"model":"glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}' <<CURLCFG; then
+header = "Authorization: Bearer $EXISTING_KEY"
+CURLCFG
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else

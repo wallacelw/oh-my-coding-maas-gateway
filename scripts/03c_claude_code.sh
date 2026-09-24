@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077  # written configs hold API keys — deny group/world access
 
 # ─── 03c_claude_code.sh — Claude Code CLI tool (pipeline step 03c, optional) ────
 #
@@ -25,7 +26,6 @@ CURL_TIMEOUT=15
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
-LOG_TAG="claude"
 source_env "$PROJECT_DIR"
 
 # ── Parse args ──
@@ -44,11 +44,17 @@ log_step "Step 03c — Claude Code CLI"
 
 # ── 1. Check prerequisites ──
 log_info "Checking prerequisites..."
-prereq_ensure_apt "curl" curl curl "curl is needed to download Claude Code CLI"
-prereq_ensure_npm "Node.js + npm are needed to install and run Claude Code CLI"
-prereq_ensure_apt "jq" jq jq "jq is needed to parse Claude Code config JSON"
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping prerequisite installs"
+else
+  prereq_ensure_apt "curl" curl curl "curl is needed to download Claude Code CLI"
+  prereq_ensure_npm "Node.js + npm are needed to install and run Claude Code CLI"
+  prereq_ensure_apt "jq" jq jq "jq is needed to parse Claude Code config JSON"
+fi
 
-if curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
+if [ "$DRY_RUN" = true ]; then
+  log_dim "Dry-run: skipping LiteLLM proxy check"
+elif curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM proxy: reachable"
 else
   log_error "LiteLLM proxy not reachable at $LITELLM_URL. Start it first."
@@ -83,10 +89,12 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CLAUDE_SETTINGS" ]; then
     if [ "$DRY_RUN" = true ]; then
       VIRTUAL_KEY="$EXISTING_KEY"
     elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/messages" \
-         -H "x-api-key: $EXISTING_KEY" \
+         --config - \
          -H "Content-Type: application/json" \
          -H "anthropic-version: 2023-06-01" \
-         -d '{"model":"claude-glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}'; then
+         -d '{"model":"claude-glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}' <<CURLCFG; then
+header = "x-api-key: $EXISTING_KEY"
+CURLCFG
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
       VIRTUAL_KEY="$EXISTING_KEY"
     else
@@ -138,7 +146,7 @@ if [ -f "$CLAUDE_SETTINGS" ]; then
       EXISTING_KEYS=$(echo "$EXISTING_SETTINGS" | jq -r 'keys | .[]' 2>/dev/null | sort -u)
       NON_ENV_KEYS=$(echo "$EXISTING_KEYS" | grep -v '^env$' || true)
       if [ -n "$NON_ENV_KEYS" ]; then
-        log_warn "Overwriting existing settings with keys: $(echo "$NON_ENV_KEYS" | tr '\n' ' ')"
+        log_info "Merging env block (preserving existing keys: $(echo "$NON_ENV_KEYS" | tr '\n' ' '))"
       fi
       backup_with_prune "$CLAUDE_SETTINGS" >/dev/null
       echo "$MERGED_SETTINGS" > "$CLAUDE_SETTINGS"
@@ -166,8 +174,13 @@ if [ -f "$CLAUDE_JSON" ]; then
   if [ "$CURRENT" = "false" ]; then
     log_info "autoInstallIdeExtension already false"
   else
-    jq '.autoInstallIdeExtension = false' "$CLAUDE_JSON" > "$CLAUDE_JSON.tmp" && mv "$CLAUDE_JSON.tmp" "$CLAUDE_JSON" || rm -f "$CLAUDE_JSON.tmp"
-    log_ok "Set autoInstallIdeExtension=false in ~/.claude.json"
+    jq '.autoInstallIdeExtension = false' "$CLAUDE_JSON" > "$CLAUDE_JSON.tmp" && mv "$CLAUDE_JSON.tmp" "$CLAUDE_JSON" && rc=0 || rc=$?
+    if [ "$rc" -eq 0 ]; then
+      log_ok "Set autoInstallIdeExtension=false in ~/.claude.json"
+    else
+      rm -f "$CLAUDE_JSON.tmp"
+      log_warn "Could not set autoInstallIdeExtension in ~/.claude.json (jq failed — file may be corrupt)"
+    fi
   fi
 else
   echo '{"autoInstallIdeExtension": false}' > "$CLAUDE_JSON"

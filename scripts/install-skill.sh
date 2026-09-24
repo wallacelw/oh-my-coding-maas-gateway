@@ -20,7 +20,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 source "$SCRIPT_DIR/helpers/common.sh"
-LOG_TAG="skill-install"
 
 # ── Parse args ──
 SKILL_NAME=""
@@ -40,6 +39,11 @@ done
 
 if [ -z "$SKILL_NAME" ]; then
   log_error "Missing --name=<name>"
+  exit 1
+fi
+if [[ ! "$SKILL_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || [[ "$SKILL_NAME" == *..* ]]; then
+  log_error "Invalid skill name: '$SKILL_NAME'"
+  log_dim "  Allowed: letters, digits, dot, dash, underscore (no '/', '..', or whitespace)."
   exit 1
 fi
 if [ -z "$SKILL_SOURCE" ]; then

@@ -21,7 +21,6 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/skills.sh"
-LOG_TAG="uninstall"
 
 # ── Defaults ──
 REMOVE_OPENCODE=false

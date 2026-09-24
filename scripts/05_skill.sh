@@ -4,7 +4,8 @@ set -euo pipefail
 # ─── 05_skill.sh — Companion skill (pipeline step 05, optional) ────────────────
 #
 # Order:         05 (after validation)
-# Optional:      yes (prompts user; skips if --no-skill or non-interactive)
+# Optional:      yes (prompts when interactive; non-interactive installs
+#                with defaults; --no-skill skips)
 # Description:   Installs SKILL.md as a skill/command into each installed
 #                coding agent tool (opencode, codex, claude, pi).
 # Inputs:        --dry-run, --no-skill, --yes
@@ -20,7 +21,6 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/skills.sh"
-LOG_TAG="skill"
 
 # ── Parse args ──
 DRY_RUN=false

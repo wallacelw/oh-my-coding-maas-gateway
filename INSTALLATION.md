@@ -67,10 +67,10 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 
 | File | Used by | Provides |
 |------|---------|----------|
-| `prereqs.sh` | all steps | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install labeled with `[LOG_TAG]`. |
+| `prereqs.sh` | bootstrap, 01–04 | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install runs under a spinner (`  Installing curl... done`). |
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
 | `common.sh` | all scripts | `is_interactive`, `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, `backup_with_prune`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
-| `models.sh` | 02, 03d, 04 | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by 02_litellm.sh, 03d_pi.sh, and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `slim.json.template` only if agents should use the new model. |
+| `models.sh` | 02, 03d, 04, bootstrap | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `slim.json.template` only if agents should use the new model. |
 | `skills.sh` | 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
 | `versions.sh` | bootstrap | `show_installed_versions` — component version table for the install summary. |
 
@@ -87,7 +87,7 @@ detected), clones the repo to the target location and re-execs. Parses
 python3, curl, jq). Shows a colored tool-selection menu if `--tool=` is not
 given. Prints a prerequisite→tools mapping for customer validation. Dispatches
 steps 01–05. Prints a colored summary with service URLs, config file paths,
-masked virtual keys, a security warning, and advice to restart the shell.
+masked virtual keys, a dim key-rotation tip, and advice to restart the shell.
 
 ### `01_env.sh`
 
@@ -108,12 +108,14 @@ per format (dual OpenAI + Anthropic), 8N total. Checks ports 4000/5432/9090/
 3000 are free. Logs the image versions being deployed, then runs
 `docker compose up -d` (LiteLLM + PostgreSQL + Prometheus + Grafana).
 Waits up to 90s for LiteLLM to become healthy. Supports
-`--routing-strategy=` and `--dry-run`.
+`--routing-strategy=` and `--dry-run` (renders the would-be config to a
+temp file, prints a diff summary against the current config, writes
+nothing, and skips prereq installs and MaaS key validation).
 
 ### `03a_opencode.sh`
 
 Installs the opencode binary (via curl, output filtered with `run_filtered`),
-the oh-my-opencode-slim plugin (v2.2.21, via bunx — 4 presets, 8 agents, output
+the oh-my-opencode-slim plugin (v2.2.24, via bunx — 4 presets, 8 agents, output
 filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.
@@ -125,21 +127,22 @@ websearch (EXA-backed, no API key required).
 Installs the OpenAI Codex CLI (via npm), mints a virtual key (alias "codex"),
 and writes `~/.codex/config.toml` (custom `litellm_proxy` provider,
 `wire_api=responses`), `model_catalog.json`, and `.env` with the API key.
-Supports `--dry-run`.
+Supports `--virtual-key=` and `--dry-run`.
 
 ### `03c_claude_code.sh`
 
 Installs the Claude Code CLI (via npm), mints a virtual key (alias
 "claude-code"), writes `~/.claude/settings.json` (env block pointing to the
 LiteLLM proxy via the Anthropic Messages API), and disables the VSCode
-extension auto-install. Supports `--dry-run`.
+extension auto-install. Supports `--virtual-key=` and `--dry-run`.
 
 ### `03d_pi.sh`
 
 Installs the Pi coding agent (downloads installer from pi.dev to a temp
 file, then executes it), mints a virtual
 key (alias "pi"), and writes `~/.pi/agent/models.json` (LiteLLM provider
-pointing to the proxy via OpenAI Chat Completions API). Supports `--dry-run`.
+pointing to the proxy via OpenAI Chat Completions API). Supports
+`--virtual-key=` and `--dry-run`.
 
 ### `04_validate.sh`
 
@@ -151,8 +154,10 @@ Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
 
 ### `05_skill.sh`
 
-Prompts the user to install SKILL.md as a skill/command into each detected
-coding agent. Detects which tools are installed (opencode, codex, claude, pi)
+Prompts whether to install SKILL.md as a skill/command into each detected
+coding agent when interactive; non-interactive runs (or `--yes`) install
+with defaults without prompting. `--no-skill` skips the step entirely.
+Detects which tools are installed (opencode, codex, claude, pi)
 and installs only into those present. Idempotent — copies identical to the
 repo SKILL.md are skipped; stale copies (content drifted after an upgrade)
 are refreshed in place.
@@ -191,8 +196,16 @@ is removed by `uninstall.sh --repo` / `--all`.
 | `--virtual-key=sk-...` | Reuse an existing opencode virtual key, skip minting. |
 | `--api-key=KEY` | Huawei MaaS API key (alternative to `HUAWEI_MAAS_API_KEY` env var). |
 | `-y`, `--yes` | Auto-accept all prompts, install all tools (non-interactive mode). |
-| `--dry-run` | Preview actions without modifying anything. |
+| `--dry-run` | Preview without side effects — no installs, no file writes, no key validation, no proxy required. Bootstrap prints each step header with the command it would run (e.g. `Would run: scripts/02_litellm.sh`); the steps themselves are not executed. |
 | `--no-skill` | Skip companion skill installation (step 05). |
+
+**Dry-run contract:** `--dry-run` is side-effect-free in every script —
+prerequisite installs, file writes, key validation, and the LiteLLM
+proxy-reachability check are all skipped, so a fresh machine can preview a
+full install. Standalone step runs print what they would do: the 03x
+scripts list the installs, config writes, and key mint they would perform;
+`02_litellm.sh` prints the would-be config with a diff summary (see its
+section above).
 
 ### `01_env.sh`
 
@@ -255,9 +268,10 @@ All scripts use a shared logging system from `helpers/common.sh`:
 - `log_ok` / `log_info` / `log_warn` / `log_error` — green ✓ / blue → / yellow ⚠ / red ✗
 - `log_dim` — dim secondary text
 
-Each script sets a `LOG_TAG` (e.g. `bootstrap`, `env`, `litellm`, `opencode`,
-`codex`, `claude`, `validate`). Prerequisite installs are labeled:
-`→ [opencode] Installing curl (curl)...`.
+Prerequisite installs run under a spinner (`  Installing curl... done`).
+Each pipeline script announces itself with a `log_step` header (e.g.
+`Step 02 — LiteLLM proxy + observability`), so every line of output is
+attributable to its step.
 
 Third-party subprocess output is filtered via `run_filtered` — suppresses
 GitHub star prompts, npm warnings, and deprecation notices, showing remaining
@@ -302,8 +316,9 @@ ensures only its own prerequisites; skipped steps install nothing. A
 | `04_validate.sh` | curl, jq |
 
 Interactive mode prompts before each installation. Non-interactive shells
-(piped stdin, CI) auto-confirm. Each install is labeled with `[LOG_TAG]`
-showing which script triggered it. Bootstrap prints a **prereq→tools mapping**
+(piped stdin, CI) auto-confirm. Each install runs under a spinner showing
+what is being installed; the calling script's step header identifies which
+script triggered it. Bootstrap prints a **prereq→tools mapping**
 at the start for customer validation (e.g. `curl — bootstrap, litellm,
 validate, opencode, codex, claude`). **Non-Debian systems** (RHEL, Alpine,
 Arch): install equivalent packages manually — Docker daemon start requires
@@ -331,7 +346,10 @@ systemd.
   postcondition.
 - Safe to re-run from any step. Never destroys data or regenerates immutable
   secrets (`LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, `DB_PASSWORD`).
-- Only `01_env.sh --force` regenerates secrets (for key rotation).
+- `01_env.sh --force` regenerates all secrets (for key rotation).
+- Fail-safe: if any preserved secret is empty or missing in an existing
+  `.env`, `01_env.sh` regenerates ALL secrets on the next run (with a
+  warning) — a partially-populated `.env` never survives silently.
 
 ---
 
@@ -378,7 +396,10 @@ git pull
   `GRAFANA_ADMIN_PASSWORD`, `PROMETHEUS_RETENTION` from existing `.env`.
 - Config is regenerated from templates — new options picked up automatically.
 - Docker Compose recreates containers; data volumes preserved.
-- If `git pull` fails: ask "Reset to origin/main? (y/n)".
+- If `git pull` fails: interactive mode asks "Reset to origin/main? (y/n)".
+  In non-interactive mode (`-y` or no TTY), bootstrap prints a loud warning
+  counting the local commits and uncommitted changes being discarded, then
+  resets to `origin/main` and continues.
 - **Grafana dashboard updates:** hard-restart to pick up provisioning:
   `docker compose restart grafana`.
 
@@ -428,8 +449,10 @@ the script automatically pulls and restarts the affected service.
 | `--dry-run` | Preview without deleting |
 | `--yes` | Skip confirmation |
 
-No flags → interactive menu. Binaries (opencode, codex, claude, pi),
-runtimes (bun, pi-node), configs, and `.bashrc` entries are all removed.
+No flags → interactive menu. Configs and `.bashrc` entries are removed.
+Binaries (opencode, codex, claude, pi) and runtimes (bun, pi-node) are
+removed where possible — npm binaries installed with sudo may survive
+(uninstall warns and prints the remaining path; remove those manually).
 
 ```bash
 ./scripts/uninstall.sh --all --dry-run   # preview
