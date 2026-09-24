@@ -13,7 +13,7 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
     container_name: litellm_proxy
-    image: ghcr.io/berriai/litellm:v1.101.0
+    image: ghcr.io/berriai/litellm:v1.102.1
     entrypoint: ["/app/entrypoint.sh"]
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:4000:4000"
