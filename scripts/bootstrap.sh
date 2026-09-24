@@ -231,6 +231,7 @@ LITELLM_URL="http://127.0.0.1:4000"
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
+source "$SCRIPT_DIR/helpers/versions.sh"
 LOG_TAG="bootstrap"
 
 # ── Refresh PATH for binaries installed by 03x scripts ──
@@ -642,6 +643,7 @@ else
 fi
 echo ""
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Version:"           "v${PROJECT_VERSION}"
+show_installed_versions "$PROJECT_DIR"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Project dir:"       "$PROJECT_DIR"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM proxy:"     "$LITELLM_URL"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "LiteLLM Admin UI:"  "${LITELLM_URL}/ui"

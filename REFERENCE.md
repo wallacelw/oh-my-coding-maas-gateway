@@ -122,13 +122,14 @@ Reference documentation for both humans and agents. For the install procedure an
 | 04 | `04_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi for partial runs) |
 | 05 | `05_skill.sh` | Install/refresh companion skill in detected coding agents (--dry-run, --no-skill, --yes); stale copies are refreshed on re-run |
 | 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
-| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords |
+| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords |
 | — | `install-skill.sh` | Install any skill into all detected coding agents (--name=<name>, --source=<path-or-url>, --dry-run). Standalone utility — not called by 05_skill.sh (which uses helpers/skills.sh directly) |
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker) |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
 | — | `helpers/models.sh` | Model catalog (MODELS array, sourced by 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
+| — | `helpers/versions.sh` | Component version table for the bootstrap install summary (show_installed_versions) |
 
 ### Models
 

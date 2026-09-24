@@ -72,6 +72,7 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 | `common.sh` | all scripts | `is_interactive`, `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, `backup_with_prune`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
 | `models.sh` | 02, 03d, 04 | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by 02_litellm.sh, 03d_pi.sh, and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `slim.json.template` only if agents should use the new model. |
 | `skills.sh` | 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
+| `versions.sh` | bootstrap | `show_installed_versions` — component version table for the install summary. |
 
 ---
 
@@ -104,8 +105,9 @@ secrets (for key rotation).
 
 Generates `configs/litellm/config.yaml` from `.env` — N deployments per model
 per format (dual OpenAI + Anthropic), 8N total. Checks ports 4000/5432/9090/
-3000 are free. Runs `docker compose up -d` (LiteLLM + PostgreSQL + Prometheus
-+ Grafana). Waits up to 90s for LiteLLM to become healthy. Supports
+3000 are free. Logs the image versions being deployed, then runs
+`docker compose up -d` (LiteLLM + PostgreSQL + Prometheus + Grafana).
+Waits up to 90s for LiteLLM to become healthy. Supports
 `--routing-strategy=` and `--dry-run`.
 
 ### `03a_opencode.sh`
@@ -394,6 +396,8 @@ are grouped into two categories:
 - **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
   Code, Pi agent
 - **Infrastructure** — LiteLLM, Grafana, Prometheus
+- **Version display** — shows the project version and a per-component
+  current-vs-latest table
 
 ```bash
 ./scripts/update.sh              # interactive: show grouped table, select which to update
@@ -402,8 +406,9 @@ are grouped into two categories:
 ./scripts/update.sh --dry-run    # show what would be updated, no changes
 ```
 
-This does NOT touch passwords, API keys, or virtual keys — only updates
-binaries, npm packages, and Docker images. After updating Docker images,
+This does NOT touch passwords, API keys, or virtual keys — it updates
+binaries, npm packages, and Docker images; the slim and docker methods
+also bump pinned versions in tracked files and commit them. After updating Docker images,
 the script automatically pulls and restarts the affected service.
 
 ---

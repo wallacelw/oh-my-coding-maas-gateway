@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.0] - 2026-09-24
+
+### Added
+
+- **Version visibility during install and update** — bootstrap's final
+  summary now prints a component version table (project, opencode,
+  oh-my-opencode-slim, codex, claude-code, pi, LiteLLM, PostgreSQL,
+  Prometheus, Grafana) via the new `helpers/versions.sh`;
+  02_litellm.sh logs the Docker image versions being deployed; update.sh
+  shows the project version alongside its per-component
+  current-vs-latest table.
+
+### Changed
+
+- **Components refreshed to latest** (via `./scripts/update.sh --all`) —
+  oh-my-opencode-slim 2.2.21 → 2.2.24 (v1-host compatible: runtime deps
+  pin @opencode-ai/* 1.18.32, exactly our opencode version), LiteLLM
+  v1.101.0 → v1.102.1, Codex CLI 0.155.1 → 0.156.1, Claude Code
+  2.1.280 → 2.1.281. Grafana (13.2.2), Prometheus (v3.14.0), pi (0.87.1),
+  and opencode (1.18.32) were already current. PostgreSQL stays
+  deliberately pinned at 16-alpine (major upgrades are manual — data
+  dir format changes).
+
 ## [1.21.5] - 2026-09-24
 
 ### Fixed

@@ -26,6 +26,10 @@ source "$SCRIPT_DIR/helpers/common.sh"
 
 LOG_TAG="update"
 
+# Project version (display only)
+PROJECT_VERSION=$(sed -n '1p' "$PROJECT_DIR/VERSION" 2>/dev/null | tr -d '[:space:]' || true)
+PROJECT_VERSION=${PROJECT_VERSION:-unknown}
+
 # ── Flags ──
 CHECK_ONLY=false
 UPDATE_ALL=false
@@ -218,6 +222,7 @@ show_table() {
   done
 
   echo ""
+  echo -e "  ${C_DIM}Project version: v${PROJECT_VERSION}${C_RESET}"
   echo -e "  ${C_BOLD}Coding Tools${C_RESET}"
   printf "  ${C_DIM}%-22s %-12s %-12s %s${C_RESET}\n" "Component" "Current" "Latest" "Status"
   printf "  ${C_DIM}%-22s %-12s %-12s %s${C_RESET}\n" "──────────" "───────" "──────" "──────"
@@ -430,6 +435,7 @@ update_component() {
 log_step "Component Update Check"
 
 echo ""
+echo -e "  ${C_DIM}Project version: v${PROJECT_VERSION}${C_RESET}"
 echo -e "  ${C_DIM}Checks current vs latest versions for all installed components.${C_RESET}"
 echo -e "  ${C_DIM}Updates binaries, npm packages, and Docker images; slim/docker methods${C_RESET}"
 echo -e "  ${C_DIM}also bump pinned versions in tracked files, commit, and re-apply configs.${C_RESET}"

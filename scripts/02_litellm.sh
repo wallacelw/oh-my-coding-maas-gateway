@@ -323,6 +323,7 @@ fi
 
 was_running=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | grep -c litellm || true)
 log_info "Starting Docker Compose (idempotent — no-op if already running)..."
+log_info "Images: LiteLLM $(grep 'image:.*litellm:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*litellm://') · PostgreSQL $(grep 'image:.*postgres:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*postgres://') · Prometheus $(grep 'image:.*prom/prometheus:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*prom\/prometheus://') · Grafana $(grep 'image:.*grafana/grafana:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's|.*grafana/grafana:||')"
 if ! run_with_spinner "Starting containers" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d; then
   log_error "Docker Compose failed to start."
   exit 1
