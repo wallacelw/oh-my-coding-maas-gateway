@@ -309,7 +309,12 @@ fi
   echo "  routing_strategy: $ROUTING_STRATEGY"
   echo "  num_retries: 3"
   echo "  cooldown_time: 30 # seconds to cool down a failed deployment"
-  echo "  allowed_fails: 3 # failures before cooldown kicks in"
+  echo "  allowed_fails: 3 # non-429 failures before cooldown (30s window)"
+  echo "  enable_pre_call_checks: true # pre-call deployment filtering (context window + optional checks)"
+  echo "  optional_pre_call_checks:"
+  echo "    - enforce_model_rate_limits # enforce per-deployment tpm/rpm as real caps"
+  echo "  allowed_fails_policy:"
+  echo "    RateLimitErrorAllowedFails: 8 # upstream 429s tolerated per 30s window before cooldown"
   echo ""
   echo "general_settings:"
   echo "  database_connection_pool_limit: 10"
@@ -338,7 +343,7 @@ log_info "Deployments: ${TOTAL_DEPLOYMENTS} total (${KEY_COUNT} per model × ${M
 log_info "Routing strategy: $ROUTING_STRATEGY"
 if [ "$KEY_COUNT" -gt 1 ]; then
   echo ""
-  log_info "Effective capacity (per model):"
+  log_info "Effective enforced capacity (per model):"
   for model_entry in "${MODELS[@]}"; do
     IFS=':' read -r model_name tpm rpm _ <<< "$model_entry"
     total_rpm=$((rpm * KEY_COUNT))

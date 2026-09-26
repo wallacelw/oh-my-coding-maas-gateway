@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.25.0] - 2026-09-27
+
+### Fixed
+
+Enforce pooled TPM/RPM limits pre-call. Per-deployment `tpm: 1000000` /
+`rpm: 100` were never enforced: `routing_strategy: simple-shuffle` treats
+them as routing weights only, so the pooled 3M TPM (3 keys × 1M) was
+advisory. The proxy now enforces them as real caps.
+
+- 02_litellm.sh + config.yaml.template: three new router settings —
+  `enable_pre_call_checks: true` (pre-call deployment filtering; oversized
+  prompts fail fast with a context-window error instead of going
+  upstream), `optional_pre_call_checks: [enforce_model_rate_limits]`
+  (per-deployment tpm/rpm enforced as caps before the call; over-pool
+  requests get HTTP 429 with a `retry-after` header), and
+  `allowed_fails_policy: {RateLimitErrorAllowedFails: 8}` (upstream 429s
+  tolerated up to 8 times per 30s window before cooldown; other error
+  types keep `allowed_fails: 3`).
+- 04_validate.sh: two new router checks — pre-call TPM/RPM enforcement
+  and 429-specific `allowed_fails_policy` (both `fail`, not `warn`).
+- Supersedes the 1.24.0 resilience claim that "provider rate limits
+  surface as retryable errors": over-pool traffic now gets a clean
+  proxy-generated 429 + `retry-after` instead of upstream cooldown
+  cascades.
+- REFERENCE.md + Grafana dashboard: synced router-settings docs and the
+  429 status-code description with proxy-enforced 429s.
+
 ## [1.24.0] - 2026-09-26
 
 ### Changed

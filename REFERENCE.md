@@ -234,7 +234,12 @@ router_settings:
   routing_strategy: simple-shuffle         # --routing-strategy= override
   num_retries: 3
   cooldown_time: 30                        # seconds to cool down a failed deployment
-  allowed_fails: 3                         # failures before cooldown kicks in
+  allowed_fails: 3                         # non-429 failures before cooldown (30s window)
+  enable_pre_call_checks: true             # pre-call deployment filtering (context window + optional checks)
+  optional_pre_call_checks:
+    - enforce_model_rate_limits            # enforce per-deployment tpm/rpm as real caps
+  allowed_fails_policy:
+    RateLimitErrorAllowedFails: 8          # upstream 429s tolerated per 30s window before cooldown
 
 general_settings:
   database_connection_pool_limit: 10
@@ -281,6 +286,10 @@ N MaaS API keys → N deployments per model per format. LiteLLM uses
 
 Total deployments: 4 models × N keys × 2 formats = 8N.
 
+Per-deployment `tpm`/`rpm` are enforced pre-call via
+`enforce_model_rate_limits` (works under `simple-shuffle`), so pooled
+capacity — per-key limits × key count — is a hard ceiling, not advisory.
+
 ### model_info
 
 Each deployment includes metadata for budget tracking and LiteLLM UI:
@@ -319,7 +328,10 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `router_settings.routing_strategy` | `simple-shuffle` | Routing strategy (override with `--routing-strategy=`) |
 | `router_settings.num_retries` | 3 | Router-level retries across deployments |
 | `router_settings.cooldown_time` | 30 | Seconds to cool down a failed deployment |
-| `router_settings.allowed_fails` | 3 | Failures before cooldown kicks in |
+| `router_settings.allowed_fails` | 3 | Non-429 failures before cooldown (30s window) |
+| `router_settings.enable_pre_call_checks` | `true` | Pre-call deployment filtering: context-window checks plus optional checks. Oversized prompts fail fast with a context-window error instead of going upstream |
+| `router_settings.optional_pre_call_checks` | `[enforce_model_rate_limits]` | Enforce per-deployment tpm/rpm as caps before the call. RPM is a hard pre-call cap; TPM uses post-completion accounting, so concurrent streams can overshoot within a minute. When the whole pool is over limit, clients get HTTP 429 with a `retry-after` header |
+| `router_settings.allowed_fails_policy` | `{RateLimitErrorAllowedFails: 8}` | Upstream 429s tolerated up to 8 times per 30s window (window = `cooldown_time`) before a deployment enters cooldown; other error types use `allowed_fails` (3) |
 | `general_settings.database_connection_pool_limit` | 10 | Max PostgreSQL connection pool size |
 | `general_settings.database_connection_timeout` | 60 | DB connection acquisition timeout (seconds) |
 | `general_settings.allow_client_side_credentials` | true | Allow client-side credential pass-through |
@@ -462,10 +474,14 @@ direct MaaS).
 > **Note:** Client-side fallback is disabled (`fallback.enabled: false`).
 > The plugin's fallback was sticky: once a session switched models it never
 > returned to its primary, and it often landed on an equally rate-limited
-> model. With fallback disabled, agents always run on their primary model;
-> provider rate limits surface as retryable errors and opencode re-attempts
-> with growing backoff. LiteLLM still provides key-level resilience by
-> retrying across same-model deployments (one per MaaS key).
+> model. With fallback disabled, agents always run on their primary model.
+> The proxy enforces the pooled per-model limit pre-call
+> (`enforce_model_rate_limits`): over-pool traffic gets a clean HTTP 429
+> with a `retry-after` header instead of upstream cooldown cascades, and
+> opencode re-attempts with growing backoff. A variant error, "No
+> deployments available for selected model." without the "Try again"
+> suffix or a `retry-after` header, can also appear (legacy RPM filter
+> path) — it is transient and distinct from the old cooldown-storm bug.
 
 > **Note:** The observer agent is single-model by design: a blind glm
 > fallback would hallucinate confident-looking "observations", so observer

@@ -372,6 +372,18 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
     else
       warn "Router: routing_strategy not set in config"
     fi
+    if grep -q 'enable_pre_call_checks: true' "$CONFIG_FILE" 2>/dev/null && grep -q 'enforce_model_rate_limits' "$CONFIG_FILE" 2>/dev/null; then
+      pass "Router: pre-call TPM/RPM enforcement enabled (enforce_model_rate_limits)"
+    else
+      fail "Router: pre-call enforcement missing — per-deployment tpm/rpm limits will NOT be enforced"
+      log_dim "  Fix: ./scripts/02_litellm.sh (regenerate config)"
+    fi
+    if grep -q 'RateLimitErrorAllowedFails' "$CONFIG_FILE" 2>/dev/null; then
+      pass "Router: 429-specific allowed_fails_policy configured"
+    else
+      fail "Router: allowed_fails_policy missing — upstream 429s trigger cooldown after allowed_fails"
+      log_dim "  Fix: ./scripts/02_litellm.sh (regenerate config)"
+    fi
     if grep -q 'callbacks:' "$CONFIG_FILE" 2>/dev/null && grep -q 'prometheus' "$CONFIG_FILE" 2>/dev/null; then
       pass "LiteLLM: prometheus callback configured"
     else

@@ -139,7 +139,12 @@ router_settings:
   routing_strategy: simple-shuffle
   num_retries: 3
   cooldown_time: 30 # seconds to cool down a failed deployment
-  allowed_fails: 3 # failures before cooldown kicks in
+  allowed_fails: 3 # non-429 failures before cooldown (30s window)
+  enable_pre_call_checks: true # pre-call deployment filtering (context window + optional checks)
+  optional_pre_call_checks:
+    - enforce_model_rate_limits # enforce per-deployment tpm/rpm as real caps
+  allowed_fails_policy:
+    RateLimitErrorAllowedFails: 8 # upstream 429s tolerated per 30s window before cooldown
 
 general_settings:
   database_connection_pool_limit: 10
