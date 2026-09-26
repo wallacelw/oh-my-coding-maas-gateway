@@ -419,7 +419,7 @@ determines routing.
 - **4 presets** — control routing (proxy vs direct) and model selection
 - **8 agents** — orchestrator, oracle, council, librarian, explorer, designer, fixer, observer
 - **Council** — 3 councillors running in parallel for consensus decisions
-- **Fallback chains** — each agent has a primary model and optional fallback
+- **Model chains** — each agent has a primary model plus an optional fallback chain; client-side fallback is disabled (`fallback.enabled: false`), so agents always run on their primary model
 - **Image analysis** — pasting a screenshot auto-routes it to the observer agent for visual analysis (see Image Analysis Workflow below)
 - **Websearch** — opencode's built-in EXA-backed web search tool (no API key required). Enabled via `OPENCODE_ENABLE_EXA=1` (env) + `"permission": {"websearch": "allow"}` (config). Required for custom providers; automatic with the default OpenCode provider.
 
@@ -436,8 +436,10 @@ Switch at runtime: `/preset LiteLLM-Balanced`
 
 ### Agent → Model Mapping
 
-`A → B` = fallback chain. `(variant)` = reasoning effort. Model names omit
-the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
+`A → B` = configured fallback chain — currently dormant (client-side
+fallback disabled; A always serves). `(variant)` = reasoning effort. Model
+names omit the provider prefix (preset name indicates LiteLLM proxy vs
+direct MaaS).
 
 | Agent | LiteLLM-Default | LiteLLM-Balanced | MaaS-Default | MaaS-Balanced |
 |-------|-----------------|------------------|--------------|---------------|
@@ -451,11 +453,19 @@ the provider prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 | observer | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) |
 
 > **Note:** In Balanced presets, glm-5.1 (primary) does not support
-> `reasoning_effort` — the variant is silently ignored. Reasoning only
-> activates on fallback to glm-5.2/glm-5.3. In Default presets, glm-5.3
-> always thinks (cannot disable); `low` = enhanced, `high` = deep.
-> deepseek-v4.1-flash variant mapping is unverified and may be silently
-> ignored (same precedent as glm-5.1).
+> `reasoning_effort` — the variant is silently ignored. Reasoning would
+> only activate on fallback to glm-5.2/glm-5.3 (dormant while fallback is
+> disabled). In Default presets, glm-5.3 always thinks (cannot disable);
+> `low` = enhanced, `high` = deep. deepseek-v4.1-flash variant mapping is
+> unverified and may be silently ignored (same precedent as glm-5.1).
+
+> **Note:** Client-side fallback is disabled (`fallback.enabled: false`).
+> The plugin's fallback was sticky: once a session switched models it never
+> returned to its primary, and it often landed on an equally rate-limited
+> model. With fallback disabled, agents always run on their primary model;
+> provider rate limits surface as retryable errors and opencode re-attempts
+> with growing backoff. LiteLLM still provides key-level resilience by
+> retrying across same-model deployments (one per MaaS key).
 
 > **Note:** The observer agent is single-model by design: a blind glm
 > fallback would hallucinate confident-looking "observations", so observer

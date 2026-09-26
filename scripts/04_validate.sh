@@ -604,7 +604,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Fixer model set (array for fallback)" '.presets["LiteLLM-Default"].fixer.model' \
       "Observer model set" '.presets["LiteLLM-Default"].observer.model' \
       "No agents disabled (observer enabled)" '.disabled_agents == []' \
-      "Fallback enabled" '.fallback.enabled == true' \
+      "Fallback disabled" '.fallback.enabled == false' \
       "Fallback has no chains (v2 format)" '(.fallback.chains // null) == null' \
       "Council presets defined" '.council.presets' \
       "Council has 3 councillors" '(.council.presets.default | keys | length) == 3' \

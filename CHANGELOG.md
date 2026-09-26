@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] - 2026-09-26
+
+### Changed
+
+- Disabled client-side model fallback in the slim plugin config
+  (`fallback.enabled: false`). The plugin's fallback was sticky: once a
+  session switched models it never returned to its primary, and under
+  rate-limit storms it often landed on an equally saturated model
+  (observed `glm-5.2 → glm-5.2` re-fallback loops). Agents now always
+  run on their primary model; provider rate limits surface as retryable
+  errors and opencode re-attempts with growing backoff. LiteLLM still
+  provides key-level resilience by retrying across same-model
+  deployments (one per MaaS key).
+- REFERENCE.md: documented dormant fallback chains in the model-mapping
+  legend and preset notes.
+- 04_validate.sh: slim-config check now expects `fallback.enabled == false`
+  (was asserting the old enabled state).
+
 ## [1.23.0] - 2026-09-25
 
 ### Fixed
