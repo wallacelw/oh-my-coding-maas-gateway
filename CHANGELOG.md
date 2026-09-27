@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.29.1] - 2026-09-28
+
+### Fixed
+
+- grafana_shots.py: the capture now waits out up to two 35s
+  auto-refresh cycles when datasource query requests drop during page
+  load, so panels that failed to load are re-queried before the
+  screenshot instead of capturing false "No data" panels (observed:
+  24 dropped queries in one capture, requiring Prometheus
+  ground-truth to adjudicate). If drops persist after two cycles, a
+  warning recommends verifying empty panels against Prometheus; the
+  run still succeeds. The drop counter counts only `/api/ds/query`
+  requests, and the docstring states the trigger scope (page load
+  onward).
+- 07_dashboard_shots.sh: the timing hint no longer promises "~30s"
+  when extra refresh waits apply.
+
 ## [1.29.0] - 2026-09-28
 
 ### Changed

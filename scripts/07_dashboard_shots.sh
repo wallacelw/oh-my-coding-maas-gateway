@@ -172,7 +172,7 @@ export GRAFANA_SHOTS_URL="$GRAFANA_URL"
 export GRAFANA_SHOTS_UID="$DASHBOARD_UID"
 export GRAFANA_SHOTS_OUT="$OUT_DIR"
 
-log_info "Capturing dashboard screenshots (takes ~30s)..."
+log_info "Capturing dashboard screenshots (takes ~30s, longer if dropped queries force extra refresh waits)..."
 if ! python3 "$SCRIPT_DIR/helpers/grafana_shots.py"; then
   log_error "Screenshot capture failed — see the output above (debug.png in $OUT_DIR shows the failed render, if any)"
   exit 1

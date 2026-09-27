@@ -9,7 +9,7 @@ environment variables so no secret ever appears in a process argument:
   GRAFANA_SHOTS_OUT        Output directory for the PNGs (required)
   GRAFANA_ADMIN_PASSWORD   Grafana admin password, from .env (required)
 
-Two Grafana quirks this works around:
+Three Grafana quirks this works around:
   1. Cookie auth: Grafana 302-redirects browsers to /login instead of
      issuing a 401 challenge, so HTTP basic-auth credentials never
      engage. We login via the API and inject the grafana_session cookie.
@@ -17,6 +17,12 @@ Two Grafana quirks this works around:
      so body.scrollHeight is just the viewport. We measure the tallest
      element, resize the viewport to the full dashboard height (which
      also triggers lazy panel rendering), then capture.
+  3. Dropped datasource queries: a failed /api/ds/query leaves its
+     panel showing "No data" until the dashboard's 30s auto-refresh
+     re-issues it, so when query requests fail during the load or
+     settle waits the script rides up to two extra refresh cycles
+     before capturing; if failures persist it only warns (empty
+     panels must then be checked against Prometheus).
 
 Output: full.png (entire dashboard) plus band-NN.png (1100px vertical
 bands sized for vision-model inspection) in GRAFANA_SHOTS_OUT. The
@@ -130,7 +136,16 @@ with sync_playwright() as p:
         ctx.add_cookies(cookies)  # type: ignore
         page = ctx.new_page()
         failed = []
-        page.on("requestfailed", lambda r: failed.append(f"{r.failure} {r.url[:120]}"))
+        # Only datasource-query drops matter: they are what leave a panel
+        # showing "No data". Other failed requests (static assets, favicon,
+        # the stale ERR_ABORTED entries when a retry's goto aborts the
+        # previous load's in-flight requests) are noise for this counter.
+        page.on(
+            "requestfailed",
+            lambda r: failed.append(f"{r.failure} {r.url[:120]}")
+            if "/api/ds/query" in r.url
+            else None,
+        )
         errors = []
         page.on(
             "console",
@@ -182,6 +197,40 @@ with sync_playwright() as p:
         page.set_viewport_size({"width": 1680, "height": height})
         page.wait_for_timeout(12000)
 
+        # 2b) Dropped datasource queries (socket failures on /api/ds/query)
+        # leave the affected panels showing "No data" until the dashboard's
+        # 30s auto-refresh re-issues them — capturing right after a dropped
+        # batch ships false-alarm empty panels. `failed` accumulates for the
+        # whole session (the end-of-run note reads it), so each wait window
+        # measures failures since a checkpoint set just before the window
+        # opens; the initial check reads the whole session because panel
+        # queries fire from page load onward.
+        failed_checkpoint = 0
+        extra_cycles = 0
+        while len(failed) - failed_checkpoint > 0 and extra_cycles < 2:
+            extra_cycles += 1
+            print(
+                f"  {len(failed) - failed_checkpoint} dropped query request(s) — "
+                f"waiting out auto-refresh cycle {extra_cycles} of 2..."
+            )
+            failed_checkpoint = len(failed)
+            page.wait_for_timeout(35000)  # past the dashboard's 30s refresh
+
+        if extra_cycles:
+            if len(failed) == failed_checkpoint:
+                print(
+                    f"note: capture waited {extra_cycles} extra refresh "
+                    "cycle(s) for dropped queries"
+                )
+            else:
+                print(
+                    f"warning: {len(failed) - failed_checkpoint} query request(s) "
+                    f"still dropping after {extra_cycles} extra refresh cycle(s) — "
+                    "some panels may show 'No data' due to dropped queries; "
+                    "verify empty panels against Prometheus before reporting "
+                    "them as broken"
+                )
+
         # 3) Capture: full image plus fixed-height bands for detailed inspection.
         save_shot(page, OUT / "full.png")
         band = 1100
@@ -197,7 +246,10 @@ with sync_playwright() as p:
             i += 1
         print(f"SAVED: full.png ({height}px tall) + {i - 1} bands in {OUT}")
         if failed:
-            print(f"note: {len(failed)} failed requests during capture (first 5):")
+            print(
+                f"note: {len(failed)} dropped query request(s) during "
+                "capture (first 5):"
+            )
             for f in failed[:5]:
                 print("  ", f)
     finally:
