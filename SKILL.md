@@ -51,6 +51,7 @@ contains `scripts/04_validate.sh`.
 | `scripts/04_validate.sh` | End-to-end validation (run anytime) | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--dry-run` |
 | `scripts/05_skill.sh` | Install THIS companion skill into agents | `--yes`, `--dry-run`, `--no-skill` |
 | `scripts/06_backup.sh` | Dump/restore the LiteLLM PostgreSQL DB (spend history, virtual keys, budgets) | `--restore FILE`, `--keep N`, `--dry-run`, `--yes` |
+| `scripts/07_dashboard_shots.sh` | Capture dashboard screenshots for visual verification | `--out=`, `--dry-run` |
 | `scripts/install-skill.sh` | Install ANY skill into all detected agents | `--name=`, `--source=`, `--dry-run` |
 | `scripts/uninstall.sh` | Remove all or part of the gateway | `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes` |
 | `scripts/02_litellm.sh` | Regenerate LiteLLM config + restart (after editing `.env` or `models.sh`) | `--routing-strategy=`, `--dry-run` |
@@ -292,6 +293,27 @@ curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_deployment_failu
 ```
 
 Grafana: `http://127.0.0.1:3000` — 43-panel dashboard (7 row headers + 36 visualization panels).
+
+### Visual dashboard verification
+
+After any change to `configs/grafana/dashboards/main.json`, capture the
+rendered dashboard and review it visually — JSON validity says nothing
+about layout, colors, or broken queries.
+
+```bash
+./scripts/07_dashboard_shots.sh   # writes full.png + band-NN.png to /tmp/dashboard-shots
+```
+
+Feed the bands to a vision-capable agent and have it check them against
+the design intent: row order, panel alignment, color semantics, units in
+titles, and empty or broken panels. Fix defects, re-run the script, and
+re-verify until clean. `04_validate.sh` reports whether the capture
+capability is installed (pass/skip — optional, no hard dependency).
+One-time setup:
+
+```bash
+pip3 install --user --break-system-packages playwright && python3 -m playwright install chromium
+```
 
 ## Verify Spend and Off-Peak Discount
 

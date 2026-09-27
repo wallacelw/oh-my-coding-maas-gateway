@@ -876,6 +876,12 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
     else
       warn "Grafana reachable but dashboard not found — check provisioning"
     fi
+
+    if command -v python3 >/dev/null 2>&1 && python3 -c "import playwright" >/dev/null 2>&1 && ls "$HOME/.cache/ms-playwright" 2>/dev/null | grep -q chromium; then
+      pass "Visual verification available (run scripts/07_dashboard_shots.sh after dashboard changes)"
+    else
+      skip "Visual verification not installed (optional — see scripts/07_dashboard_shots.sh --help)"
+    fi
   else
     fail "Grafana not reachable at :3000"
   fi

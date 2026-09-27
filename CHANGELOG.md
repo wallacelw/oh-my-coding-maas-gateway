@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.27.0] - 2026-09-27
+
+### Added
+
+- **Visual dashboard verification** — new `scripts/07_dashboard_shots.sh`
+  + `scripts/helpers/grafana_shots.py`: screenshot capture for visual
+  dashboard verification (Grafana cookie auth, tall-viewport full render,
+  band output sized for vision-model review). `04_validate.sh` reports
+  the capability (pass/skip — validation gains no hard dependency).
+  Docs updated: SKILL.md (script table + verification loop),
+  REFERENCE.md, INSTALLATION.md, AGENTS.md.
+- `.gitignore`: ignore `__pycache__/` (python bytecode from the new
+  helper).
+
 ## [1.26.0] - 2026-09-27
 
 ### Changed

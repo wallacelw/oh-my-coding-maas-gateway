@@ -50,6 +50,7 @@ domain and is independently runnable.
 | 04 | `04_validate.sh` | Validation | no | End-to-end validation of all installed components. |
 | 05 | `05_skill.sh` | Companion skill | yes | Install SKILL.md into detected coding agents (opencode, codex, claude, pi); refreshes stale copies on re-run. |
 | 06 | `06_backup.sh` | PostgreSQL backup & restore | — | Dump the LiteLLM DB (spend history, virtual keys, budgets) to `backups/`; `--restore FILE` rebuilds it. Maintenance — not run by bootstrap. |
+| 07 | `07_dashboard_shots.sh` | Grafana visual verification | — | Capture the rendered dashboard as PNG screenshots for vision-model review. Maintenance — not run by bootstrap. |
 
 ### Ordering
 
@@ -183,6 +184,18 @@ prompts unless `--yes`), `--keep N`.
 
 `backups/` is gitignored (dumps contain spend history and key hashes) and
 is removed by `uninstall.sh --repo` / `--all`.
+
+### `07_dashboard_shots.sh`
+
+Maintenance script (like `update.sh`) — not part of the install pipeline.
+Captures the rendered Grafana dashboard as PNG screenshots for visual
+verification: `full.png` (entire dashboard) plus `band-NN.png` (1100px
+vertical bands sized for vision-model review) in the output directory.
+
+Flags: `--out=DIR` (default `/tmp/dashboard-shots`), `--dry-run`.
+
+Requires python3 + playwright + chromium (one-time setup:
+`pip3 install --user --break-system-packages playwright && python3 -m playwright install chromium`).
 
 ---
 

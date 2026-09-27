@@ -23,7 +23,7 @@ Reference documentation for both humans and agents. For the install procedure an
 | `LITELLM_MASTER_KEY` | `01_env.sh` (auto or custom) | `03a-03d` via `helpers/keys.sh` | Must start with `sk-` | **High** — invalidates all virtual keys (`--force` to regenerate) |
 | `LITELLM_SALT_KEY` | `01_env.sh` (auto or custom) | LiteLLM container | Random string | **High** — invalidates all virtual keys (`--force` to regenerate) |
 | `DB_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, postgres | Random string | **High** — breaks DB auth (`--force` to regenerate) |
-| `GRAFANA_ADMIN_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, `04_validate.sh` | Random string | Low — changes dashboard login only |
+| `GRAFANA_ADMIN_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, `04_validate.sh`, `07_dashboard_shots.sh` | Random string | Low — changes dashboard login only |
 | `PROMETHEUS_RETENTION` | `01_env.sh` (default `30d`) | docker-compose, 04_validate.sh | Prometheus duration (`Nd`/`Nh`/`Nw`) | None — config value |
 | `HUAWEI_MAAS_ANTHROPIC_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/anthropic`) | `02_litellm.sh` | URL | None — config value |
 | `HUAWEI_MAAS_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`) | `02_litellm.sh` | URL | None — config value |
@@ -124,6 +124,7 @@ Reference documentation for both humans and agents. For the install procedure an
 | 04 | `04_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi for partial runs) |
 | 05 | `05_skill.sh` | Install/refresh companion skill in detected coding agents (--dry-run, --no-skill, --yes); stale copies are refreshed on re-run |
 | 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
+| 07 | `07_dashboard_shots.sh` | Capture the rendered Grafana dashboard as PNG screenshots (full.png + band-NN.png) for vision-model review (--out=DIR, --dry-run). Requires python3 + playwright + chromium. Maintenance — not run by bootstrap |
 | — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus). Does not touch keys or passwords; the slim and docker methods also bump pinned versions in tracked files (including the version references in these docs) and commit those changes |
 | — | `install-skill.sh` | Install any skill into all detected coding agents (--name=<name>, --source=<path-or-url>, --dry-run). Standalone utility — not called by 05_skill.sh (which uses helpers/skills.sh directly) |
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker), sourced by bootstrap.sh and steps 01–04 |
@@ -385,6 +386,9 @@ window, 30s refresh:
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
 `$window` (rate window: 1m/5m/15m/1h, default 15m).
+
+Visual verification: `./scripts/07_dashboard_shots.sh` captures the rendered
+dashboard as PNG bands for vision-model review.
 
 ### Container Security
 

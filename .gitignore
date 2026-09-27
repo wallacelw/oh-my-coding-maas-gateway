@@ -10,3 +10,6 @@ backups/
 # ── Temp files from interrupted script runs ──
 *.tmp
 .bootstrap.lock
+
+# ── Python bytecode ──
+__pycache__/
