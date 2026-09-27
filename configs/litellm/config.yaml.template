@@ -136,7 +136,7 @@ litellm_settings:
     favicon_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
 
 router_settings:
-  routing_strategy: simple-shuffle
+  routing_strategy: least-busy
   num_retries: 3
   cooldown_time: 30 # seconds to cool down a failed deployment
   allowed_fails: 3 # non-429 failures before cooldown (30s window)

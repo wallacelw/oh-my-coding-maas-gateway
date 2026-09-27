@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.29.0] - 2026-09-28
+
+### Changed
+
+- **Routing strategy default: `simple-shuffle` → `least-busy`** —
+  in-flight-aware selection (the deployment with the fewest active
+  requests, with retry across deployments). Analysis of the Sep-27 429
+  storm showed parallel 400-700K-token requests colliding on single
+  API keys under random shuffle; least-busy spreads concurrent
+  requests one-per-deployment. `usage-based-routing-v2` was evaluated
+  and rejected: its TPM counters only update on completion, so it
+  cannot see in-flight requests (upstream limit confirmed 1M TPM per
+  API key). The `--routing-strategy=` override is unchanged.
+- **Dashboard capacity calibration for a 5-key install** (was 3
+  keys): RPM thresholds yellow 1400 / red 2000 (4 models × 500
+  pooled); TPM thresholds yellow 14,000,000 / red 20,000,000. Panel
+  descriptions updated: 10 deployments per model (5 API keys × 2 API
+  formats); upstream pool 500 RPM / 5M TPM per model, with each key's
+  budget shared by its two wire-format deployments. Dashboard
+  version 23.
+
+### Fixed
+
+- **"Models Healthy" semantics** — query `min by` → `max by`: a model
+  now counts as healthy only when every one of its deployments is
+  healthy, matching the panel description (previously a model with
+  one healthy and nine outage deployments counted as healthy).
+- **Provider-filter asymmetry documented** on Error % and
+  Total/Successful/Failed Requests: failures cannot be filtered by
+  `$provider` (some failure series lack the `api_provider` label), so
+  provider selection scopes the success side only.
+- grafana_shots.py: browser lifecycle is exception-safe (try/finally
+  on all exit paths), login response closed, graceful errors for an
+  existing OUT file and page-load timeout, truncation notice at the
+  12000px capture cap, stale "43-panel" comment fixed.
+- 07_dashboard_shots.sh: the chromium-missing hint no longer suggests
+  the pip3 step when the playwright module is already installed.
+
+### Docs
+
+- REFERENCE.md: the LiteLLM baseURL Core Rule is now SDK-accurate —
+  raw OpenAI-compatible clients (Codex, Pi) require `:4000/v1`;
+  opencode's ai-sdk and Anthropic-format clients use `:4000` (no
+  `/v1`); the Pi tool-connections row corrected accordingly. Router
+  table and prose updated for `least-busy`.
+- AGENTS.md: the helpers enumeration lists all seven files (added
+  versions.sh, grafana_shots).
+- INSTALLATION.md: ordering prose names 07_dashboard_shots.sh;
+  bootstrap prose lists all flags; the 03d section covers the npm
+  install path; the PostgreSQL endpoint row is `db:5432` (compose
+  network only, port not published).
+- README.md: upgrade-preservation wording is precise (.env, the
+  generated LiteLLM config, and Docker volumes are preserved;
+  tracked repo files, including config templates, are reset).
+- PostgreSQL added to the update.sh Infrastructure component lists
+  (pinned, display-only, never auto-updated).
+
 ## [1.28.0] - 2026-09-27
 
 ### Changed

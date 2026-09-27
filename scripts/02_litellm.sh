@@ -27,7 +27,7 @@ source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
 
 # ── Parse args ──
-ROUTING_STRATEGY="simple-shuffle"
+ROUTING_STRATEGY="least-busy"
 DRY_RUN=false
 for arg in "$@"; do
   case "$arg" in

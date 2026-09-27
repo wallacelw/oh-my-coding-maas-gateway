@@ -104,7 +104,8 @@ pipeline. Components are grouped into two categories:
 
 - **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
   Code, Pi agent
-- **Infrastructure** — LiteLLM, Grafana, Prometheus
+- **Infrastructure** — LiteLLM, Grafana, Prometheus, PostgreSQL (pinned,
+  display-only — never auto-updated)
 
 ```bash
 ./scripts/update.sh              # interactive: show grouped table, select which to update

@@ -58,8 +58,9 @@ domain and is independently runnable.
 → `03a/03b/03c/03d` tools (independent, optional, any relative order) → `04 validate`
 (last, checks everything) → `05 skill` (companion skill into installed agents).
 
-`06_backup.sh` is a maintenance script (like `update.sh`) — run manually
-whenever a database backup or restore is needed; never part of the install
+`06_backup.sh` and `07_dashboard_shots.sh` are maintenance scripts (like
+`update.sh`) — run manually whenever a database backup/restore or a
+dashboard screenshot capture is needed; never part of the install
 sequence.
 
 ### Helpers (`scripts/helpers/`)
@@ -84,7 +85,8 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 The only script a human runs. Prompts for an install directory (default:
 current parent, or `/home` if standalone). If running standalone (no repo
 detected), clones the repo to the target location and re-execs. Parses
-`--tool=`, `--virtual-key=`, `--dry-run`. Ensures core prerequisites (git,
+`--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--no-skill`,
+and `--dry-run`. Ensures core prerequisites (git,
 python3, curl, jq). Shows a colored tool-selection menu if `--tool=` is not
 given. Prints a prerequisite→tools mapping for customer validation. Dispatches
 steps 01–05. Prints a colored summary with service URLs, config file paths,
@@ -139,8 +141,10 @@ extension auto-install. Supports `--virtual-key=` and `--dry-run`.
 
 ### `03d_pi.sh`
 
-Installs the Pi coding agent (downloads installer from pi.dev to a temp
-file, then executes it), mints a virtual
+Installs the Pi coding agent — via `npm install -g
+@earendil-works/pi-coding-agent` when running non-interactive with
+Node ≥ 22, otherwise by downloading the installer from pi.dev to a temp
+file and executing it — mints a virtual
 key (alias "pi"), and writes `~/.pi/agent/models.json` (LiteLLM provider
 pointing to the proxy via OpenAI Chat Completions API). Supports
 `--virtual-key=` and `--dry-run`.
@@ -429,7 +433,8 @@ are grouped into two categories:
 
 - **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
   Code, Pi agent
-- **Infrastructure** — LiteLLM, Grafana, Prometheus
+- **Infrastructure** — LiteLLM, Grafana, Prometheus, PostgreSQL (pinned,
+  display-only — never auto-updated)
 - **Version display** — shows the project version and a per-component
   current-vs-latest table
 
@@ -579,7 +584,7 @@ group, `ufw allow from <your-ip> to any port 4000`).
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key | View keys, spend, deployments |
 | Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 44-panel observability dashboard |
 | Prometheus | `http://127.0.0.1:9090` | None | Metrics storage |
-| PostgreSQL | `localhost:5432` (internal) | — | LiteLLM database |
+| PostgreSQL | `db:5432` (compose network only — port not published; host access via `docker compose exec db psql`) | — | LiteLLM database |
 
 ### Coding Tools
 

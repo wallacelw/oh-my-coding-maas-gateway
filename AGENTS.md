@@ -349,7 +349,7 @@ consistent, and readable. These standards apply to ALL scripts.
 
 ```
 scripts/          — install pipeline (bootstrap + numbered steps 01-07, 03a-03d)
-scripts/helpers/   — shared helper libraries (prereqs, keys, common, models, skills)
+scripts/helpers/   — shared helper libraries (prereqs, keys, common, models, skills, versions, grafana_shots)
 configs/          — component configs grouped by service
 configs/litellm/   — LiteLLM config, entrypoint, template
 configs/prometheus/ — Prometheus config

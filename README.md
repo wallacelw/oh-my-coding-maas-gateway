@@ -60,8 +60,9 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 
 Non-interactive upgrades discard local repo changes if `git pull` fails —
 bootstrap prints a warning counting what is being discarded before
-resetting to `origin/main`. Config and data in `.env`, `configs/`, and
-Docker volumes are preserved.
+resetting to `origin/main`. `.env`, the generated LiteLLM config, and
+Docker volumes are preserved; tracked repo files, including config
+templates, are reset.
 
 Estimated time: ~5 min fresh, ~2 min upgrade. For flags and non-interactive
 usage, see [INSTALLATION.md](./INSTALLATION.md).
@@ -94,7 +95,8 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 
 In non-interactive mode, if `git pull` fails, bootstrap warns about the
 local commits and uncommitted changes it is discarding, then resets to
-`origin/main` — `.env`, configs, and Docker volumes are preserved.
+`origin/main` — `.env`, the generated LiteLLM config, and Docker volumes
+are preserved; tracked repo files, including config templates, are reset.
 
 After upgrade, restart any running coding tools — plugin/preset changes
 are not hot-reloaded.
@@ -102,7 +104,8 @@ are not hot-reloaded.
 ### Update coding tools only
 
 To check and update individual components (opencode, Codex, Claude Code,
-Pi, LiteLLM, Grafana, Prometheus) without re-running the full pipeline:
+Pi, LiteLLM, Grafana, Prometheus; PostgreSQL is listed as pinned and
+display-only, never auto-updated) without re-running the full pipeline:
 
 ```bash
 ./scripts/update.sh              # interactive: show versions, select which to update

@@ -3,7 +3,7 @@
   "uid": "oh-my-coding-maas-gateway",
   "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, glm-5.2, glm-5.1, deepseek-v4.1-flash) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
   "schemaVersion": 39,
-  "version": 22,
+  "version": 23,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -107,7 +107,7 @@
       "id": 2,
       "type": "stat",
       "title": "Error % ($window)",
-      "description": "Failed requests as a percentage of total requests, from litellm_deployment_failure_responses_total (deployment-level failures: 429 rate limits, 500 server errors, timeouts). This is the primary error health indicator.\n\nGOOD: <1% (green) — healthy error rate.\nWARNING: 1–5% (yellow) — elevated, monitor closely.\nBAD: >5% (red) — investigate upstream provider status, rate limits, or model availability.\n\nNOTE: This is a rate over the $window smoothing window (shown in the title), while the request counts in Errors & Health total the full dashboard time range — the percentage will not match those counts exactly.\n\nNOTE: Shows 0% when no failure series exist at all — nothing has failed since Prometheus started. If the entire dashboard is empty, the proxy or Prometheus is down, not error-free.\n\nNOTE: Internal health-check traffic is excluded — this is the client error rate. Deployment probe results are monitored via Models Healthy and the Deployment state timeline.\n\nNOTE: Failures are matched on requested_model and successes on litellm_model_name — some failure series (status-less exceptions) do not carry litellm_model_name, so matching both sides on litellm_model_name would silently drop those failures from the rate.",
+      "description": "Failed requests as a percentage of total requests, from litellm_deployment_failure_responses_total (deployment-level failures: 429 rate limits, 500 server errors, timeouts). This is the primary error health indicator.\n\nGOOD: <1% (green) — healthy error rate.\nWARNING: 1–5% (yellow) — elevated, monitor closely.\nBAD: >5% (red) — investigate upstream provider status, rate limits, or model availability.\n\nNOTE: This is a rate over the $window smoothing window (shown in the title), while the request counts in Errors & Health total the full dashboard time range — the percentage will not match those counts exactly.\n\nNOTE: Shows 0% when no failure series exist at all — nothing has failed since Prometheus started. If the entire dashboard is empty, the proxy or Prometheus is down, not error-free.\n\nNOTE: Internal health-check traffic is excluded — this is the client error rate. Deployment probe results are monitored via Models Healthy and the Deployment state timeline.\n\nNOTE: Failures are matched on requested_model and successes on litellm_model_name — some failure series (status-less exceptions) do not carry litellm_model_name, so matching both sides on litellm_model_name would silently drop those failures from the rate.\n\nNOTE: Failures are not filtered by the provider variable (some failure series lack the api_provider label) — with a specific provider selected, the percentage mixes provider-scoped successes with all-format failures.",
       "gridPos": {
         "x": 0,
         "y": 1,
@@ -183,7 +183,7 @@
       },
       "targets": [
         {
-          "expr": "count(min by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}) == 0)",
+          "expr": "count(max by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}) == 0)",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -433,7 +433,7 @@
       "id": 7,
       "type": "stat",
       "title": "RPM",
-      "description": "Requests per minute over the selected window, totaled across selected models — the number to compare against the pooled RPM ceiling.\n\nThresholds are calibrated for All models selected: pooled ceiling = 300 RPM per model (100 per key × 3 keys) × 4 models = 1200. Yellow at 840 (70% of ceiling), red at 1200 — at the ceiling, over-pool requests are rejected pre-call with 429 (see '429s to clients by model' in Errors & Health).\n\nNOTE: With fewer models selected the effective ceiling shrinks (300 per selected model); read the colors with All selected.\n\nGOOD: Green — comfortable headroom.\nBAD: Yellow/Red — approaching or at the pooled ceiling; expect client-facing 429s.\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-glm-5.1). Selecting specific models counts only those.",
+      "description": "Requests per minute over the selected window, totaled across selected models — the number to compare against the pooled RPM ceiling.\n\nThresholds are calibrated for All models selected: pooled ceiling = 500 RPM per model (100 per key × 5 keys) × 4 models = 2000. Yellow at 1400 (70% of ceiling), red at 2000 — at the ceiling, the upstream per-key quota rejects requests with 429 (see '429s to clients by model' in Errors & Health).\n\nNOTE: With fewer models selected the effective ceiling shrinks (500 per selected model); read the colors with All selected.\n\nGOOD: Green — comfortable headroom.\nBAD: Yellow/Red — approaching or at the pooled ceiling; expect client-facing 429s.\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-glm-5.1). Selecting specific models counts only those.",
       "gridPos": {
         "x": 6,
         "y": 5,
@@ -469,11 +469,11 @@
               },
               {
                 "color": "yellow",
-                "value": 840
+                "value": 1400
               },
               {
                 "color": "red",
-                "value": 1200
+                "value": 2000
               }
             ]
           }
@@ -557,7 +557,7 @@
       "id": 9,
       "type": "stat",
       "title": "TPM",
-      "description": "Tokens per minute (input + output combined), totaled across selected models. Same as TPS scaled to per-minute. Use for capacity planning against the pooled TPM ceiling: 3M per model (1M per key × 3 keys) × 4 models = 12M with All selected. Thresholds tint the sparkline only (yellow at 8.4M = 70%, red at 12M) — the value text stays neutral by design, since throughput is not an alarm.\n\nGOOD: Well below the ceiling.\nBAD: Approaching the ceiling — expect throttling; see Rate Limits & Capacity for per-model utilization.",
+      "description": "Tokens per minute (input + output combined), totaled across selected models. Same as TPS scaled to per-minute. Use for capacity planning against the pooled TPM ceiling: 5M per model (1M per key × 5 keys) × 4 models = 20M with All selected. Thresholds tint the sparkline only (yellow at 14M = 70%, red at 20M) — the value text stays neutral by design, since throughput is not an alarm.\n\nGOOD: Well below the ceiling.\nBAD: Approaching the ceiling — expect throttling; see Rate Limits & Capacity for per-model utilization.",
       "gridPos": {
         "x": 18,
         "y": 5,
@@ -593,11 +593,11 @@
               },
               {
                 "color": "yellow",
-                "value": 8400000
+                "value": 14000000
               },
               {
                 "color": "red",
-                "value": 12000000
+                "value": 20000000
               }
             ]
           }
@@ -637,7 +637,7 @@
       "id": 11,
       "type": "stat",
       "title": "Total Requests (time range)",
-      "description": "Absolute count of all client requests (successful + failed) across all deployments in the selected Grafana time range. Internal health-check traffic is excluded. Should equal Successful Requests + Failed Requests.\n\nNOTE: The three counts are independent increase() extrapolations and can differ by ±1 (e.g. 376 vs 339 + 36 = 375) — a Prometheus estimation artifact, not missing traffic.\n\nNOTE: Successes are matched on litellm_model_name and failures on requested_model — some failure series do not carry litellm_model_name, so both label filters are required to keep this equal to Successful Requests + Failed Requests.",
+      "description": "Absolute count of all client requests (successful + failed) across all deployments in the selected Grafana time range. Internal health-check traffic is excluded. Should equal Successful Requests + Failed Requests.\n\nNOTE: The three counts are independent increase() extrapolations and can differ by ±1 (e.g. 376 vs 339 + 36 = 375) — a Prometheus estimation artifact, not missing traffic.\n\nNOTE: Successes are matched on litellm_model_name and failures on requested_model — some failure series do not carry litellm_model_name, so both label filters are required to keep this equal to Successful Requests + Failed Requests.\n\nNOTE: Successes are provider-scoped but failures are not (some failure series lack the api_provider label) — with a provider selected, the total mixes scopes.",
       "gridPos": {
         "x": 0,
         "y": 10,
@@ -697,7 +697,7 @@
       "id": 12,
       "type": "stat",
       "title": "Successful Requests (time range)",
-      "description": "Absolute count of successful client responses across all deployments in the selected Grafana time range. Internal health-check traffic is excluded.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.",
+      "description": "Absolute count of successful client responses across all deployments in the selected Grafana time range. Internal health-check traffic is excluded.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.\n\nNOTE: Provider selection scopes this panel's successes only; Failed Requests is not provider-filtered.",
       "gridPos": {
         "x": 8,
         "y": 10,
@@ -757,7 +757,7 @@
       "id": 13,
       "type": "stat",
       "title": "Failed Requests (time range)",
-      "description": "Absolute count of failed client responses across all deployments in the selected Grafana time range. Internal health-check traffic is excluded — a failing health check does not count here (watch the Deployment state timeline for that).\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Errors by model below for per-model details.",
+      "description": "Absolute count of failed client responses across all deployments in the selected Grafana time range. Internal health-check traffic is excluded — a failing health check does not count here (watch the Deployment state timeline for that).\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Errors by model below for per-model details.\n\nNOTE: This panel is not filtered by provider (some failure series lack the api_provider label); provider selection affects the success side only.",
       "gridPos": {
         "x": 16,
         "y": 10,
@@ -1296,7 +1296,7 @@
       "id": 17,
       "type": "state-timeline",
       "title": "Deployment state",
-      "description": "Per-model deployment health over time — the WORST single deployment state per model (max across its 6 deployments: 3 API keys × 2 API formats), from litellm_deployment_state. 0 = all deployments healthy (green), 1 = at least one deployment degraded (orange), 2 = at least one deployment in full outage (red).\n\nIn-segment labels are hidden by design — narrow segments clip text; read the colors and hover for detail.\n\nGOOD: All rows green — every model fully healthy.\nBAD: Orange (degraded) or red (outage) blocks — check LiteLLM logs for the failing deployments.\n\nNOTE: The legend lists the CURRENT state of each model (latest value) — historical segments keep their colors. Full key: green = Healthy (0), orange = Degraded (1), red = Outage (2).",
+      "description": "Per-model deployment health over time — the WORST single deployment state per model (max across its 10 deployments: 5 API keys × 2 API formats), from litellm_deployment_state. 0 = all deployments healthy (green), 1 = at least one deployment degraded (orange), 2 = at least one deployment in full outage (red).\n\nIn-segment labels are hidden by design — narrow segments clip text; read the colors and hover for detail.\n\nGOOD: All rows green — every model fully healthy.\nBAD: Orange (degraded) or red (outage) blocks — check LiteLLM logs for the failing deployments.\n\nNOTE: The legend lists the CURRENT state of each model (latest value) — historical segments keep their colors. Full key: green = Healthy (0), orange = Degraded (1), red = Outage (2).",
       "gridPos": {
         "x": 18,
         "y": 14,
@@ -1359,7 +1359,7 @@
       "id": 18,
       "type": "row",
       "title": "Rate Limits & Capacity",
-      "description": "Traffic versus provider rate ceilings — the capacity-planning view. RPM and TPM by model on top; the configured per-deployment limits below, aligned under the matching chart. The router enforces pooled per-model limits (3 keys × per-key limit) before calls are dispatched, so over-pool traffic is rejected with 429s pre-call.",
+      "description": "Traffic versus provider rate ceilings — the capacity-planning view. RPM and TPM by model on top; the configured per-deployment limits below, aligned under the matching chart. The router rejects pre-call when a single deployment would exceed its per-deployment cap (100 RPM / 1M TPM); the upstream rejects with 429 when an API key's per-minute quota is exceeded (per-model pool across 5 keys: 500 RPM / 5M TPM).",
       "gridPos": {
         "x": 0,
         "y": 26,
@@ -1635,7 +1635,7 @@
       "id": 21,
       "type": "stat",
       "title": "Deployment RPM limits",
-      "description": "Configured requests-per-minute ceiling per deployment, from litellm_deployment_rpm_limit (set in models.sh). Every model allows 100 RPM per API key; with 3 keys per model, the router enforces a pooled 300 RPM per model before dispatching.\n\nHOW TO READ: Compare against 'RPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the ceiling — over-pool requests are rejected pre-call with 429.",
+      "description": "Configured requests-per-minute ceiling per deployment, from litellm_deployment_rpm_limit (set in models.sh). Every model allows 100 RPM per API key; with 5 keys per model, the upstream pool is 500 RPM per model (each key's budget is shared by its two wire-format deployments).\n\nHOW TO READ: Compare against 'RPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the upstream pool — requests beyond it draw upstream 429s (the router's per-deployment caps bind earlier only when a single deployment runs hot).",
       "gridPos": {
         "x": 0,
         "y": 41,
@@ -1754,7 +1754,7 @@
       "id": 22,
       "type": "stat",
       "title": "Deployment TPM limits",
-      "description": "Configured tokens-per-minute ceiling per deployment, from litellm_deployment_tpm_limit (set in models.sh). Every model allows 1M TPM per API key; with 3 keys per model, the router enforces a pooled 3M TPM per model before dispatching.\n\nHOW TO READ: Compare against 'TPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the ceiling — over-pool requests are rejected pre-call with 429.",
+      "description": "Configured tokens-per-minute ceiling per deployment, from litellm_deployment_tpm_limit (set in models.sh). Every model allows 1M TPM per API key; with 5 keys per model, the upstream pool is 5M TPM per model (each key's budget is shared by its two wire-format deployments).\n\nHOW TO READ: Compare against 'TPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the upstream pool — requests beyond it draw upstream 429s (the router's per-deployment caps bind earlier only when a single deployment runs hot).",
       "gridPos": {
         "x": 12,
         "y": 41,

@@ -116,6 +116,8 @@ if [ "$DRY_RUN" = true ]; then
   log_dim "  Output: $OUT_DIR — full.png + band-NN.png"
   if [ "$HAVE_PYTHON" = true ] && [ "$HAVE_PLAYWRIGHT" = true ] && [ "$HAVE_CHROMIUM" = true ]; then
     log_dim "  Capture tooling: python3 + playwright + chromium available"
+  elif [ "$HAVE_PLAYWRIGHT" = true ]; then
+    log_dim "  Capture tooling: chromium missing — python3 -m playwright install chromium"
   else
     log_dim "  Capture tooling: missing — pip3 install --user --break-system-packages playwright && python3 -m playwright install chromium"
   fi
@@ -141,8 +143,10 @@ if [ "$HAVE_PLAYWRIGHT" != true ]; then
   log_error "playwright not installed — fix: pip3 install --user --break-system-packages playwright && python3 -m playwright install chromium"
   exit 1
 fi
+# The playwright-module check above already exited with the pip3 fix, so
+# here the module is importable and only the browser download is missing.
 if [ "$HAVE_CHROMIUM" != true ]; then
-  log_error "playwright chromium not installed — fix: pip3 install --user --break-system-packages playwright && python3 -m playwright install chromium"
+  log_error "playwright chromium not installed — fix: python3 -m playwright install chromium"
   exit 1
 fi
 if [ "$HAVE_JQ" != true ]; then
