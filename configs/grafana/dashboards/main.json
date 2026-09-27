@@ -1,8 +1,9 @@
 {
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
+  "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, glm-5.2, glm-5.1, deepseek-v4.1-flash) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
   "schemaVersion": 39,
-  "version": 16,
+  "version": 18,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -90,7 +91,7 @@
       "id": 1,
       "type": "row",
       "title": "At-a-glance",
-      "description": "Live proxy load and health snapshot. Check here first when investigating issues — these stat panels give an instant read on current system state.",
+      "description": "Live snapshot of proxy health, load, and spend — check here first. Top row is current state (error rate, model health, in-flight requests, window spend); bottom row is request and token rates. One scan answers 'is everything OK?'.",
       "gridPos": {
         "x": 0,
         "y": 0,
@@ -103,10 +104,146 @@
     {
       "id": 2,
       "type": "stat",
+      "title": "Error % ($window)",
+      "description": "Failed requests as a percentage of total requests, from litellm_deployment_failure_responses_total (deployment-level failures: 429 rate limits, 500 server errors, timeouts). This is the primary error health indicator.\n\nGOOD: <1% (green) — healthy error rate.\nWARNING: 1–5% (yellow) — elevated, monitor closely.\nBAD: >5% (red) — investigate upstream provider status, rate limits, or model availability.\n\nNOTE: This is a rate over the $window smoothing window (shown in the title), while the request counts in Errors & Health total the full dashboard time range — the percentage will not match those counts exactly.\n\nNOTE: Shows 0% when no failure series exist at all — nothing has failed since Prometheus started. If the entire dashboard is empty, the proxy or Prometheus is down, not error-free.\n\nNOTE: Failures are matched on requested_model and successes on litellm_model_name — LiteLLM does not emit litellm_model_name on internal health-check failure series, so aligning both sides on litellm_model_name would silently drop those failures from the rate.",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$window])) / (sum(rate(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}[$window])) + sum(rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$window]))) * 100",
+          "refId": "A",
+          "legendFormat": "",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "0%",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Models Healthy",
+      "description": "Count of distinct models with all deployments in healthy state (deployment_state == 0). A model is healthy only when every one of its upstream deployments responds successfully to health checks.\n\nGOOD: Equals the number of selected models (4 when All is selected).\nBAD: Less than that — one or more models have degraded or unavailable deployments. Check the Deployment state timeline in Errors & Health for details.",
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "count(min by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}) == 0)",
+          "refId": "A",
+          "legendFormat": "",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "0",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
       "title": "Active Requests",
       "description": "Number of requests currently being processed by the proxy (started but not yet completed). This is a real-time gauge, not a rate — it shows 'right now, N requests are in flight.'\n\nHOW TO READ: Sudden spikes indicate traffic bursts or upstream slowdowns (requests pile up if the backend is slow). If it climbs continuously without dropping, the proxy may be stuck or the upstream is saturated.\n\nGOOD: Low and stable, tracking expected concurrency (0–10 typical).\nBAD: Continuously rising or pegged at max concurrency — investigate upstream latency.",
       "gridPos": {
-        "x": 0,
+        "x": 12,
         "y": 1,
         "w": 6,
         "h": 4
@@ -167,13 +304,71 @@
       }
     },
     {
-      "id": 33,
+      "id": 5,
+      "type": "stat",
+      "title": "Spend (time range)",
+      "description": "Total USD spent in the currently selected Grafana time range, from litellm_spend_metric_total. This is cumulative spend over the visible window, not a rate. Use it to quickly assess cost impact during incidents or traffic spikes.\n\nGOOD: Within budget expectations.\nBAD: Unexpectedly high — check for runaway clients, retry loops, or expensive model selection.",
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(litellm_spend_metric_total{model=~\"$model\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "$",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 6,
       "type": "stat",
       "title": "RPS",
       "description": "Requests per second over the selected window, from litellm_proxy_total_requests_metric_total (all HTTP requests including health checks). Use this to gauge real-time traffic volume. Compare with RPM (×60) for sanity.\n\nGOOD: Matches expected traffic pattern.\nBAD: Unexpected drop to zero (proxy down) or sudden 10× spike (retry storms, runaway clients).",
       "gridPos": {
-        "x": 6,
-        "y": 1,
+        "x": 0,
+        "y": 5,
         "w": 6,
         "h": 4
       },
@@ -233,13 +428,13 @@
       }
     },
     {
-      "id": 3,
+      "id": 7,
       "type": "stat",
       "title": "RPM",
       "description": "Requests per minute over the selected window. Same metric as RPS scaled to per-minute. Use this for capacity planning — compare against your MaaS provider's RPM limit.\n\nGOOD: Below 70% of your RPM limit.\nBAD: Approaching or exceeding the limit — expect 429 rate-limit errors.",
       "gridPos": {
-        "x": 12,
-        "y": 1,
+        "x": 6,
+        "y": 5,
         "w": 6,
         "h": 4
       },
@@ -299,78 +494,12 @@
       }
     },
     {
-      "id": 6,
-      "type": "stat",
-      "title": "Error %",
-      "description": "Failed requests as a percentage of total requests, from litellm_deployment_failure_responses_total (deployment-level failures: 429 rate limits, 500 server errors, timeouts). This is the primary error health indicator.\n\nGOOD: <1% (green) — healthy error rate.\nWARNING: 1–5% (yellow) — elevated, monitor closely.\nBAD: >5% (red) — investigate upstream provider status, rate limits, or model availability.\n\nNOTE: Failures are matched on requested_model and successes on litellm_model_name — LiteLLM does not emit litellm_model_name on internal health-check failure series, so aligning both sides on litellm_model_name would silently drop those failures from the rate.",
-      "gridPos": {
-        "x": 18,
-        "y": 1,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$window])) / (sum(rate(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}[$window])) + sum(rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$window]))) * 100",
-          "refId": "A",
-          "legendFormat": "",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 34,
+      "id": 8,
       "type": "stat",
       "title": "TPS",
       "description": "Tokens per second (input + output combined) over the selected window, from litellm_total_tokens_metric_total. Measures throughput in terms of token generation. A model generating long outputs will have high TPS even with low RPS.\n\nGOOD: Matches expected workload volume.\nBAD: Sudden drops suggest request failures or model unavailability.",
       "gridPos": {
-        "x": 6,
+        "x": 12,
         "y": 5,
         "w": 6,
         "h": 4
@@ -391,7 +520,7 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "tok/s",
           "color": {
             "mode": "thresholds"
           },
@@ -401,14 +530,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 500
               }
             ]
           }
@@ -425,18 +546,18 @@
         },
         "orientation": "horizontal",
         "textMode": "auto",
-        "colorMode": "value",
+        "colorMode": "none",
         "graphMode": "area",
         "justifyMode": "auto"
       }
     },
     {
-      "id": 4,
+      "id": 9,
       "type": "stat",
       "title": "TPM",
       "description": "Tokens per minute (input + output combined). Same as TPS scaled to per-minute. Use for provider TPM limit capacity planning.\n\nGOOD: Below 70% of your provider's TPM limit.\nBAD: Approaching the limit — expect throttling.",
       "gridPos": {
-        "x": 12,
+        "x": 18,
         "y": 5,
         "w": 6,
         "h": 4
@@ -467,14 +588,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 6000
-              },
-              {
-                "color": "red",
-                "value": 30000
               }
             ]
           }
@@ -491,25 +604,39 @@
         },
         "orientation": "horizontal",
         "textMode": "auto",
-        "colorMode": "value",
+        "colorMode": "none",
         "graphMode": "area",
         "justifyMode": "auto"
       }
     },
     {
-      "id": 5,
-      "type": "stat",
-      "title": "Models Healthy",
-      "description": "Count of distinct models with all deployments in healthy state (deployment_state == 0). A model is healthy only when every one of its upstream deployments responds successfully to health checks.\n\nGOOD: Equals the total number of configured models.\nBAD: Less than total — one or more models have degraded or unavailable deployments. Check the Deployment health table for details.",
+      "id": 10,
+      "type": "row",
+      "title": "Errors & Health",
+      "description": "Request outcomes and failure detail for incident triage. Time-range counts across the top, then failures per model, the status-code mix, and per-model deployment health. Start here when Error % in At-a-glance looks wrong.",
       "gridPos": {
         "x": 0,
-        "y": 5,
-        "w": 6,
+        "y": 9,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Total Requests (time range)",
+      "description": "Absolute count of all requests (successful + failed) across all deployments in the selected Grafana time range. Should equal Successful Requests + Failed Requests.\n\nNOTE: Successes are matched on litellm_model_name and failures on requested_model — LiteLLM does not emit litellm_model_name on internal health-check failure series, so both label filters are required to keep this equal to Successful Requests + Failed Requests.",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 8,
         "h": 4
       },
       "targets": [
         {
-          "expr": "count(min by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}) == 0)",
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range])) + sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -524,6 +651,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "noValue": "0",
           "color": {
             "mode": "thresholds"
           },
@@ -535,7 +663,8 @@
                 "value": null
               }
             ]
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
@@ -555,19 +684,19 @@
       }
     },
     {
-      "id": 7,
+      "id": 12,
       "type": "stat",
-      "title": "Spend (window)",
-      "description": "Total USD spent in the currently selected Grafana time range, from litellm_spend_metric_total. This is cumulative spend over the visible window, not a rate. Use it to quickly assess cost impact during incidents or traffic spikes.\n\nGOOD: Within budget expectations.\nBAD: Unexpectedly high — check for runaway clients, retry loops, or expensive model selection.",
+      "title": "Successful Requests (time range)",
+      "description": "Absolute count of successful responses across all deployments in the selected Grafana time range.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.",
       "gridPos": {
-        "x": 18,
-        "y": 5,
-        "w": 6,
+        "x": 8,
+        "y": 10,
+        "w": 8,
         "h": 4
       },
       "targets": [
         {
-          "expr": "sum(increase(litellm_spend_metric_total{model=~\"$model\"}[$__range]))",
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range]))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -581,7 +710,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "$",
+          "unit": "short",
+          "noValue": "0",
           "color": {
             "mode": "thresholds"
           },
@@ -593,7 +723,8 @@
                 "value": null
               }
             ]
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
@@ -613,310 +744,21 @@
       }
     },
     {
-      "id": 8,
-      "type": "row",
-      "title": "Latency",
-      "description": "Streaming and request latency metrics per model. These panels reveal where time is spent in the request lifecycle: queue wait → proxy overhead → upstream API → first token → token generation. Use them to identify bottlenecks and compare model performance.",
-      "gridPos": {
-        "x": 0,
-        "y": 9,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false,
-      "panels": []
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "TTFT by model",
-      "description": "Time To First Token (P95) — the time from request start to the first token being streamed back, from litellm_llm_api_time_to_first_token_metric. This is what users perceive as 'the model is thinking.' It includes queue wait, proxy overhead, and the upstream's prefill phase.\n\nGOOD: <1s for chat models, <2s for reasoning models — users perceive instant response.\nBAD: >3s — users perceive lag; check Queue wait and LLM API latency panels to isolate the cause.",
-      "gridPos": {
-        "x": 0,
-        "y": 10,
-        "w": 12,
-        "h": 12
-      },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_llm_api_time_to_first_token_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "A",
-          "legendFormat": "{{model}}",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "TPOT by model",
-      "description": "Time Per Output Token (P95) — the average time between consecutive output tokens during streaming, from litellm_deployment_latency_per_output_token. This measures the model's raw generation speed. Lower means faster token generation.\n\nGOOD: <50ms/token for fast models, <100ms for reasoning models — smooth streaming.\nBAD: >200ms — slow generation; may indicate provider throttling, model overload, or GPU contention.",
-      "gridPos": {
-        "x": 12,
-        "y": 10,
-        "w": 12,
-        "h": 12
-      },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le, litellm_model_name) (rate(litellm_deployment_latency_per_output_token_bucket{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$window])))",
-          "refId": "A",
-          "legendFormat": "{{litellm_model_name}}",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "End-to-end latency",
-      "description": "Total request latency P95 (seconds) — the full round-trip from request received to response completed, from litellm_request_total_latency_metric. P95 captures the slow tail that affects user experience.\n\nGOOD: <2s for chat models, <5s for reasoning models.\nBAD: >5s — check Queue wait, LLM API latency, and Proxy overhead to isolate the bottleneck.",
-      "gridPos": {
-        "x": 0,
-        "y": 22,
-        "w": 6,
-        "h": 12
-      },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "A",
-          "legendFormat": "{{model}}",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
-      "id": 35,
-      "type": "timeseries",
-      "title": "LLM API latency",
-      "description": "Upstream LLM API call latency P95 (seconds) — time spent waiting for the model provider, from litellm_llm_api_latency_metric. This excludes proxy overhead and queue wait. Compare with End-to-end latency to isolate where time is spent.\n\nGOOD: Close to End-to-end latency (proxy adds minimal overhead).\nBAD: Much higher than expected — provider is slow, rate-limiting, or experiencing an outage.",
-      "gridPos": {
-        "x": 6,
-        "y": 22,
-        "w": 6,
-        "h": 12
-      },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_llm_api_latency_metric_bucket{model=~\"$model\"}[$window])))",
-          "refId": "A",
-          "legendFormat": "{{model}}",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "Proxy overhead",
-      "description": "LiteLLM proxy processing overhead (P95) — time spent inside the proxy itself (routing, auth, logging, callbacks), from litellm_overhead_latency_metric. This is the difference between end-to-end latency and upstream API latency.\n\nGOOD: <100ms — proxy is not a bottleneck.\nBAD: >500ms — proxy is slow; check callback handlers, logging volume, or CPU saturation on the proxy container.",
-      "gridPos": {
-        "x": 12,
-        "y": 22,
-        "w": 6,
-        "h": 12
-      },
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, sum by (le, litellm_model_name) (rate(litellm_overhead_latency_metric_bucket{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$window])))",
-          "refId": "A",
-          "legendFormat": "{{litellm_model_name}}",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
       "id": 13,
-      "type": "timeseries",
-      "title": "Queue wait",
-      "description": "Request queue wait time (P95) — how long requests wait in the LiteLLM queue before being dispatched to the upstream, from litellm_request_queue_time_seconds. This is zero under low load; it rises when all deployment slots are busy.\n\nGOOD: <100ms — no queuing pressure.\nBAD: >1s — the proxy is saturated; consider adding more deployments, increasing concurrency limits, or adding API keys.",
+      "type": "stat",
+      "title": "Failed Requests (time range)",
+      "description": "Absolute count of failed responses across all deployments in the selected Grafana time range.\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Errors by model below for per-model details.",
       "gridPos": {
-        "x": 18,
-        "y": 22,
-        "w": 6,
-        "h": 12
+        "x": 16,
+        "y": 10,
+        "w": 8,
+        "h": 4
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_request_queue_time_seconds_bucket{model=~\"$model\"}[$window])))",
+          "expr": "sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
           "refId": "A",
-          "legendFormat": "{{model}}",
+          "legendFormat": "",
           "hide": false,
           "datasource": {
             "type": "prometheus",
@@ -928,56 +770,55 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short",
+          "noValue": "0",
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "decimals": 0
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
+        "reduceOptions": {
           "calcs": [
-            "lastNotNull"
-          ]
+            "last"
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
       }
     },
     {
       "id": 14,
-      "type": "row",
-      "title": "Errors & Health",
-      "description": "Error rates, status code breakdown, deployment state, and per-model health. Use these panels to diagnose failures and identify degraded deployments.",
-      "gridPos": {
-        "x": 0,
-        "y": 34,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false,
-      "panels": []
-    },
-    {
-      "id": 15,
       "type": "timeseries",
       "title": "Errors by model",
-      "description": "Absolute count of failed requests per model in the selected time window, from litellm_deployment_failure_responses_total using increase() over $__range. Each line shows the total failure count for one model.\n\nHOW TO READ: This is a cumulative count over the visible time range, not a rate. Spikes indicate model-specific issues (rate limits, model unavailable, provider outage).\n\nGOOD: All lines at or near zero.\nBAD: Sustained non-zero count for a model — check provider status, rate limits, and model configuration.",
+      "description": "Absolute count of failed requests per model in the selected dashboard time range, from litellm_deployment_failure_responses_total using increase() over $__range. Each line shows the total failure count for one model.\n\nHOW TO READ: This is a cumulative count over the visible time range, not a rate. Spikes indicate model-specific issues (rate limits, model unavailable, provider outage).\n\nGOOD: All lines at or near zero.\nBAD: Sustained non-zero count for a model — check provider status, rate limits, and model configuration.",
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 14,
         "w": 12,
         "h": 12
       },
@@ -1009,7 +850,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1021,24 +923,24 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 16,
+      "id": 15,
       "type": "piechart",
       "title": "Error status codes",
-      "description": "Distribution of HTTP status codes for failed requests in the selected time window, from litellm_deployment_failure_responses_total grouped by exception_status.\n\nSTATUS CODE REFERENCE:\n  400 — Bad Request: malformed request, invalid model name, or bad parameters.\n  401 — Unauthorized: API key invalid, expired, or missing.\n  403 — Forbidden: API key lacks permission for the requested model or action.\n  404 — Not Found: requested model or endpoint does not exist.\n  408 — Timeout: request exceeded the configured timeout limit.\n  429 — Rate Limited: too many requests — hit MaaS provider RPM/TPM limit, or proxy-enforced pre-call limit (pooled TPM/RPM cap). Transient; should recover automatically via cooldown/retry.\n  500 — Internal Server Error: upstream provider returned an unexpected error. Investigate provider status.\n  502 — Bad Gateway: upstream provider unreachable or returned invalid response. Provider may be down.\n  503 — Service Unavailable: upstream temporarily overloaded. Usually transient.\n  504 — Gateway Timeout: upstream did not respond in time. Provider is slow or unresponsive.\n\nGOOD: Empty (no errors) or dominated by 429 (transient rate limits that auto-recover).\nBAD: Large 500/502/503/504 slices — upstream provider issues requiring investigation.",
+      "description": "Distribution of HTTP status codes for failed deployment requests in the selected time range, from litellm_deployment_failure_responses_total grouped by exception_status. Failures without an HTTP status (exception_status 'None' — connection errors that never got a response) are excluded from this breakdown; they still count in Errors by model and the request totals.\n\nCOLOR KEY: yellow = 429 (transient rate limit), red = 5xx (provider failure — investigate), orange = 401/403 (auth/key problems), blue = other 4xx (client-side request issues).\n\nSTATUS CODE REFERENCE:\n  400 — Bad Request: malformed request, invalid model name, or bad parameters.\n  401 — Unauthorized: API key invalid, expired, or missing.\n  403 — Forbidden: API key lacks permission for the requested model or action.\n  404 — Not Found: requested model or endpoint does not exist.\n  408 — Timeout: request exceeded the configured timeout limit.\n  429 — Rate Limited: a deployment hit its MaaS RPM/TPM limit. Transient; should recover automatically via cooldown and retry. NOTE: router-level pre-call rejections (proxy-enforced pooled limits) are refused before a deployment is chosen, so they do not appear in this deployment-level panel — if clients report 429s but this panel looks clean, that is likely why.\n  500 — Internal Server Error: upstream provider returned an unexpected error. Investigate provider status.\n  502 — Bad Gateway: upstream provider unreachable or returned invalid response. Provider may be down.\n  503 — Service Unavailable: upstream temporarily overloaded. Usually transient.\n  504 — Gateway Timeout: upstream did not respond in time. Provider is slow or unresponsive.\n\nGOOD: Empty (no errors) or dominated by yellow 429 (transient rate limits that auto-recover).\nBAD: Large red 5xx slices — upstream provider issues requiring investigation.",
       "gridPos": {
         "x": 12,
-        "y": 35,
+        "y": 14,
         "w": 6,
         "h": 12
       },
       "targets": [
         {
-          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by (exception_status) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range])), \"status\", \"$1\", \"exception_status\", \"(.*)\"), \"status\", \"400 — Bad Request\", \"exception_status\", \"400\"), \"status\", \"401 — Unauthorized\", \"exception_status\", \"401\"), \"status\", \"403 — Forbidden\", \"exception_status\", \"403\"), \"status\", \"404 — Not Found\", \"exception_status\", \"404\"), \"status\", \"408 — Timeout\", \"exception_status\", \"408\"), \"status\", \"429 — Rate Limited\", \"exception_status\", \"429\"), \"status\", \"500 — Internal Server Error\", \"exception_status\", \"500\"), \"status\", \"502 — Bad Gateway\", \"exception_status\", \"502\"), \"status\", \"503 — Service Unavailable\", \"exception_status\", \"503\"), \"status\", \"504 — Gateway Timeout\", \"exception_status\", \"504\")",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by (exception_status) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\",exception_status!=\"None\"}[$__range])), \"status\", \"$1\", \"exception_status\", \"(.*)\"), \"status\", \"400 — Bad Request\", \"exception_status\", \"400\"), \"status\", \"401 — Unauthorized\", \"exception_status\", \"401\"), \"status\", \"403 — Forbidden\", \"exception_status\", \"403\"), \"status\", \"404 — Not Found\", \"exception_status\", \"404\"), \"status\", \"408 — Timeout\", \"exception_status\", \"408\"), \"status\", \"429 — Rate Limited\", \"exception_status\", \"429\"), \"status\", \"500 — Internal Server Error\", \"exception_status\", \"500\"), \"status\", \"502 — Bad Gateway\", \"exception_status\", \"502\"), \"status\", \"503 — Service Unavailable\", \"exception_status\", \"503\"), \"status\", \"504 — Gateway Timeout\", \"exception_status\", \"504\")",
           "refId": "A",
           "legendFormat": "{{status}}",
           "hide": false,
@@ -1057,24 +959,191 @@
             "mode": "palette-classic"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "429 — Rate Limited"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "500 — Internal Server Error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E02F44"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "502 — Bad Gateway"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E02F44"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "503 — Service Unavailable"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E02F44"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "504 — Gateway Timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E02F44"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "401 — Unauthorized"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "403 — Forbidden"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "400 — Bad Request"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "404 — Not Found"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "408 — Timeout"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "pieType": "donut",
         "displayLabels": [
           "name",
           "percent"
-        ]
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showValues": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       }
     },
     {
-      "id": 17,
+      "id": 16,
       "type": "state-timeline",
       "title": "Deployment state",
-      "description": "Deployment health state per model over time, from litellm_deployment_state. Colored blocks show each model's health: green=healthy (0), orange=partial degradation (1), red=outage (2).\n\nGOOD: All blocks green — all models fully healthy.\nBAD: Any orange (partial — some deployments degraded) or red (outage — model is down).",
+      "description": "Per-model deployment health over time, from litellm_deployment_state summed across each model's deployments (6 per model: 3 API keys × 2 API formats). The sum maps to: 0 = all deployments healthy (green), 1 = one deployment degraded (orange), 2+ = outage-level degradation — a deployment in full outage or multiple degraded (red).\n\nGOOD: All rows green — every model fully healthy.\nBAD: Orange (partial) or red (outage-level) blocks — check LiteLLM logs for the failing deployments.",
       "gridPos": {
         "x": 18,
-        "y": 35,
+        "y": 14,
         "w": 6,
         "h": 12
       },
@@ -1113,6 +1182,46 @@
                 "2": {
                   "text": "Outage",
                   "color": "red"
+                },
+                "3": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "4": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "5": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "6": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "7": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "8": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "9": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "10": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "11": {
+                  "text": "Outage",
+                  "color": "red"
+                },
+                "12": {
+                  "text": "Outage",
+                  "color": "red"
                 }
               }
             }
@@ -1127,13 +1236,13 @@
       }
     },
     {
-      "id": 19,
+      "id": 17,
       "type": "row",
-      "title": "Throughput & Capacity",
-      "description": "Request and token throughput rates, traffic distribution across models, and RPM utilization against provider limits. Use these to understand load patterns and capacity headroom.",
+      "title": "Rate Limits & Capacity",
+      "description": "Traffic versus provider rate ceilings — the capacity-planning view. RPM and TPM by model on top; the configured per-deployment limits below, aligned under the matching chart. The router enforces pooled per-model limits (3 keys × per-key limit) before calls are dispatched, so over-pool traffic is rejected with 429s pre-call.",
       "gridPos": {
         "x": 0,
-        "y": 46,
+        "y": 26,
         "w": 24,
         "h": 1
       },
@@ -1141,197 +1250,15 @@
       "panels": []
     },
     {
-      "id": 36,
-      "type": "stat",
-      "title": "Total Requests (window)",
-      "description": "Absolute count of all requests (successful + failed) across all deployments in the selected Grafana time range. Should equal Successful Requests + Failed Requests.\n\nNOTE: Successes are matched on litellm_model_name and failures on requested_model — LiteLLM does not emit litellm_model_name on internal health-check failure series, so both label filters are required to keep this equal to Successful Requests + Failed Requests.",
-      "gridPos": {
-        "x": 0,
-        "y": 47,
-        "w": 8,
-        "h": 4
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range])) + sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
-          "refId": "A",
-          "legendFormat": "",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 37,
-      "type": "stat",
-      "title": "Successful Requests (window)",
-      "description": "Absolute count of successful responses across all deployments. Count of successful responses in the selected Grafana time range.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.",
-      "gridPos": {
-        "x": 8,
-        "y": 47,
-        "w": 8,
-        "h": 4
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range]))",
-          "refId": "A",
-          "legendFormat": "",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 38,
-      "type": "stat",
-      "title": "Failed Requests (window)",
-      "description": "Absolute count of failed responses across all deployments. Count of failed responses in the selected Grafana time range.\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Error rate by model for per-model details.",
-      "gridPos": {
-        "x": 16,
-        "y": 47,
-        "w": 8,
-        "h": 4
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
-          "refId": "A",
-          "legendFormat": "",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 20,
+      "id": 18,
       "type": "timeseries",
       "title": "RPM by model",
       "description": "Requests per minute broken down by model, from litellm_proxy_total_requests_metric_total. Each line shows traffic volume for one model. Use this to understand which models receive the most traffic and spot usage pattern changes.\n\nGOOD: Matches expected traffic distribution.\nBAD: One model suddenly dominates (misconfigured client) or a model drops to zero (clients can't reach it).",
       "gridPos": {
         "x": 0,
-        "y": 51,
+        "y": 27,
         "w": 12,
-        "h": 12
+        "h": 10
       },
       "targets": [
         {
@@ -1361,7 +1288,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1373,20 +1361,20 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 21,
+      "id": 19,
       "type": "timeseries",
       "title": "TPM by model",
       "description": "Tokens per minute broken down by model, from litellm_total_tokens_metric. Shows token consumption per model. Compare with RPM by model — a model with low RPM but high TPM has long conversations.\n\nGOOD: Matches expected usage pattern.\nBAD: Unexpected spikes — runaway clients or unexpectedly long outputs.",
       "gridPos": {
         "x": 12,
-        "y": 51,
+        "y": 27,
         "w": 12,
-        "h": 12
+        "h": 10
       },
       "targets": [
         {
@@ -1416,7 +1404,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1428,18 +1477,256 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 24,
-      "type": "row",
-      "title": "Tokens",
-      "description": "Token usage broken down by type: input (prompt), cached input, output (completion), and reasoning (thinking). Use these to understand cost drivers and optimize prompts.",
+      "id": 20,
+      "type": "stat",
+      "title": "Deployment RPM limits",
+      "description": "Configured requests-per-minute ceiling per deployment, from litellm_deployment_rpm_limit (set in models.sh). Every model allows 100 RPM per API key; with 3 keys per model, the router enforces a pooled 300 RPM per model before dispatching.\n\nHOW TO READ: Compare against 'RPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the ceiling — over-pool requests are rejected pre-call with 429.",
       "gridPos": {
         "x": 0,
-        "y": 62,
+        "y": 37,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "max by (litellm_model_name) (litellm_deployment_rpm_limit{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Deployment TPM limits",
+      "description": "Configured tokens-per-minute ceiling per deployment, from litellm_deployment_tpm_limit (set in models.sh). Every model allows 1M TPM per API key; with 3 keys per model, the router enforces a pooled 3M TPM per model before dispatching.\n\nHOW TO READ: Compare against 'TPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the ceiling — over-pool requests are rejected pre-call with 429.",
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "max by (litellm_model_name) (litellm_deployment_tpm_limit{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 22,
+      "type": "row",
+      "title": "Latency",
+      "description": "Where time goes in the request lifecycle. Top row is what the user feels — time to first token, generation speed, total round-trip. Bottom row decomposes the round-trip — upstream API time, proxy overhead, queue wait. Compare panels to isolate bottlenecks.",
+      "gridPos": {
+        "x": 0,
+        "y": 45,
         "w": 24,
         "h": 1
       },
@@ -1447,13 +1734,723 @@
       "panels": []
     },
     {
-      "id": 39,
+      "id": 23,
       "type": "timeseries",
-      "title": "Input tokens",
+      "title": "Time to first token (P95, s)",
+      "description": "Time To First Token (TTFT, P95) — the time from request start to the first token being streamed back, from litellm_llm_api_time_to_first_token_metric. This is what users perceive as 'the model is thinking.' It includes queue wait, proxy overhead, and the upstream's prefill phase.\n\nGOOD: <1s for chat models, <2s for reasoning models — users perceive instant response.\nBAD: >3s — users perceive lag; check Queue wait and LLM API latency panels to isolate the cause.",
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_llm_api_time_to_first_token_metric_bucket{model=~\"$model\"}[$window])))",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Time per output token (P95, s)",
+      "description": "Time Per Output Token (TPOT, P95) — the average time between consecutive output tokens during streaming, from litellm_deployment_latency_per_output_token. This measures the model's raw generation speed. Lower means faster token generation.\n\nGOOD: <50ms/token for fast models, <100ms for reasoning models — smooth streaming.\nBAD: >200ms — slow generation; may indicate provider throttling, model overload, or GPU contention.",
+      "gridPos": {
+        "x": 8,
+        "y": 46,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, litellm_model_name) (rate(litellm_deployment_latency_per_output_token_bucket{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$window])))",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "End-to-end latency (P95, s)",
+      "description": "Total request latency P95 (seconds) — the full round-trip from request received to response completed, from litellm_request_total_latency_metric. P95 captures the slow tail that affects user experience.\n\nGOOD: <2s for chat models, <5s for reasoning models.\nBAD: >5s — check Queue wait, LLM API latency, and Proxy overhead to isolate the bottleneck.",
+      "gridPos": {
+        "x": 16,
+        "y": 46,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_request_total_latency_metric_bucket{model=~\"$model\"}[$window])))",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "LLM API latency (P95, s)",
+      "description": "Upstream LLM API call latency P95 (seconds) — time spent waiting for the model provider, from litellm_llm_api_latency_metric. This excludes proxy overhead and queue wait. Compare with End-to-end latency to isolate where time is spent.\n\nGOOD: Close to End-to-end latency (proxy adds minimal overhead).\nBAD: Much higher than expected — provider is slow, rate-limiting, or experiencing an outage.",
+      "gridPos": {
+        "x": 0,
+        "y": 58,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_llm_api_latency_metric_bucket{model=~\"$model\"}[$window])))",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Proxy overhead (P95, s)",
+      "description": "LiteLLM proxy processing overhead (P95) — time spent inside the proxy itself (routing, auth, logging, callbacks), from litellm_overhead_latency_metric. This is the difference between end-to-end latency and upstream API latency.\n\nGOOD: <100ms — proxy is not a bottleneck.\nBAD: >500ms — proxy is slow; check callback handlers, logging volume, or CPU saturation on the proxy container.",
+      "gridPos": {
+        "x": 8,
+        "y": 58,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, litellm_model_name) (rate(litellm_overhead_latency_metric_bucket{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$window])))",
+          "refId": "A",
+          "legendFormat": "{{litellm_model_name}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Queue wait (P95, s)",
+      "description": "Request queue wait time (P95) — how long requests wait in the LiteLLM queue before being dispatched to the upstream, from litellm_request_queue_time_seconds. This is zero under low load; it rises when all deployment slots are busy.\n\nGOOD: <100ms — no queuing pressure.\nBAD: >1s — the proxy is saturated; consider adding more deployments, increasing concurrency limits, or adding API keys.",
+      "gridPos": {
+        "x": 16,
+        "y": 58,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(litellm_request_queue_time_seconds_bucket{model=~\"$model\"}[$window])))",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 29,
+      "type": "row",
+      "title": "Tokens",
+      "description": "Token usage by type, per model: input (prompt), cached input, output (completion), and reasoning (thinking). Input and reasoning tokens drive cost — compare with the Cache row to see how much input work is avoided.",
+      "gridPos": {
+        "x": 0,
+        "y": 70,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Input tokens/min",
       "description": "Input (prompt) tokens per minute per model, from litellm_input_tokens_metric. Input tokens are what the client sends — prompts, context, system instructions. They drive prefill latency and cost.\n\nGOOD: Proportional to request rate.\nBAD: Disproportionately high — clients sending excessive context (large prompts, untrimmed conversation history).",
       "gridPos": {
         "x": 0,
-        "y": 63,
+        "y": 71,
         "w": 6,
         "h": 12
       },
@@ -1485,7 +2482,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1497,18 +2555,18 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 44,
+      "id": 31,
       "type": "timeseries",
-      "title": "Cached input tokens",
-      "description": "Input tokens served from LiteLLM's proxy cache per minute per model. These tokens did not need to be reprocessed by the upstream model, reducing latency and cost. Compare with Input tokens to see what fraction of input tokens are cached. Higher is better.",
+      "title": "Cached input tokens/min",
+      "description": "Input tokens served from LiteLLM's proxy cache per minute per model. These tokens did not need to be reprocessed by the upstream model, reducing latency and cost. Compare with Input tokens/min to see what fraction of input tokens are cached. Higher is better.",
       "gridPos": {
         "x": 6,
-        "y": 63,
+        "y": 71,
         "w": 6,
         "h": 12
       },
@@ -1540,7 +2598,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1552,18 +2671,18 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 40,
+      "id": 32,
       "type": "timeseries",
-      "title": "Output tokens",
+      "title": "Output tokens/min",
       "description": "Output (completion) tokens per minute per model, from litellm_output_tokens_metric. Output tokens are the model's response. They drive generation time and cost.\n\nGOOD: Proportional to expected response length.\nBAD: Unexpectedly high — model generating excessively long responses; check max_tokens settings.",
       "gridPos": {
         "x": 12,
-        "y": 63,
+        "y": 71,
         "w": 6,
         "h": 12
       },
@@ -1595,7 +2714,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1607,18 +2787,18 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 41,
+      "id": 33,
       "type": "timeseries",
-      "title": "Reasoning tokens",
+      "title": "Reasoning tokens/min",
       "description": "Reasoning (thinking) tokens per minute per model, from litellm_output_reasoning_tokens_metric. These are internal tokens generated by reasoning models (chain-of-thought) before the final response. They consume time and cost but are not visible to the user.\n\nGOOD: Expected for reasoning models; near-zero for non-reasoning models.\nBAD: Unexpectedly high for non-reasoning models (misconfigured) or dominating total output (expensive reasoning overhead).",
       "gridPos": {
         "x": 18,
-        "y": 63,
+        "y": 71,
         "w": 6,
         "h": 12
       },
@@ -1650,7 +2830,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1662,15 +2903,328 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 26,
+      "id": 34,
       "type": "row",
-      "title": "Cost",
-      "description": "Spend accumulation and rate per model. Use these to track cost trends and spot runaway spending in real time.",
+      "title": "Cache",
+      "description": "Cache effectiveness. The request-level hit ratio is the headline; cache misses and provider cache reads explain it. Higher hit ratios mean cheaper, faster requests.",
+      "gridPos": {
+        "x": 0,
+        "y": 83,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 35,
+      "type": "stat",
+      "title": "Cache hit ratio (requests)",
+      "description": "Percentage of REQUESTS served without a proxy cache miss (1 − misses / requests), per model, over the selected window. This is a request-level measure of LiteLLM's exact-match proxy cache: a request only hits when an identical request was cached.\n\nDO NOT COMPARE with token-level caching: 'Cached input tokens/min' (Tokens row) and 'Provider cache reads' count TOKENS served from provider-side prompt caching. Token ratios are usually much higher — large prompts hit the provider cache even when the exact request never repeats. Both numbers can be correct at the same time.\n\nThresholds: red < 10%, yellow 10–30%, green > 30%.\nGOOD: Green — repeated identical requests are served from cache.\nBAD: Red — few exact repeats; normal for varied coding prompts, so read red as 'cache rarely applies', not as an outage.\n\nNOTE: Models with no misses series ever recorded render no tile — treat as 100%. If no model has misses (or proxy caching is disabled), the panel shows 'no misses'.",
+      "gridPos": {
+        "x": 0,
+        "y": 84,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "1 - (sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) / sum by (model) (rate(litellm_requests_metric_total{model=~\"$model\"}[$window])))",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "no misses",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "green",
+                "value": 0.3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Cache misses/min",
+      "description": "Cache misses per minute per model. Each miss means the request was not served from LiteLLM's cache and had to go to the upstream provider. Lower is better — high miss rates suggest cache TTL is too short or requests are too varied to benefit from caching.",
+      "gridPos": {
+        "x": 8,
+        "y": 84,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) * 60",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "req/min",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 37,
+      "type": "timeseries",
+      "title": "Provider cache reads (tok/min)",
+      "description": "Input tokens read from provider-side prompt caching per minute per model (e.g. Anthropic prompt cache, GLM context caching). These are tokens the upstream provider cached internally, avoiding re-processing charges. Higher is better.",
+      "gridPos": {
+        "x": 16,
+        "y": 84,
+        "w": 8,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "sum by (model) (rate(litellm_provider_cache_read_input_tokens_metric_total{model=~\"$model\"}[$window])) * 60",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "tok/min",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 38,
+      "type": "row",
+      "title": "Cost & Budget",
+      "description": "Spend tracking and attribution. Lifetime total, per-model accumulation, and burn rate on top; spend by coding tool and tool × model detail below. Use the tool × model table to verify preset assignments and off-peak discount impact.",
       "gridPos": {
         "x": 0,
         "y": 96,
@@ -1681,7 +3235,7 @@
       "panels": []
     },
     {
-      "id": 27,
+      "id": 39,
       "type": "stat",
       "title": "Total cost",
       "description": "Cumulative USD spent across all models since the proxy started, from litellm_spend_metric_total. This is a lifetime counter — use it for budget tracking.\n\nGOOD: Within budget.\nBAD: Approaching or exceeding budget — check Spend rate panel for real-time cost trajectory.",
@@ -1689,7 +3243,7 @@
         "x": 0,
         "y": 97,
         "w": 6,
-        "h": 8
+        "h": 10
       },
       "targets": [
         {
@@ -1747,7 +3301,7 @@
       }
     },
     {
-      "id": 28,
+      "id": 40,
       "type": "timeseries",
       "title": "Cost per model",
       "description": "Cumulative USD spend over time per model. Each line shows the running total for one model. Use this to identify which models cost the most over time.\n\nGOOD: Linear growth at expected rate.\nBAD: Sudden steep slope — runaway costs on a model; check for expensive model selection or excessive usage.",
@@ -1755,7 +3309,7 @@
         "x": 6,
         "y": 97,
         "w": 12,
-        "h": 8
+        "h": 10
       },
       "targets": [
         {
@@ -1785,7 +3339,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1797,20 +3412,20 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 29,
+      "id": 41,
       "type": "timeseries",
       "title": "Spend rate",
-      "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate. Use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
+      "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate; use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nOFF-PEAK DISCOUNT: 13:00–00:00 UTC, glm-5.2 and glm-5.1 bill at 70% of peak rates and deepseek-v4.1-flash at 50% (glm-5.3 has no off-peak discount). Expect visibly lower $/min for the same workload inside that window — a flat rate across the boundary suggests the discount is not being applied.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
       "gridPos": {
         "x": 18,
         "y": 97,
         "w": 6,
-        "h": 8
+        "h": 10
       },
       "targets": [
         {
@@ -1840,76 +3455,68 @@
             "showPoints": "never"
           }
         },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
-      "id": 47,
-      "type": "row",
-      "title": "Cache",
-      "description": "Cache hit/miss metrics from LiteLLM. Shows how effectively the proxy cache and provider-side prompt caching are reducing upstream calls and token processing.",
-      "gridPos": {
-        "x": 0,
-        "y": 75,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false,
-      "panels": []
-    },
-    {
-      "id": 43,
-      "type": "timeseries",
-      "title": "Cache misses/min",
-      "description": "Cache misses per minute per model. Each miss means the request was not served from LiteLLM's cache and had to go to the upstream provider. Lower is better — high miss rates suggest cache TTL is too short or requests are too varied to benefit from caching.",
-      "gridPos": {
-        "x": 12,
-        "y": 76,
-        "w": 12,
-        "h": 12
-      },
-      "targets": [
-        {
-          "expr": "sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) * 60",
-          "refId": "A",
-          "legendFormat": "{{model}}",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
           },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "req/min",
-          "color": {
-            "mode": "palette-classic"
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
           },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
           }
-        },
-        "overrides": []
+        ]
       },
       "options": {
         "legend": {
@@ -1921,81 +3528,26 @@
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       }
     },
     {
-      "id": 45,
-      "type": "timeseries",
-      "title": "Provider cache reads",
-      "description": "Input tokens read from provider-side prompt caching per minute per model (e.g. Anthropic prompt cache, GLM context caching). These are tokens the upstream provider cached internally, avoiding re-processing charges. Higher is better.",
+      "id": 42,
+      "type": "piechart",
+      "title": "Spend by tool",
+      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1, light agents on deepseek-v4.1-flash).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
       "gridPos": {
         "x": 0,
-        "y": 76,
-        "w": 12,
-        "h": 12
-      },
-      "targets": [
-        {
-          "expr": "sum by (model) (rate(litellm_provider_cache_read_input_tokens_metric_total{model=~\"$model\"}[$window])) * 60",
-          "refId": "A",
-          "legendFormat": "{{model}}",
-          "hide": false,
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "tok/min",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      }
-    },
-    {
-      "id": 46,
-      "type": "stat",
-      "title": "Cache hit ratio",
-      "description": "Percentage of requests served from cache (1 - cache_misses / total_requests). Higher is better — 100% means every request was cached, 0% means no caching benefit. Compare across models to identify which models benefit most from caching.",
-      "gridPos": {
-        "x": 0,
-        "y": 88,
-        "w": 24,
+        "y": 107,
+        "w": 8,
         "h": 8
       },
       "targets": [
         {
-          "expr": "1 - (sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) / sum by (model) (rate(litellm_requests_metric_total{model=~\"$model\"}[$window])))",
+          "expr": "sum by (api_key_alias) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
           "refId": "A",
-          "legendFormat": "{{model}}",
+          "legendFormat": "{{api_key_alias}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",
@@ -2007,26 +3559,9 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit",
+          "unit": "$",
           "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 0.1
-              },
-              {
-                "color": "green",
-                "value": 0.3
-              }
-            ]
+            "mode": "palette-classic"
           }
         },
         "overrides": []
@@ -2039,133 +3574,43 @@
           "fields": "",
           "values": false
         },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 48,
-      "type": "row",
-      "title": "Rate Limits & Budget",
-      "description": "Deployment rate limits (TPM/RPM) from config, and spend attribution per coding tool. Use these to understand capacity headroom and cost distribution across opencode, Codex, Claude Code, and Pi.",
-      "gridPos": { "x": 0, "y": 105, "w": 24, "h": 1 },
-      "collapsed": false,
-      "panels": []
-    },
-    {
-      "id": 49,
-      "type": "stat",
-      "title": "Deployment TPM limits",
-      "description": "Tokens-per-minute limit per model deployment, from litellm_deployment_tpm_limit (set in models.sh). Shows the provider-side rate ceiling for each model.\n\nHOW TO READ: All models (GLM and DeepSeek) allow 1M TPM. Compare against the 'TPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors; consider load-balancing keys or shifting work to higher-limit models.",
-      "gridPos": { "x": 0, "y": 106, "w": 6, "h": 5 },
-      "targets": [
-        {
-          "expr": "max by (litellm_model_name) (litellm_deployment_tpm_limit{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
-          "refId": "A",
-          "legendFormat": "{{litellm_model_name}}",
-          "hide": false,
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 50,
-      "type": "stat",
-      "title": "Deployment RPM limits",
-      "description": "Requests-per-minute limit per model deployment, from litellm_deployment_rpm_limit (set in models.sh). Shows the provider-side request rate ceiling.\n\nHOW TO READ: All models (GLM and DeepSeek) allow 100 RPM. Compare against the 'RPM by model' panel to gauge utilization headroom.\n\nGOOD: Traffic well below limits.\nBAD: Traffic approaching limits — expect 429 rate-limit errors.",
-      "gridPos": { "x": 6, "y": 106, "w": 6, "h": 5 },
-      "targets": [
-        {
-          "expr": "max by (litellm_model_name) (litellm_deployment_rpm_limit{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
-          "refId": "A",
-          "legendFormat": "{{litellm_model_name}}",
-          "hide": false,
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto"
-      }
-    },
-    {
-      "id": 51,
-      "type": "piechart",
-      "title": "Spend by tool",
-      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1, light agents on deepseek-v4.1-flash).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
-      "gridPos": { "x": 12, "y": 106, "w": 12, "h": 5 },
-      "targets": [
-        {
-          "expr": "sum by (api_key_alias) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
-          "refId": "A",
-          "legendFormat": "{{api_key_alias}}",
-          "hide": false,
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "editorMode": "code",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "$",
-          "color": { "mode": "palette-classic" }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "pieType": "donut",
-        "displayLabels": ["name", "percent"]
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showValues": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       }
     },
     {
-      "id": 52,
+      "id": 43,
       "type": "table",
       "title": "Spend by tool × model",
-      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model.\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs explorer on deepseek-v4.1-flash. Useful for tuning preset assignments for cost efficiency.",
-      "gridPos": { "x": 0, "y": 111, "w": 24, "h": 8 },
+      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model. The footer row sums total window spend across all pairs.\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs explorer on deepseek-v4.1-flash. Useful for tuning preset assignments for cost efficiency.",
+      "gridPos": {
+        "x": 8,
+        "y": 107,
+        "w": 16,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "sum by (api_key_alias, model) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
           "refId": "A",
           "legendFormat": "{{api_key_alias}} — {{model}}",
           "hide": false,
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "editorMode": "code",
           "range": false,
           "format": "table",
@@ -2175,15 +3620,31 @@
       "fieldConfig": {
         "defaults": {
           "unit": "$",
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "options": {
         "showHeader": true,
         "cellHeight": "sm",
-        "footer": { "show": false }
+        "footer": {
+          "show": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ]
+        }
       }
     }
   ],

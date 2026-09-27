@@ -371,18 +371,17 @@ dashboard.
 Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
 (default: `30d`).
 
-**Dashboard** (`configs/grafana/dashboards/main.json`) — 44 panels (8 row
-headers + 36 visualization panels) across 8 sections, default 1h time
+**Dashboard** (`configs/grafana/dashboards/main.json`) — 43 panels (7 row
+headers + 36 visualization panels) across 7 sections, default 1h time
 window, 30s refresh:
 
-1. **At-a-glance** — Active Requests, RPS, RPM, Error %, TPS, TPM, Models Healthy, Spend (window) (8 stat panels)
-2. **Latency** — TTFT by model, TPOT by model, End-to-end latency, LLM API latency, Proxy overhead, Queue wait (6 timeseries)
-3. **Errors & Health** — Errors by model, Error status codes (pie), Deployment state (state-timeline) (3 panels)
-4. **Throughput & Capacity** — Total/Successful/Failed Requests (window), RPM by model, TPM by model (5 panels)
-5. **Tokens** — Input tokens, Cached input tokens, Output tokens, Reasoning tokens (4 timeseries)
-6. **Cache** — Cache misses/min, Provider cache reads, Cache hit ratio (stat) (3 panels)
-7. **Cost** — Total cost, Cost per model, Spend rate (3 panels)
-8. **Rate Limits & Budget** — Deployment TPM limits, Deployment RPM limits, Spend by tool (pie), Spend by tool × model (table) (4 panels)
+1. **At-a-glance** — Error % ($window), Models Healthy, Active Requests, Spend (time range), RPS, RPM, TPS, TPM (8 stat panels)
+2. **Errors & Health** — Total Requests (time range), Successful Requests (time range), Failed Requests (time range), Errors by model, Error status codes (pie), Deployment state (state-timeline) (6 panels)
+3. **Rate Limits & Capacity** — RPM by model, TPM by model, Deployment RPM limits, Deployment TPM limits (4 panels)
+4. **Latency** — Time to first token (P95, s), Time per output token (P95, s), End-to-end latency (P95, s), LLM API latency (P95, s), Proxy overhead (P95, s), Queue wait (P95, s) (6 timeseries)
+5. **Tokens** — Input tokens/min, Cached input tokens/min, Output tokens/min, Reasoning tokens/min (4 timeseries)
+6. **Cache** — Cache hit ratio (requests), Cache misses/min, Provider cache reads (tok/min) (3 panels)
+7. **Cost & Budget** — Total cost, Cost per model, Spend rate, Spend by tool (pie), Spend by tool × model (table) (5 panels)
 
 Variables: `$model` (filter by model), `$provider` (filter by openai/anthropic),
 `$window` (rate window: 1m/5m/15m/1h, default 15m).

@@ -522,10 +522,10 @@ pi
 
 ### Monitoring
 
-- **Grafana:** `http://127.0.0.1:3000` — 44-panel dashboard (8 row headers +
+- **Grafana:** `http://127.0.0.1:3000` — 43-panel dashboard (7 row headers +
   36 visualization panels). Login: admin / your Grafana password from .env.
-  8 sections: At-a-glance, Latency, Errors & Health, Throughput &
-  Capacity, Tokens, Cache, Cost, Rate Limits & Budget. Time window selectable (default 1h).
+  7 sections: At-a-glance, Errors & Health, Rate Limits & Capacity, Latency,
+  Tokens, Cache, Cost & Budget. Time window selectable (default 1h).
 - **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
   keys, spend, budgets. Login: `admin` / your master key.
 - **Prometheus:** `http://127.0.0.1:9090` — raw metrics.
@@ -564,7 +564,7 @@ group, `ufw allow from <your-ip> to any port 4000`).
 |---------|-----|------|---------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key | API gateway |
 | LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key | View keys, spend, deployments |
-| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 44-panel observability dashboard |
+| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 43-panel observability dashboard |
 | Prometheus | `http://127.0.0.1:9090` | None | Metrics storage |
 | PostgreSQL | `localhost:5432` (internal) | — | LiteLLM database |
 

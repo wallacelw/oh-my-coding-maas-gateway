@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-09-27
+
+### Changed
+
+Grafana dashboard UX redesign: triage-first row order (At-a-glance →
+Errors & Health → Rate Limits & Capacity → Latency → Tokens → Cache →
+Cost & Budget), 7 rows + 36 panels (43 total, was 44).
+
+- Per-model color system: glm-5.3 blue, glm-5.2 purple, glm-5.1 yellow,
+  deepseek-v4.1-flash orange; red/green reserved for error/health
+  semantics. Semantic status-code pie colors.
+- Units and aggregation windows in panel titles; panel array cleaned
+  (sequential IDs, visual order).
+- 429 status-code description corrected: proxy-enforced pre-call
+  rejections happen before a deployment is chosen, so they do not
+  appear in the deployment-level status panel. One query change: the
+  status-code pie excludes status-less failures (documented in the
+  panel description).
+
+### Fixed
+
+- Grafana container memory limit 256m → 512m (reservations 64m →
+  128m): the redesigned dashboard's full render exceeded the old
+  ceiling (container restarts mid-render at 94% idle usage).
+- Validation and docs synced to the new panel structure (04_validate.sh,
+  INSTALLATION.md, REFERENCE.md, SKILL.md).
+
 ## [1.25.2] - 2026-09-27
 
 ### Changed
