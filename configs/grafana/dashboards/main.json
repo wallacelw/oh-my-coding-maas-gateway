@@ -3,7 +3,7 @@
   "uid": "oh-my-coding-maas-gateway",
   "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, glm-5.2, glm-5.1, deepseek-v4.1-flash) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
   "schemaVersion": 39,
-  "version": 18,
+  "version": 22,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -36,7 +36,8 @@
         "current": {
           "text": "All",
           "value": "$__all"
-        }
+        },
+        "allValue": ".*"
       },
       {
         "name": "provider",
@@ -52,7 +53,8 @@
         "current": {
           "text": "All",
           "value": "$__all"
-        }
+        },
+        "allValue": ".*"
       },
       {
         "name": "window",
@@ -105,7 +107,7 @@
       "id": 2,
       "type": "stat",
       "title": "Error % ($window)",
-      "description": "Failed requests as a percentage of total requests, from litellm_deployment_failure_responses_total (deployment-level failures: 429 rate limits, 500 server errors, timeouts). This is the primary error health indicator.\n\nGOOD: <1% (green) — healthy error rate.\nWARNING: 1–5% (yellow) — elevated, monitor closely.\nBAD: >5% (red) — investigate upstream provider status, rate limits, or model availability.\n\nNOTE: This is a rate over the $window smoothing window (shown in the title), while the request counts in Errors & Health total the full dashboard time range — the percentage will not match those counts exactly.\n\nNOTE: Shows 0% when no failure series exist at all — nothing has failed since Prometheus started. If the entire dashboard is empty, the proxy or Prometheus is down, not error-free.\n\nNOTE: Failures are matched on requested_model and successes on litellm_model_name — LiteLLM does not emit litellm_model_name on internal health-check failure series, so aligning both sides on litellm_model_name would silently drop those failures from the rate.",
+      "description": "Failed requests as a percentage of total requests, from litellm_deployment_failure_responses_total (deployment-level failures: 429 rate limits, 500 server errors, timeouts). This is the primary error health indicator.\n\nGOOD: <1% (green) — healthy error rate.\nWARNING: 1–5% (yellow) — elevated, monitor closely.\nBAD: >5% (red) — investigate upstream provider status, rate limits, or model availability.\n\nNOTE: This is a rate over the $window smoothing window (shown in the title), while the request counts in Errors & Health total the full dashboard time range — the percentage will not match those counts exactly.\n\nNOTE: Shows 0% when no failure series exist at all — nothing has failed since Prometheus started. If the entire dashboard is empty, the proxy or Prometheus is down, not error-free.\n\nNOTE: Internal health-check traffic is excluded — this is the client error rate. Deployment probe results are monitored via Models Healthy and the Deployment state timeline.\n\nNOTE: Failures are matched on requested_model and successes on litellm_model_name — some failure series (status-less exceptions) do not carry litellm_model_name, so matching both sides on litellm_model_name would silently drop those failures from the rate.",
       "gridPos": {
         "x": 0,
         "y": 1,
@@ -114,7 +116,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$window])) / (sum(rate(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\"}[$window])) + sum(rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$window]))) * 100",
+          "expr": "sum(rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$window])) / (sum(rate(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$window])) + sum(rate(litellm_deployment_failure_responses_total{requested_model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$window]))) * 100",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -365,7 +367,7 @@
       "id": 6,
       "type": "stat",
       "title": "RPS",
-      "description": "Requests per second over the selected window, from litellm_proxy_total_requests_metric_total (all HTTP requests including health checks). Use this to gauge real-time traffic volume. Compare with RPM (×60) for sanity.\n\nGOOD: Matches expected traffic pattern.\nBAD: Unexpected drop to zero (proxy down) or sudden 10× spike (retry storms, runaway clients).",
+      "description": "Requests per second over the selected window, from litellm_proxy_total_requests_metric_total (all HTTP requests including health checks). Use this to gauge real-time traffic volume. Compare with RPM (×60) for sanity.\n\nGOOD: Matches expected traffic pattern.\nBAD: Unexpected drop to zero (proxy down) or sudden 10× spike (retry storms, runaway clients).\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-glm-5.1). Selecting specific models counts only those.",
       "gridPos": {
         "x": 0,
         "y": 5,
@@ -431,7 +433,7 @@
       "id": 7,
       "type": "stat",
       "title": "RPM",
-      "description": "Requests per minute over the selected window. Same metric as RPS scaled to per-minute. Use this for capacity planning — compare against your MaaS provider's RPM limit.\n\nGOOD: Below 70% of your RPM limit.\nBAD: Approaching or exceeding the limit — expect 429 rate-limit errors.",
+      "description": "Requests per minute over the selected window, totaled across selected models — the number to compare against the pooled RPM ceiling.\n\nThresholds are calibrated for All models selected: pooled ceiling = 300 RPM per model (100 per key × 3 keys) × 4 models = 1200. Yellow at 840 (70% of ceiling), red at 1200 — at the ceiling, over-pool requests are rejected pre-call with 429 (see '429s to clients by model' in Errors & Health).\n\nNOTE: With fewer models selected the effective ceiling shrinks (300 per selected model); read the colors with All selected.\n\nGOOD: Green — comfortable headroom.\nBAD: Yellow/Red — approaching or at the pooled ceiling; expect client-facing 429s.\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-glm-5.1). Selecting specific models counts only those.",
       "gridPos": {
         "x": 6,
         "y": 5,
@@ -467,11 +469,11 @@
               },
               {
                 "color": "yellow",
-                "value": 600
+                "value": 840
               },
               {
                 "color": "red",
-                "value": 3000
+                "value": 1200
               }
             ]
           }
@@ -555,7 +557,7 @@
       "id": 9,
       "type": "stat",
       "title": "TPM",
-      "description": "Tokens per minute (input + output combined). Same as TPS scaled to per-minute. Use for provider TPM limit capacity planning.\n\nGOOD: Below 70% of your provider's TPM limit.\nBAD: Approaching the limit — expect throttling.",
+      "description": "Tokens per minute (input + output combined), totaled across selected models. Same as TPS scaled to per-minute. Use for capacity planning against the pooled TPM ceiling: 3M per model (1M per key × 3 keys) × 4 models = 12M with All selected. Thresholds tint the sparkline only (yellow at 8.4M = 70%, red at 12M) — the value text stays neutral by design, since throughput is not an alarm.\n\nGOOD: Well below the ceiling.\nBAD: Approaching the ceiling — expect throttling; see Rate Limits & Capacity for per-model utilization.",
       "gridPos": {
         "x": 18,
         "y": 5,
@@ -588,6 +590,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 8400000
+              },
+              {
+                "color": "red",
+                "value": 12000000
               }
             ]
           }
@@ -613,7 +623,7 @@
       "id": 10,
       "type": "row",
       "title": "Errors & Health",
-      "description": "Request outcomes and failure detail for incident triage. Time-range counts across the top, then failures per model, the status-code mix, and per-model deployment health. Start here when Error % in At-a-glance looks wrong.",
+      "description": "Request outcomes and failure detail for incident triage, all client-traffic scoped (internal health checks excluded — watch the Deployment state timeline for probe results). Time-range counts across the top, then failures per model, client-facing 429s, the status-code mix, and per-model deployment health. Start here when Error % in At-a-glance looks wrong.",
       "gridPos": {
         "x": 0,
         "y": 9,
@@ -627,7 +637,7 @@
       "id": 11,
       "type": "stat",
       "title": "Total Requests (time range)",
-      "description": "Absolute count of all requests (successful + failed) across all deployments in the selected Grafana time range. Should equal Successful Requests + Failed Requests.\n\nNOTE: Successes are matched on litellm_model_name and failures on requested_model — LiteLLM does not emit litellm_model_name on internal health-check failure series, so both label filters are required to keep this equal to Successful Requests + Failed Requests.",
+      "description": "Absolute count of all client requests (successful + failed) across all deployments in the selected Grafana time range. Internal health-check traffic is excluded. Should equal Successful Requests + Failed Requests.\n\nNOTE: The three counts are independent increase() extrapolations and can differ by ±1 (e.g. 376 vs 339 + 36 = 375) — a Prometheus estimation artifact, not missing traffic.\n\nNOTE: Successes are matched on litellm_model_name and failures on requested_model — some failure series do not carry litellm_model_name, so both label filters are required to keep this equal to Successful Requests + Failed Requests.",
       "gridPos": {
         "x": 0,
         "y": 10,
@@ -636,7 +646,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range])) + sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\",api_key_alias!=\"litellm-internal-health-check\"}[$__range])) + sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -687,7 +697,7 @@
       "id": 12,
       "type": "stat",
       "title": "Successful Requests (time range)",
-      "description": "Absolute count of successful responses across all deployments in the selected Grafana time range.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.",
+      "description": "Absolute count of successful client responses across all deployments in the selected Grafana time range. Internal health-check traffic is excluded.\n\nGOOD: Close to Total Requests (>99%).\nBAD: Significantly less than Total — check error panels for the failure cause.",
       "gridPos": {
         "x": 8,
         "y": 10,
@@ -696,7 +706,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\"}[$__range]))",
+          "expr": "sum(increase(litellm_deployment_success_responses_total{litellm_model_name=~\"$model\",api_provider=~\"$provider\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -747,7 +757,7 @@
       "id": 13,
       "type": "stat",
       "title": "Failed Requests (time range)",
-      "description": "Absolute count of failed responses across all deployments in the selected Grafana time range.\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Errors by model below for per-model details.",
+      "description": "Absolute count of failed client responses across all deployments in the selected Grafana time range. Internal health-check traffic is excluded — a failing health check does not count here (watch the Deployment state timeline for that).\n\nGOOD: 0 or very low.\nBAD: High and growing — sustained failures; check Errors by model below for per-model details.",
       "gridPos": {
         "x": 16,
         "y": 10,
@@ -756,7 +766,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
+          "expr": "sum(increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
           "refId": "A",
           "legendFormat": "",
           "hide": false,
@@ -815,16 +825,16 @@
       "id": 14,
       "type": "timeseries",
       "title": "Errors by model",
-      "description": "Absolute count of failed requests per model in the selected dashboard time range, from litellm_deployment_failure_responses_total using increase() over $__range. Each line shows the total failure count for one model.\n\nHOW TO READ: This is a cumulative count over the visible time range, not a rate. Spikes indicate model-specific issues (rate limits, model unavailable, provider outage).\n\nGOOD: All lines at or near zero.\nBAD: Sustained non-zero count for a model — check provider status, rate limits, and model configuration.",
+      "description": "Absolute count of failed client requests per model in the selected dashboard time range, from litellm_deployment_failure_responses_total using increase() over $__range. Internal health-check traffic is excluded (api_key_alias filter), so a failing health check cannot add a phantom series. Each line shows the total failure count for one model.\n\nHOW TO READ: This is a cumulative count over the visible time range, not a rate. Spikes indicate model-specific issues (rate limits, model unavailable, provider outage).\n\nGOOD: All lines at or near zero.\nBAD: Sustained non-zero count for a model — check provider status, rate limits, and model configuration.",
       "gridPos": {
         "x": 0,
         "y": 14,
-        "w": 12,
+        "w": 6,
         "h": 12
       },
       "targets": [
         {
-          "expr": "sum by (requested_model) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\"}[$__range]))",
+          "expr": "sum by (requested_model) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
           "refId": "A",
           "legendFormat": "{{requested_model}}",
           "hide": false,
@@ -910,6 +920,21 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "claude-glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3FC9C0"
+                }
+              }
+            ]
           }
         ]
       },
@@ -929,9 +954,140 @@
     },
     {
       "id": 15,
+      "type": "timeseries",
+      "title": "429s to clients by model",
+      "description": "429 responses the PROXY returned to clients, per requested model, counted over the dashboard time range from litellm_proxy_total_requests_metric_total (status_code 429). Internal health-check traffic is excluded.\n\nSCOPE: This is the client-facing view — it includes router-level pre-call rejections from pooled rate-limit enforcement (requests refused before any deployment was selected) as well as 429s relayed from deployments. The 'Error status codes' pie counts deployment-level failures only, so the two can legitimately disagree: clients seeing 429s while the pie looks clean means the pooled caps (not the provider) are doing the rejecting.\n\nGOOD: Flat at zero — no client-facing rate limiting.\nBAD: Sustained steps or bursts — the pooled RPM/TPM caps are rejecting traffic; check Rate Limits & Capacity to see which model is near its ceiling.",
+      "gridPos": {
+        "x": 6,
+        "y": 14,
+        "w": 6,
+        "h": 12
+      },
+      "targets": [
+        {
+          "expr": "sum by (requested_model) (increase(litellm_proxy_total_requests_metric_total{status_code=\"429\",requested_model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{requested_model}}",
+          "hide": false,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F2CC0E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deepseek-v4.1-flash"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "claude-glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3FC9C0"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
       "type": "piechart",
       "title": "Error status codes",
-      "description": "Distribution of HTTP status codes for failed deployment requests in the selected time range, from litellm_deployment_failure_responses_total grouped by exception_status. Failures without an HTTP status (exception_status 'None' — connection errors that never got a response) are excluded from this breakdown; they still count in Errors by model and the request totals.\n\nCOLOR KEY: yellow = 429 (transient rate limit), red = 5xx (provider failure — investigate), orange = 401/403 (auth/key problems), blue = other 4xx (client-side request issues).\n\nSTATUS CODE REFERENCE:\n  400 — Bad Request: malformed request, invalid model name, or bad parameters.\n  401 — Unauthorized: API key invalid, expired, or missing.\n  403 — Forbidden: API key lacks permission for the requested model or action.\n  404 — Not Found: requested model or endpoint does not exist.\n  408 — Timeout: request exceeded the configured timeout limit.\n  429 — Rate Limited: a deployment hit its MaaS RPM/TPM limit. Transient; should recover automatically via cooldown and retry. NOTE: router-level pre-call rejections (proxy-enforced pooled limits) are refused before a deployment is chosen, so they do not appear in this deployment-level panel — if clients report 429s but this panel looks clean, that is likely why.\n  500 — Internal Server Error: upstream provider returned an unexpected error. Investigate provider status.\n  502 — Bad Gateway: upstream provider unreachable or returned invalid response. Provider may be down.\n  503 — Service Unavailable: upstream temporarily overloaded. Usually transient.\n  504 — Gateway Timeout: upstream did not respond in time. Provider is slow or unresponsive.\n\nGOOD: Empty (no errors) or dominated by yellow 429 (transient rate limits that auto-recover).\nBAD: Large red 5xx slices — upstream provider issues requiring investigation.",
+      "description": "Distribution of HTTP status codes for failed client requests in the selected time range, from litellm_deployment_failure_responses_total grouped by exception_status. Internal health-check traffic is excluded. Failures without an HTTP status (exception_status 'None' — connection errors that never got a response) are also excluded from this breakdown; they still count in Errors by model and the request totals.\n\nCOLOR KEY: yellow = 429 (transient rate limit), red = 5xx (provider failure — investigate), orange = 401/403 (auth/key problems), blue = other 4xx (client-side request issues).\n\nSTATUS CODE REFERENCE:\n  400 — Bad Request: malformed request, invalid model name, or bad parameters.\n  401 — Unauthorized: API key invalid, expired, or missing.\n  403 — Forbidden: API key lacks permission for the requested model or action.\n  404 — Not Found: requested model or endpoint does not exist.\n  408 — Timeout: request exceeded the configured timeout limit.\n  429 — Rate Limited: a deployment hit its MaaS RPM/TPM limit. Transient; should recover automatically via cooldown and retry. NOTE: router-level pre-call rejections (proxy-enforced pooled limits) are refused before a deployment is chosen, so they do not appear in this deployment-level panel — if clients report 429s but this panel looks clean, that is likely why.\n  500 — Internal Server Error: upstream provider returned an unexpected error. Investigate provider status.\n  502 — Bad Gateway: upstream provider unreachable or returned invalid response. Provider may be down.\n  503 — Service Unavailable: upstream temporarily overloaded. Usually transient.\n  504 — Gateway Timeout: upstream did not respond in time. Provider is slow or unresponsive.\n\nGOOD: Empty (no errors) or dominated by yellow 429 (transient rate limits that auto-recover).\nBAD: Large red 5xx slices — upstream provider issues requiring investigation.",
       "gridPos": {
         "x": 12,
         "y": 14,
@@ -940,7 +1096,7 @@
       },
       "targets": [
         {
-          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by (exception_status) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\",exception_status!=\"None\"}[$__range])), \"status\", \"$1\", \"exception_status\", \"(.*)\"), \"status\", \"400 — Bad Request\", \"exception_status\", \"400\"), \"status\", \"401 — Unauthorized\", \"exception_status\", \"401\"), \"status\", \"403 — Forbidden\", \"exception_status\", \"403\"), \"status\", \"404 — Not Found\", \"exception_status\", \"404\"), \"status\", \"408 — Timeout\", \"exception_status\", \"408\"), \"status\", \"429 — Rate Limited\", \"exception_status\", \"429\"), \"status\", \"500 — Internal Server Error\", \"exception_status\", \"500\"), \"status\", \"502 — Bad Gateway\", \"exception_status\", \"502\"), \"status\", \"503 — Service Unavailable\", \"exception_status\", \"503\"), \"status\", \"504 — Gateway Timeout\", \"exception_status\", \"504\")",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(sum by (exception_status) (increase(litellm_deployment_failure_responses_total{requested_model=~\"$model\",exception_status!=\"None\",api_key_alias!=\"litellm-internal-health-check\"}[$__range])), \"status\", \"$1\", \"exception_status\", \"(.*)\"), \"status\", \"400 — Bad Request\", \"exception_status\", \"400\"), \"status\", \"401 — Unauthorized\", \"exception_status\", \"401\"), \"status\", \"403 — Forbidden\", \"exception_status\", \"403\"), \"status\", \"404 — Not Found\", \"exception_status\", \"404\"), \"status\", \"408 — Timeout\", \"exception_status\", \"408\"), \"status\", \"429 — Rate Limited\", \"exception_status\", \"429\"), \"status\", \"500 — Internal Server Error\", \"exception_status\", \"500\"), \"status\", \"502 — Bad Gateway\", \"exception_status\", \"502\"), \"status\", \"503 — Service Unavailable\", \"exception_status\", \"503\"), \"status\", \"504 — Gateway Timeout\", \"exception_status\", \"504\")",
           "refId": "A",
           "legendFormat": "{{status}}",
           "hide": false,
@@ -1137,10 +1293,10 @@
       }
     },
     {
-      "id": 16,
+      "id": 17,
       "type": "state-timeline",
       "title": "Deployment state",
-      "description": "Per-model deployment health over time, from litellm_deployment_state summed across each model's deployments (6 per model: 3 API keys × 2 API formats). The sum maps to: 0 = all deployments healthy (green), 1 = one deployment degraded (orange), 2+ = outage-level degradation — a deployment in full outage or multiple degraded (red).\n\nGOOD: All rows green — every model fully healthy.\nBAD: Orange (partial) or red (outage-level) blocks — check LiteLLM logs for the failing deployments.",
+      "description": "Per-model deployment health over time — the WORST single deployment state per model (max across its 6 deployments: 3 API keys × 2 API formats), from litellm_deployment_state. 0 = all deployments healthy (green), 1 = at least one deployment degraded (orange), 2 = at least one deployment in full outage (red).\n\nIn-segment labels are hidden by design — narrow segments clip text; read the colors and hover for detail.\n\nGOOD: All rows green — every model fully healthy.\nBAD: Orange (degraded) or red (outage) blocks — check LiteLLM logs for the failing deployments.\n\nNOTE: The legend lists the CURRENT state of each model (latest value) — historical segments keep their colors. Full key: green = Healthy (0), orange = Degraded (1), red = Outage (2).",
       "gridPos": {
         "x": 18,
         "y": 14,
@@ -1149,7 +1305,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
+          "expr": "max by (litellm_model_name) (litellm_deployment_state{litellm_model_name=~\"$model\",api_provider=~\"$provider\"})",
           "refId": "A",
           "legendFormat": "{{litellm_model_name}}",
           "hide": false,
@@ -1182,46 +1338,6 @@
                 "2": {
                   "text": "Outage",
                   "color": "red"
-                },
-                "3": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "4": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "5": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "6": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "7": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "8": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "9": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "10": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "11": {
-                  "text": "Outage",
-                  "color": "red"
-                },
-                "12": {
-                  "text": "Outage",
-                  "color": "red"
                 }
               }
             }
@@ -1231,12 +1347,16 @@
       },
       "options": {
         "rowHeight": 0.9,
-        "showValue": "auto",
-        "mergeValues": true
+        "showValue": "never",
+        "mergeValues": true,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
       }
     },
     {
-      "id": 17,
+      "id": 18,
       "type": "row",
       "title": "Rate Limits & Capacity",
       "description": "Traffic versus provider rate ceilings — the capacity-planning view. RPM and TPM by model on top; the configured per-deployment limits below, aligned under the matching chart. The router enforces pooled per-model limits (3 keys × per-key limit) before calls are dispatched, so over-pool traffic is rejected with 429s pre-call.",
@@ -1250,19 +1370,19 @@
       "panels": []
     },
     {
-      "id": 18,
+      "id": 19,
       "type": "timeseries",
       "title": "RPM by model",
-      "description": "Requests per minute broken down by model, from litellm_proxy_total_requests_metric_total. Each line shows traffic volume for one model. Use this to understand which models receive the most traffic and spot usage pattern changes.\n\nGOOD: Matches expected traffic distribution.\nBAD: One model suddenly dominates (misconfigured client) or a model drops to zero (clients can't reach it).",
+      "description": "Requests per minute broken down by model, from litellm_proxy_total_requests_metric_total. Each line shows traffic volume for one model. Use this to understand which models receive the most traffic and spot usage pattern changes.\n\nGOOD: Matches expected traffic distribution.\nBAD: One model suddenly dominates (misconfigured client) or a model drops to zero (clients can't reach it).\n\nNOTE: With All selected, internal health-check traffic appears as a separate 'health-check' line (it carries no requested_model label) — it is real pool consumption. Requests made via model aliases (e.g. claude-glm-5.1) appear under the alias name.",
       "gridPos": {
         "x": 0,
         "y": 27,
         "w": 12,
-        "h": 10
+        "h": 14
       },
       "targets": [
         {
-          "expr": "sum by (requested_model) (rate(litellm_proxy_total_requests_metric_total{requested_model=~\"$model\"}[$window])) * 60",
+          "expr": "label_replace(sum by (requested_model) (rate(litellm_proxy_total_requests_metric_total{requested_model=~\"$model\"}[$window])) * 60, \"requested_model\", \"health-check\", \"requested_model\", \"\")",
           "refId": "A",
           "legendFormat": "{{requested_model}}",
           "hide": false,
@@ -1348,6 +1468,36 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "health-check"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#808080"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "claude-glm-5.1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3FC9C0"
+                }
+              }
+            ]
           }
         ]
       },
@@ -1366,7 +1516,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 20,
       "type": "timeseries",
       "title": "TPM by model",
       "description": "Tokens per minute broken down by model, from litellm_total_tokens_metric. Shows token consumption per model. Compare with RPM by model — a model with low RPM but high TPM has long conversations.\n\nGOOD: Matches expected usage pattern.\nBAD: Unexpected spikes — runaway clients or unexpectedly long outputs.",
@@ -1374,7 +1524,7 @@
         "x": 12,
         "y": 27,
         "w": 12,
-        "h": 10
+        "h": 14
       },
       "targets": [
         {
@@ -1482,13 +1632,13 @@
       }
     },
     {
-      "id": 20,
+      "id": 21,
       "type": "stat",
       "title": "Deployment RPM limits",
       "description": "Configured requests-per-minute ceiling per deployment, from litellm_deployment_rpm_limit (set in models.sh). Every model allows 100 RPM per API key; with 3 keys per model, the router enforces a pooled 300 RPM per model before dispatching.\n\nHOW TO READ: Compare against 'RPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the ceiling — over-pool requests are rejected pre-call with 429.",
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 41,
         "w": 12,
         "h": 8
       },
@@ -1601,13 +1751,13 @@
       }
     },
     {
-      "id": 21,
+      "id": 22,
       "type": "stat",
       "title": "Deployment TPM limits",
       "description": "Configured tokens-per-minute ceiling per deployment, from litellm_deployment_tpm_limit (set in models.sh). Every model allows 1M TPM per API key; with 3 keys per model, the router enforces a pooled 3M TPM per model before dispatching.\n\nHOW TO READ: Compare against 'TPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the ceiling — over-pool requests are rejected pre-call with 429.",
       "gridPos": {
         "x": 12,
-        "y": 37,
+        "y": 41,
         "w": 12,
         "h": 8
       },
@@ -1639,7 +1789,18 @@
                 "value": null
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1000000": {
+                  "text": "1M",
+                  "color": "green"
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {
@@ -1720,13 +1881,13 @@
       }
     },
     {
-      "id": 22,
+      "id": 23,
       "type": "row",
       "title": "Latency",
-      "description": "Where time goes in the request lifecycle. Top row is what the user feels — time to first token, generation speed, total round-trip. Bottom row decomposes the round-trip — upstream API time, proxy overhead, queue wait. Compare panels to isolate bottlenecks.",
+      "description": "Where time goes in the request lifecycle. Top row is what the user feels — time to first token, generation speed, total round-trip. Bottom row decomposes the round-trip — upstream API time, proxy overhead, queue wait. Compare panels to isolate bottlenecks. All six panels are P95 quantiles in seconds; axes auto-scale to milliseconds for small values.",
       "gridPos": {
         "x": 0,
-        "y": 45,
+        "y": 49,
         "w": 24,
         "h": 1
       },
@@ -1734,13 +1895,13 @@
       "panels": []
     },
     {
-      "id": 23,
+      "id": 24,
       "type": "timeseries",
       "title": "Time to first token (P95, s)",
-      "description": "Time To First Token (TTFT, P95) — the time from request start to the first token being streamed back, from litellm_llm_api_time_to_first_token_metric. This is what users perceive as 'the model is thinking.' It includes queue wait, proxy overhead, and the upstream's prefill phase.\n\nGOOD: <1s for chat models, <2s for reasoning models — users perceive instant response.\nBAD: >3s — users perceive lag; check Queue wait and LLM API latency panels to isolate the cause.",
+      "description": "Time To First Token (TTFT, P95) — the time from request start to the first token being streamed back, from litellm_llm_api_time_to_first_token_metric. This is what users perceive as 'the model is thinking.' It includes queue wait, proxy overhead, and the upstream's prefill phase.\n\nGOOD: <1s for chat models, <2s for reasoning models — users perceive instant response.\nBAD: >3s — users perceive lag; check Queue wait and LLM API latency panels to isolate the cause.\n\nUNIT: The query returns seconds; the axis auto-scales to milliseconds for small values.",
       "gridPos": {
         "x": 0,
-        "y": 46,
+        "y": 50,
         "w": 8,
         "h": 12
       },
@@ -1850,13 +2011,13 @@
       }
     },
     {
-      "id": 24,
+      "id": 25,
       "type": "timeseries",
       "title": "Time per output token (P95, s)",
-      "description": "Time Per Output Token (TPOT, P95) — the average time between consecutive output tokens during streaming, from litellm_deployment_latency_per_output_token. This measures the model's raw generation speed. Lower means faster token generation.\n\nGOOD: <50ms/token for fast models, <100ms for reasoning models — smooth streaming.\nBAD: >200ms — slow generation; may indicate provider throttling, model overload, or GPU contention.",
+      "description": "Time Per Output Token (TPOT, P95) — the average time between consecutive output tokens during streaming, from litellm_deployment_latency_per_output_token. This measures the model's raw generation speed. Lower means faster token generation.\n\nGOOD: <50ms/token for fast models, <100ms for reasoning models — smooth streaming.\nBAD: >200ms — slow generation; may indicate provider throttling, model overload, or GPU contention.\n\nUNIT: The query returns seconds; the axis auto-scales to milliseconds for small values.",
       "gridPos": {
         "x": 8,
-        "y": 46,
+        "y": 50,
         "w": 8,
         "h": 12
       },
@@ -1966,13 +2127,13 @@
       }
     },
     {
-      "id": 25,
+      "id": 26,
       "type": "timeseries",
       "title": "End-to-end latency (P95, s)",
-      "description": "Total request latency P95 (seconds) — the full round-trip from request received to response completed, from litellm_request_total_latency_metric. P95 captures the slow tail that affects user experience.\n\nGOOD: <2s for chat models, <5s for reasoning models.\nBAD: >5s — check Queue wait, LLM API latency, and Proxy overhead to isolate the bottleneck.",
+      "description": "Total request latency P95 (seconds) — the full round-trip from request received to response completed, from litellm_request_total_latency_metric. P95 captures the slow tail that affects user experience.\n\nGOOD: <2s for chat models, <5s for reasoning models.\nBAD: >5s — check Queue wait, LLM API latency, and Proxy overhead to isolate the bottleneck.\n\nUNIT: The query returns seconds; the axis auto-scales to milliseconds for small values.",
       "gridPos": {
         "x": 16,
-        "y": 46,
+        "y": 50,
         "w": 8,
         "h": 12
       },
@@ -2082,13 +2243,13 @@
       }
     },
     {
-      "id": 26,
+      "id": 27,
       "type": "timeseries",
       "title": "LLM API latency (P95, s)",
-      "description": "Upstream LLM API call latency P95 (seconds) — time spent waiting for the model provider, from litellm_llm_api_latency_metric. This excludes proxy overhead and queue wait. Compare with End-to-end latency to isolate where time is spent.\n\nGOOD: Close to End-to-end latency (proxy adds minimal overhead).\nBAD: Much higher than expected — provider is slow, rate-limiting, or experiencing an outage.",
+      "description": "Upstream LLM API call latency P95 (seconds) — time spent waiting for the model provider, from litellm_llm_api_latency_metric. This excludes proxy overhead and queue wait. Compare with End-to-end latency to isolate where time is spent.\n\nGOOD: Close to End-to-end latency (proxy adds minimal overhead).\nBAD: Much higher than expected — provider is slow, rate-limiting, or experiencing an outage.\n\nUNIT: The query returns seconds; the axis auto-scales to milliseconds for small values.",
       "gridPos": {
         "x": 0,
-        "y": 58,
+        "y": 62,
         "w": 8,
         "h": 12
       },
@@ -2198,13 +2359,13 @@
       }
     },
     {
-      "id": 27,
+      "id": 28,
       "type": "timeseries",
       "title": "Proxy overhead (P95, s)",
-      "description": "LiteLLM proxy processing overhead (P95) — time spent inside the proxy itself (routing, auth, logging, callbacks), from litellm_overhead_latency_metric. This is the difference between end-to-end latency and upstream API latency.\n\nGOOD: <100ms — proxy is not a bottleneck.\nBAD: >500ms — proxy is slow; check callback handlers, logging volume, or CPU saturation on the proxy container.",
+      "description": "LiteLLM proxy processing overhead (P95) — time spent inside the proxy itself (routing, auth, logging, callbacks), from litellm_overhead_latency_metric. This is the difference between end-to-end latency and upstream API latency.\n\nGOOD: <100ms — proxy is not a bottleneck.\nBAD: >500ms — proxy is slow; check callback handlers, logging volume, or CPU saturation on the proxy container.\n\nUNIT: The query returns seconds; the axis auto-scales to milliseconds for small values.",
       "gridPos": {
         "x": 8,
-        "y": 58,
+        "y": 62,
         "w": 8,
         "h": 12
       },
@@ -2314,13 +2475,13 @@
       }
     },
     {
-      "id": 28,
+      "id": 29,
       "type": "timeseries",
       "title": "Queue wait (P95, s)",
-      "description": "Request queue wait time (P95) — how long requests wait in the LiteLLM queue before being dispatched to the upstream, from litellm_request_queue_time_seconds. This is zero under low load; it rises when all deployment slots are busy.\n\nGOOD: <100ms — no queuing pressure.\nBAD: >1s — the proxy is saturated; consider adding more deployments, increasing concurrency limits, or adding API keys.",
+      "description": "Request queue wait time (P95) — how long requests wait in the LiteLLM queue before being dispatched to the upstream, from litellm_request_queue_time_seconds. This is zero under low load; it rises when all deployment slots are busy.\n\nGOOD: <100ms — no queuing pressure.\nBAD: >1s — the proxy is saturated; consider adding more deployments, increasing concurrency limits, or adding API keys.\n\nUNIT: The query returns seconds; the axis auto-scales to milliseconds for small values.",
       "gridPos": {
         "x": 16,
-        "y": 58,
+        "y": 62,
         "w": 8,
         "h": 12
       },
@@ -2430,13 +2591,13 @@
       }
     },
     {
-      "id": 29,
+      "id": 30,
       "type": "row",
       "title": "Tokens",
       "description": "Token usage by type, per model: input (prompt), cached input, output (completion), and reasoning (thinking). Input and reasoning tokens drive cost — compare with the Cache row to see how much input work is avoided.",
       "gridPos": {
         "x": 0,
-        "y": 70,
+        "y": 74,
         "w": 24,
         "h": 1
       },
@@ -2444,13 +2605,13 @@
       "panels": []
     },
     {
-      "id": 30,
+      "id": 31,
       "type": "timeseries",
       "title": "Input tokens/min",
       "description": "Input (prompt) tokens per minute per model, from litellm_input_tokens_metric. Input tokens are what the client sends — prompts, context, system instructions. They drive prefill latency and cost.\n\nGOOD: Proportional to request rate.\nBAD: Disproportionately high — clients sending excessive context (large prompts, untrimmed conversation history).",
       "gridPos": {
         "x": 0,
-        "y": 71,
+        "y": 75,
         "w": 6,
         "h": 12
       },
@@ -2560,13 +2721,13 @@
       }
     },
     {
-      "id": 31,
+      "id": 32,
       "type": "timeseries",
       "title": "Cached input tokens/min",
       "description": "Input tokens served from LiteLLM's proxy cache per minute per model. These tokens did not need to be reprocessed by the upstream model, reducing latency and cost. Compare with Input tokens/min to see what fraction of input tokens are cached. Higher is better.",
       "gridPos": {
         "x": 6,
-        "y": 71,
+        "y": 75,
         "w": 6,
         "h": 12
       },
@@ -2676,13 +2837,13 @@
       }
     },
     {
-      "id": 32,
+      "id": 33,
       "type": "timeseries",
       "title": "Output tokens/min",
       "description": "Output (completion) tokens per minute per model, from litellm_output_tokens_metric. Output tokens are the model's response. They drive generation time and cost.\n\nGOOD: Proportional to expected response length.\nBAD: Unexpectedly high — model generating excessively long responses; check max_tokens settings.",
       "gridPos": {
         "x": 12,
-        "y": 71,
+        "y": 75,
         "w": 6,
         "h": 12
       },
@@ -2792,13 +2953,13 @@
       }
     },
     {
-      "id": 33,
+      "id": 34,
       "type": "timeseries",
       "title": "Reasoning tokens/min",
       "description": "Reasoning (thinking) tokens per minute per model, from litellm_output_reasoning_tokens_metric. These are internal tokens generated by reasoning models (chain-of-thought) before the final response. They consume time and cost but are not visible to the user.\n\nGOOD: Expected for reasoning models; near-zero for non-reasoning models.\nBAD: Unexpectedly high for non-reasoning models (misconfigured) or dominating total output (expensive reasoning overhead).",
       "gridPos": {
         "x": 18,
-        "y": 71,
+        "y": 75,
         "w": 6,
         "h": 12
       },
@@ -2908,13 +3069,13 @@
       }
     },
     {
-      "id": 34,
+      "id": 35,
       "type": "row",
       "title": "Cache",
       "description": "Cache effectiveness. The request-level hit ratio is the headline; cache misses and provider cache reads explain it. Higher hit ratios mean cheaper, faster requests.",
       "gridPos": {
         "x": 0,
-        "y": 83,
+        "y": 87,
         "w": 24,
         "h": 1
       },
@@ -2922,19 +3083,19 @@
       "panels": []
     },
     {
-      "id": 35,
+      "id": 36,
       "type": "stat",
       "title": "Cache hit ratio (requests)",
-      "description": "Percentage of REQUESTS served without a proxy cache miss (1 − misses / requests), per model, over the selected window. This is a request-level measure of LiteLLM's exact-match proxy cache: a request only hits when an identical request was cached.\n\nDO NOT COMPARE with token-level caching: 'Cached input tokens/min' (Tokens row) and 'Provider cache reads' count TOKENS served from provider-side prompt caching. Token ratios are usually much higher — large prompts hit the provider cache even when the exact request never repeats. Both numbers can be correct at the same time.\n\nThresholds: red < 10%, yellow 10–30%, green > 30%.\nGOOD: Green — repeated identical requests are served from cache.\nBAD: Red — few exact repeats; normal for varied coding prompts, so read red as 'cache rarely applies', not as an outage.\n\nNOTE: Models with no misses series ever recorded render no tile — treat as 100%. If no model has misses (or proxy caching is disabled), the panel shows 'no misses'.",
+      "description": "Percentage of REQUESTS served without a proxy cache miss (1 − misses / requests), per model, over the selected window. This is a request-level measure of LiteLLM's exact-match proxy cache: a request only hits when an identical request was cached.\n\nDO NOT COMPARE with token-level caching: 'Cached input tokens/min' (Tokens row) and 'Provider cache reads' count TOKENS served from provider-side prompt caching. Token ratios are usually much higher — large prompts hit the provider cache even when the exact request never repeats. Both numbers can be correct at the same time.\n\nThresholds: red < 10%, yellow 10–30%, green > 30%.\nGOOD: Green — repeated identical requests are served from cache.\nBAD: Red — few exact repeats; normal for varied coding prompts, so read red as 'cache rarely applies', not as an outage.\n\nNOTE: Models with requests but no recorded misses compute to a literal 100%. If no model has any traffic (or proxy caching is disabled with no misses series), the panel shows 'no misses'.",
       "gridPos": {
         "x": 0,
-        "y": 84,
+        "y": 88,
         "w": 8,
         "h": 12
       },
       "targets": [
         {
-          "expr": "1 - (sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) / sum by (model) (rate(litellm_requests_metric_total{model=~\"$model\"}[$window])))",
+          "expr": "1 - ((sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) OR (0 * sum by (model) (rate(litellm_requests_metric_total{model=~\"$model\"}[$window])))) / sum by (model) (rate(litellm_requests_metric_total{model=~\"$model\"}[$window])))",
           "refId": "A",
           "legendFormat": "{{model}}",
           "hide": false,
@@ -2989,13 +3150,13 @@
       }
     },
     {
-      "id": 36,
+      "id": 37,
       "type": "timeseries",
       "title": "Cache misses/min",
       "description": "Cache misses per minute per model. Each miss means the request was not served from LiteLLM's cache and had to go to the upstream provider. Lower is better — high miss rates suggest cache TTL is too short or requests are too varied to benefit from caching.",
       "gridPos": {
         "x": 8,
-        "y": 84,
+        "y": 88,
         "w": 8,
         "h": 12
       },
@@ -3105,13 +3266,13 @@
       }
     },
     {
-      "id": 37,
+      "id": 38,
       "type": "timeseries",
       "title": "Provider cache reads (tok/min)",
       "description": "Input tokens read from provider-side prompt caching per minute per model (e.g. Anthropic prompt cache, GLM context caching). These are tokens the upstream provider cached internally, avoiding re-processing charges. Higher is better.",
       "gridPos": {
         "x": 16,
-        "y": 84,
+        "y": 88,
         "w": 8,
         "h": 12
       },
@@ -3221,13 +3382,13 @@
       }
     },
     {
-      "id": 38,
+      "id": 39,
       "type": "row",
       "title": "Cost & Budget",
       "description": "Spend tracking and attribution. Lifetime total, per-model accumulation, and burn rate on top; spend by coding tool and tool × model detail below. Use the tool × model table to verify preset assignments and off-peak discount impact.",
       "gridPos": {
         "x": 0,
-        "y": 96,
+        "y": 100,
         "w": 24,
         "h": 1
       },
@@ -3235,13 +3396,13 @@
       "panels": []
     },
     {
-      "id": 39,
+      "id": 40,
       "type": "stat",
       "title": "Total cost",
       "description": "Cumulative USD spent across all models since the proxy started, from litellm_spend_metric_total. This is a lifetime counter — use it for budget tracking.\n\nGOOD: Within budget.\nBAD: Approaching or exceeding budget — check Spend rate panel for real-time cost trajectory.",
       "gridPos": {
         "x": 0,
-        "y": 97,
+        "y": 101,
         "w": 6,
         "h": 10
       },
@@ -3301,13 +3462,13 @@
       }
     },
     {
-      "id": 40,
+      "id": 41,
       "type": "timeseries",
       "title": "Cost per model",
       "description": "Cumulative USD spend over time per model. Each line shows the running total for one model. Use this to identify which models cost the most over time.\n\nGOOD: Linear growth at expected rate.\nBAD: Sudden steep slope — runaway costs on a model; check for expensive model selection or excessive usage.",
       "gridPos": {
         "x": 6,
-        "y": 97,
+        "y": 101,
         "w": 12,
         "h": 10
       },
@@ -3417,13 +3578,13 @@
       }
     },
     {
-      "id": 41,
+      "id": 42,
       "type": "timeseries",
       "title": "Spend rate",
       "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate; use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nOFF-PEAK DISCOUNT: 13:00–00:00 UTC, glm-5.2 and glm-5.1 bill at 70% of peak rates and deepseek-v4.1-flash at 50% (glm-5.3 has no off-peak discount). Expect visibly lower $/min for the same workload inside that window — a flat rate across the boundary suggests the discount is not being applied.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
       "gridPos": {
         "x": 18,
-        "y": 97,
+        "y": 101,
         "w": 6,
         "h": 10
       },
@@ -3533,15 +3694,15 @@
       }
     },
     {
-      "id": 42,
+      "id": 43,
       "type": "piechart",
       "title": "Spend by tool",
       "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1, light agents on deepseek-v4.1-flash).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
       "gridPos": {
         "x": 0,
-        "y": 107,
+        "y": 111,
         "w": 8,
-        "h": 8
+        "h": 14
       },
       "targets": [
         {
@@ -3591,19 +3752,19 @@
       }
     },
     {
-      "id": 43,
+      "id": 44,
       "type": "table",
       "title": "Spend by tool × model",
-      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model. The footer row sums total window spend across all pairs.\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs explorer on deepseek-v4.1-flash. Useful for tuning preset assignments for cost efficiency.",
+      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model. The footer row sums total window spend across all pairs. Rows are sorted by spend, descending — the biggest line items are always on top; scroll for the tail (the footer total always covers every row).\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs explorer on deepseek-v4.1-flash. Useful for tuning preset assignments for cost efficiency.",
       "gridPos": {
         "x": 8,
-        "y": 107,
+        "y": 111,
         "w": 16,
-        "h": 8
+        "h": 14
       },
       "targets": [
         {
-          "expr": "sum by (api_key_alias, model) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range]))",
+          "expr": "sort_desc(sum by (api_key_alias, model) (increase(litellm_spend_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$__range])))",
           "refId": "A",
           "legendFormat": "{{api_key_alias}} — {{model}}",
           "hide": false,

@@ -145,6 +145,7 @@ management, debug routing, observability, and recovery.
 ```bash
 ./scripts/06_backup.sh                  # dump LiteLLM DB (spend history, keys, budgets)
 ./scripts/06_backup.sh --restore FILE   # restore from a dump
+./scripts/07_dashboard_shots.sh         # capture Grafana dashboard screenshots (visual verification)
 ```
 
 Run before `docker compose down -v` — the DB volume is destroyed otherwise.

@@ -5,6 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.28.0] - 2026-09-27
+
+### Changed
+
+Grafana dashboard data-fidelity pass: 7 rows + 37 panels (44 total, was
+43) — one new panel, IDs renumbered 1-44, dashboard version 22, eleven
+queries changed.
+
+- **New panel "429s to clients by model"** (Errors & Health) —
+  proxy-level 429s from
+  `litellm_proxy_total_requests_metric_total{status_code="429"}`,
+  including router-level pre-call `enforce_model_rate_limits` rejections
+  that never reach a deployment and were previously invisible
+  dashboard-wide. The Errors & Health chart band is now a uniform 4× w6:
+  Errors by model | 429s to clients by model | Error status codes |
+  Deployment state.
+- **Deployment state** — `sum by` → `max by`: shows the worst single
+  deployment state per model (0/1/2) instead of a lossy sum; in-segment
+  value labels hidden (color + tooltip carry the signal).
+- **Error-family panels exclude internal health-check traffic**
+  (`api_key_alias!="litellm-internal-health-check"`): Error %,
+  Total/Successful/Failed Requests, Errors by model, Error status codes
+  pie. Health-check traffic was ~65% of deployment failures and ~59% of
+  successes in a default window, including phantom series for removed
+  models. RPS/RPM keep it deliberately (real pool consumption) — the
+  client-impact vs deployment-health split is now clean.
+- **Cache hit ratio (requests)** — zero-fill idiom: models with requests
+  but no misses now compute to a literal 100% instead of "no data".
+- **RPM/TPM stat thresholds aligned to pooled enforcement** — RPM yellow
+  840 / red 1200 (4 models × 300 pooled; was 600/3000); TPM yellow
+  8,400,000 / red 12,000,000 (new — 1.27.0 carried no TPM thresholds
+  after removing the stale 6000/30000 values).
+- **Latency panels** — descriptions note the s→ms axis auto-scaling
+  (titles keep "(P95, s)").
+- **TPM limits stat** — reads "1M" (was "1 Mil").
+- **Total Requests** — description notes the ±1 `increase()`
+  extrapolation artifact.
+- README.md: one line for `scripts/07_dashboard_shots.sh`.
+- Validation and docs synced to the new panel structure (04_validate.sh,
+  INSTALLATION.md, REFERENCE.md, SKILL.md).
+- **Template variables `$model` and `$provider`** — custom allValue
+  `.*`: "All" now truly matches all series including unlabeled ones.
+  Previously Grafana's explicit-list expansion silently excluded
+  health-check traffic from the RPS/RPM stats (under-reporting by
+  exactly the health-check rate) and excluded glm-5.1's Anthropic-format
+  deployments (no `api_provider` label) from Models Healthy and the
+  Deployment state timeline (23 vs 20 deployment series visible).
+- **"RPM by model"** — the health-check series is now visible and named
+  (`label_replace` on the empty label → "health-check", pinned gray) —
+  real pool consumption, previously invisible. A real client-requested
+  alias (claude-glm-5.1) also now appears (pinned teal, pre-empted in
+  Errors by model and 429s to clients as well).
+- **"Spend by tool" / "Spend by tool × model"** — pie and table grew
+  h8 → h14, table sorted with `sort_desc()`: all ~10 rows visible
+  without scrolling, TOTAL footer pinned.
+- **"Deployment state"** — description documents the legend's
+  current-state behavior and the full color key (green Healthy /
+  orange Degraded / red Outage): Grafana 13.2.2's state-timeline legend
+  lists only current states.
+- **"RPM by model" / "TPM by model"** — h10 → h14 so six-row legends
+  fit; rows below shifted accordingly.
+- Data-fidelity verified by five screenshot review rounds (three
+  comparing every stat and legend value against per-panel Prometheus
+  ground truth) — all values match within drift tolerance.
+
 ## [1.27.0] - 2026-09-27
 
 ### Added

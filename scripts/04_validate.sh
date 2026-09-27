@@ -865,10 +865,10 @@ if [ "$RUN_OBSERVABILITY" = true ]; then
          "http://127.0.0.1:3000/api/dashboards/uid/oh-my-coding-maas-gateway" 2>/dev/null <<<"user = \"admin:${GRAFANA_ADMIN_PASSWORD:-admin}\"" || true)
        if [ -n "$DASHBOARD_JSON" ]; then
           PANEL_COUNT=$(printf '%s' "$DASHBOARD_JSON" | jq '.dashboard.panels | length' 2>/dev/null || echo "0")
-          if [ "$PANEL_COUNT" = "43" ]; then
-            pass "Grafana dashboard has 43 panels (7 rows + 36 visualization)"
+          if [ "$PANEL_COUNT" = "44" ]; then
+            pass "Grafana dashboard has 44 panels (7 rows + 37 visualization)"
           else
-            fail "Grafana dashboard has $PANEL_COUNT panels (expected 43 = 7 rows + 36 visualization)"
+            fail "Grafana dashboard has $PANEL_COUNT panels (expected 44 = 7 rows + 37 visualization)"
           fi
        else
          skip "Grafana dashboard panel count (API not reachable)"

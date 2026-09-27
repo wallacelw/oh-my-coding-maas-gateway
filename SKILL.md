@@ -292,7 +292,7 @@ curl -sf 'http://127.0.0.1:9090/api/v1/query?query=litellm_spend_metric_total' |
 curl -sf 'http://127.0.0.1:9090/api/v1/query?query=rate(litellm_deployment_failure_responses_total[5m])' | jq .
 ```
 
-Grafana: `http://127.0.0.1:3000` — 43-panel dashboard (7 row headers + 36 visualization panels).
+Grafana: `http://127.0.0.1:3000` — 44-panel dashboard (7 row headers + 37 visualization panels).
 
 ### Visual dashboard verification
 

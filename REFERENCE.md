@@ -372,12 +372,12 @@ dashboard.
 Prometheus TSDB retention is configurable via `PROMETHEUS_RETENTION` in `.env`
 (default: `30d`).
 
-**Dashboard** (`configs/grafana/dashboards/main.json`) — 43 panels (7 row
-headers + 36 visualization panels) across 7 sections, default 1h time
+**Dashboard** (`configs/grafana/dashboards/main.json`) — 44 panels (7 row
+headers + 37 visualization panels) across 7 sections, default 1h time
 window, 30s refresh:
 
 1. **At-a-glance** — Error % ($window), Models Healthy, Active Requests, Spend (time range), RPS, RPM, TPS, TPM (8 stat panels)
-2. **Errors & Health** — Total Requests (time range), Successful Requests (time range), Failed Requests (time range), Errors by model, Error status codes (pie), Deployment state (state-timeline) (6 panels)
+2. **Errors & Health** — Total Requests (time range), Successful Requests (time range), Failed Requests (time range), Errors by model, 429s to clients by model, Error status codes (pie), Deployment state (state-timeline) (7 panels)
 3. **Rate Limits & Capacity** — RPM by model, TPM by model, Deployment RPM limits, Deployment TPM limits (4 panels)
 4. **Latency** — Time to first token (P95, s), Time per output token (P95, s), End-to-end latency (P95, s), LLM API latency (P95, s), Proxy overhead (P95, s), Queue wait (P95, s) (6 timeseries)
 5. **Tokens** — Input tokens/min, Cached input tokens/min, Output tokens/min, Reasoning tokens/min (4 timeseries)
