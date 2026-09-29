@@ -233,15 +233,13 @@ litellm_settings:
     favicon_url: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/Huawei_Standard_logo.svg/3840px-Huawei_Standard_logo.svg.png"
 
 router_settings:
-  routing_strategy: least-busy             # --routing-strategy= override
-  num_retries: 3
-  cooldown_time: 30                        # seconds to cool down a failed deployment
-  allowed_fails: 3                         # non-429 failures before cooldown (30s window)
-  enable_pre_call_checks: true             # pre-call deployment filtering (context window + optional checks)
-  optional_pre_call_checks:
-    - enforce_model_rate_limits            # enforce per-deployment tpm/rpm as real caps
+  routing_strategy: usage-based-routing-v2 # --routing-strategy= override
+  num_retries: 6                           # 7 attempts: survive re-picks of a hot key and still rotate
+  cooldown_time: 60                        # benched key returns with in-flight drained and the upstream minute rolled
+  allowed_fails: 1                         # non-429 failures before cooldown (60s window)
+  enable_pre_call_checks: true             # pre-call context-window filtering
   allowed_fails_policy:
-    RateLimitErrorAllowedFails: 8          # upstream 429s tolerated per 30s window before cooldown
+    RateLimitErrorAllowedFails: 3          # tolerate a few upstream 429s before benching; avoids empty-pool cascades
 
 general_settings:
   database_connection_pool_limit: 10
@@ -284,15 +282,32 @@ Responses API → Chat Completions. This lets Codex CLI use `/v1/responses`
 ### Load Balancing
 
 N MaaS API keys → N deployments per model per format. LiteLLM uses
-`least-busy` routing (in-flight-aware selection: the deployment with the
-fewest active requests, with retry across deployments).
+`usage-based-routing-v2` (per-minute TPM-aware selection: each request
+goes to the deployment with the lowest TPM usage in the current minute,
+random tie-break among the least-used, and a deployment is skipped when
+the request's input tokens alone would exceed its per-minute `tpm`).
+This rotates across keys even for sequential (non-concurrent) traffic,
+so pooled throughput scales with key count.
 
 Total deployments: 4 models × N keys × 2 formats = 8N.
 
-Per-deployment `tpm`/`rpm` are enforced pre-call via
-`enforce_model_rate_limits` (works across routing strategies, including
-`least-busy`), so pooled capacity — per-key limits × key count — is a
-hard ceiling, not advisory.
+Per-deployment `tpm`/`rpm` are enforced at routing time by
+`usage-based-routing-v2` itself: a deployment is skipped when its
+remaining per-minute TPM cannot fit the request's input tokens or its
+RPM is exhausted. A deployment that returns upstream 429s is benched
+only after `RateLimitErrorAllowedFails` (3) of them within the
+cooldown window — tolerating a few keeps a parallel burst from
+benching the whole pool in a chain reaction. Pooled capacity —
+per-key limits × key count — is respected by selection for sequential
+traffic; concurrent in-flight requests are invisible to the
+success-only counters and can overshoot a key's per-minute TPM, which
+draws tolerated upstream 429s and retry rotation. Two distinct
+paths can still return HTTP 429 to the client: when every deployment
+is *skipped* by the TPM/RPM check, v2 raises "No deployments
+available" with a hardcoded `retry-after: 60`; when every deployment
+is *benched*, the cooldown path raises with `retry-after` =
+`cooldown_time`. While any key is healthy, cooldowns are internal and
+add no client-visible delay.
 
 ### model_info
 
@@ -320,7 +335,7 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| `num_retries` | 3 | Retry across deployments on failure |
+| `num_retries` | 3 | Proxy-level retry default; cross-deployment failover is governed by `router_settings.num_retries` |
 | `request_timeout` | 600 | Full request timeout (10 min) |
 | `stream_timeout` | 60 | TTFT timeout (60s) |
 | `drop_params` | `True` | Drop unsupported params instead of erroring |
@@ -329,13 +344,12 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `prometheus_initialize_budget_metrics` | true | Emit budget metrics for all keys |
 | `require_auth_for_metrics_endpoint` | false | Allow unauthenticated `/metrics` |
 | `ui_theme_config` | Huawei logo URLs | Brand the Admin UI (logo + favicon) |
-| `router_settings.routing_strategy` | `least-busy` | Routing strategy (override with `--routing-strategy=`) |
-| `router_settings.num_retries` | 3 | Router-level retries across deployments |
-| `router_settings.cooldown_time` | 30 | Seconds to cool down a failed deployment |
-| `router_settings.allowed_fails` | 3 | Non-429 failures before cooldown (30s window) |
-| `router_settings.enable_pre_call_checks` | `true` | Pre-call deployment filtering: context-window checks plus optional checks. Oversized prompts fail fast with a context-window error instead of going upstream |
-| `router_settings.optional_pre_call_checks` | `[enforce_model_rate_limits]` | Enforce per-deployment tpm/rpm as caps before the call. RPM is a hard pre-call cap; TPM uses post-completion accounting, so concurrent streams can overshoot within a minute. When the whole pool is over limit, clients get HTTP 429 with a `retry-after` header |
-| `router_settings.allowed_fails_policy` | `{RateLimitErrorAllowedFails: 8}` | Upstream 429s tolerated up to 8 times per 30s window (window = `cooldown_time`) before a deployment enters cooldown; other error types use `allowed_fails` (3) |
+| `router_settings.routing_strategy` | `usage-based-routing-v2` | Routing strategy (override with `--routing-strategy=`) |
+| `router_settings.num_retries` | 6 | Router-level retries with cross-deployment failover (7 total attempts: survive re-picks of a hot key and still rotate) |
+| `router_settings.cooldown_time` | 60 | Seconds to cool down a benched deployment; also the client-facing `retry-after` when the whole pool is benched |
+| `router_settings.allowed_fails` | 1 | Non-429 failures before cooldown (window = `cooldown_time`) |
+| `router_settings.enable_pre_call_checks` | `true` | Pre-call context-window filtering. Oversized prompts fail fast with a context-window error instead of going upstream |
+| `router_settings.allowed_fails_policy` | `{RateLimitErrorAllowedFails: 3}` | Upstream 429s tolerated (window = `cooldown_time`) before a deployment is benched — tolerating a few avoids empty-pool cascades under parallel bursts; other error types use `allowed_fails` (1) |
 | `general_settings.database_connection_pool_limit` | 10 | Max PostgreSQL connection pool size |
 | `general_settings.database_connection_timeout` | 60 | DB connection acquisition timeout (seconds) |
 | `general_settings.allow_client_side_credentials` | true | Allow client-side credential pass-through |
@@ -481,13 +495,14 @@ direct MaaS).
 > The plugin's fallback was sticky: once a session switched models it never
 > returned to its primary, and it often landed on an equally rate-limited
 > model. With fallback disabled, agents always run on their primary model.
-> The proxy enforces the pooled per-model limit pre-call
-> (`enforce_model_rate_limits`): over-pool traffic gets a clean HTTP 429
+> The proxy enforces the pooled per-model limit at routing time
+> (`usage-based-routing-v2` skips deployments whose remaining per-minute
+> TPM cannot fit the request): over-pool traffic gets a clean HTTP 429
 > with a `retry-after` header instead of upstream cooldown cascades, and
-> opencode re-attempts with growing backoff. A variant error, "No
-> deployments available for selected model." without the "Try again"
-> suffix or a `retry-after` header, can also appear (legacy RPM filter
-> path) — it is transient and distinct from the old cooldown-storm bug.
+> opencode re-attempts with growing backoff. The same "No deployments
+> available for selected model." error can appear without the "Try
+> again" suffix (legacy RPM filter path) — it is transient and distinct
+> from the old cooldown-storm bug.
 
 > **Note:** The observer agent is single-model by design: a blind glm
 > fallback would hallucinate confident-looking "observations", so observer

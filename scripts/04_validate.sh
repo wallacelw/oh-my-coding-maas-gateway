@@ -369,14 +369,19 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
     # M3: Router settings in config
     if grep -q 'routing_strategy:' "$CONFIG_FILE" 2>/dev/null; then
       pass "Router: routing_strategy configured"
+      if grep -q 'routing_strategy: usage-based-routing-v2' "$CONFIG_FILE" 2>/dev/null; then
+        pass "Router: routing-level TPM/RPM enforcement active (usage-based-routing-v2)"
+      else
+        warn "Router: routing-level TPM/RPM enforcement only active under usage-based-routing-v2"
+        log_dim "  Fix: ./scripts/02_litellm.sh (regenerate config with the default strategy)"
+      fi
     else
       warn "Router: routing_strategy not set in config"
     fi
-    if grep -q 'enable_pre_call_checks: true' "$CONFIG_FILE" 2>/dev/null && grep -q 'enforce_model_rate_limits' "$CONFIG_FILE" 2>/dev/null; then
-      pass "Router: pre-call TPM/RPM enforcement enabled (enforce_model_rate_limits)"
+    if grep -q 'enable_pre_call_checks: true' "$CONFIG_FILE" 2>/dev/null; then
+      pass "Router: pre-call context-window filtering enabled"
     else
-      fail "Router: pre-call enforcement missing — per-deployment tpm/rpm limits will NOT be enforced"
-      log_dim "  Fix: ./scripts/02_litellm.sh (regenerate config)"
+      warn "Router: enable_pre_call_checks missing — oversized prompts go upstream instead of failing fast"
     fi
     if grep -q 'RateLimitErrorAllowedFails' "$CONFIG_FILE" 2>/dev/null; then
       pass "Router: 429-specific allowed_fails_policy configured"

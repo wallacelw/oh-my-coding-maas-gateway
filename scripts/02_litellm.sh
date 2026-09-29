@@ -27,7 +27,7 @@ source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
 
 # ── Parse args ──
-ROUTING_STRATEGY="least-busy"
+ROUTING_STRATEGY="usage-based-routing-v2"
 DRY_RUN=false
 for arg in "$@"; do
   case "$arg" in
@@ -35,7 +35,7 @@ for arg in "$@"; do
     --dry-run)            DRY_RUN=true ;;
     *)
       echo "Usage: $0 [--routing-strategy=STRATEGY] [--dry-run]" >&2
-      echo "  Strategies: simple-shuffle, least-busy, latency-based-routing, usage-based-routing, cost-based-routing" >&2
+      echo "  Strategies: simple-shuffle, least-busy, latency-based-routing, usage-based-routing, usage-based-routing-v2, cost-based-routing" >&2
       exit 1
       ;;
   esac
@@ -44,11 +44,11 @@ done
 # ── Validate routing strategy (fail fast — an invalid value would only
 # surface later as a LiteLLM startup failure) ──
 case "$ROUTING_STRATEGY" in
-  simple-shuffle|least-busy|latency-based-routing|usage-based-routing|cost-based-routing)
+  simple-shuffle|least-busy|latency-based-routing|usage-based-routing|usage-based-routing-v2|cost-based-routing)
     ;;
   *)
     log_error "Invalid routing strategy: '$ROUTING_STRATEGY'"
-    log_dim "  Valid values: simple-shuffle, least-busy, latency-based-routing, usage-based-routing, cost-based-routing"
+    log_dim "  Valid values: simple-shuffle, least-busy, latency-based-routing, usage-based-routing, usage-based-routing-v2, cost-based-routing"
     exit 1
     ;;
 esac
@@ -293,7 +293,7 @@ fi
 
   echo ""
   echo "litellm_settings:"
-  echo "  num_retries: 3 # retry call 3 times across deployments"
+  echo "  num_retries: 3 # proxy-level retry default; cross-deployment failover is router_settings.num_retries"
   echo "  request_timeout: 600 # full request: 10 min"
   echo "  stream_timeout: 60 # TTFT only: 60s"
   echo "  drop_params: True"
@@ -307,14 +307,12 @@ fi
   echo ""
   echo "router_settings:"
   echo "  routing_strategy: $ROUTING_STRATEGY"
-  echo "  num_retries: 3"
-  echo "  cooldown_time: 30 # seconds to cool down a failed deployment"
-  echo "  allowed_fails: 3 # non-429 failures before cooldown (30s window)"
-  echo "  enable_pre_call_checks: true # pre-call deployment filtering (context window + optional checks)"
-  echo "  optional_pre_call_checks:"
-  echo "    - enforce_model_rate_limits # enforce per-deployment tpm/rpm as real caps"
+  echo "  num_retries: 6 # 7 attempts: survive re-picks of a hot key and still rotate"
+  echo "  cooldown_time: 60 # benched key returns with in-flight drained and the upstream minute rolled"
+  echo "  allowed_fails: 1 # non-429 failures before cooldown (60s window)"
+  echo "  enable_pre_call_checks: true # pre-call context-window filtering"
   echo "  allowed_fails_policy:"
-  echo "    RateLimitErrorAllowedFails: 8 # upstream 429s tolerated per 30s window before cooldown"
+  echo "    RateLimitErrorAllowedFails: 3 # tolerate a few upstream 429s before benching; avoids empty-pool cascades"
   echo ""
   echo "general_settings:"
   echo "  database_connection_pool_limit: 10"

@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.0] - 2026-09-29
+
+### Changed
+
+- **Routing strategy default: `least-busy` → `usage-based-routing-v2`** —
+  per-minute TPM-aware selection. Each request goes to the key with the
+  lowest TPM usage in the current minute (random tie-break among the
+  least-used), and a key is skipped when the request's input tokens
+  alone would exceed its remaining per-minute TPM. Evidence from the
+  24h spend logs: least-busy pins sequential traffic to the
+  first-listed key (LiteLLM 1.102.1 tie-break is `min(range(...))` over
+  in-flight counts, which are all zero for sequential requests;
+  observed distribution 523/256/67/11/5 requests across 5 keys on
+  glm-5.3, 249 client-visible 429s, one key hitting its 1M TPM upstream
+  limit while four idled). This supersedes the 1.29.0 rejection of v2,
+  which overlooked v2's input-token pre-check. `usage-based-routing-v2`
+  added to the `--routing-strategy=` valid values; the override itself
+  is unchanged.
+- **429 graceful-degradation tuning** so parallel bursts degrade
+  instead of cascading (post-change telemetry showed bench-on-first
+  429 emptying the whole pool in a chain reaction, producing
+  zero-success minutes): `RateLimitErrorAllowedFails: 8 → 3` (tolerate
+  a few upstream 429s per key before benching); `num_retries: 3 → 6`
+  (7 attempts survive re-picks of a hot key — v2 does not count tokens
+  from failed calls — and still rotate); `allowed_fails: 3 → 1` (bench
+  flaky keys faster on non-429 failures); `cooldown_time: 30 → 60` (a
+  benched key returns with its in-flight requests drained and the
+  upstream per-minute window rolled, instead of returning still-hot
+  and re-429ing; the client-facing `retry-after` when the whole pool
+  is benched is 60s, but that state is rare under softened benching).
+- **Dropped `optional_pre_call_checks: [enforce_model_rate_limits]`** —
+  verified against LiteLLM 1.102.1 source: its TPM/RPM raise carries
+  `num_retries=0`, so a single hot deployment 429'd the client
+  immediately without trying the other four healthy keys (the exact
+  "tool waits when one deployment cools down" symptom).
+  `usage-based-routing-v2` already enforces per-key tpm/rpm at the
+  routing level (TPM input-token aware, RPM pre-call), so the check was
+  redundant. `enable_pre_call_checks: true` remains for context-window
+  filtering. 04_validate.sh now asserts routing-level enforcement via
+  the strategy instead of the dropped check (warn, not fail, when a
+  non-default strategy is selected via override).
+
+### Docs
+
+- REFERENCE.md: router settings table, Load Balancing prose, and the
+  pooled-limit note updated for `usage-based-routing-v2` routing-level
+  enforcement.
+- Grafana dashboard (version 24): five panel descriptions re-attributed
+  — router-level client 429s now come from v2's "no deployment can
+  serve the request" path (pooled per-minute TPM exhausted), not the
+  dropped pre-call check; the deployment-limit stat panels reworded
+  for skip-and-rotate semantics.
+
 ## [1.29.1] - 2026-09-28
 
 ### Fixed

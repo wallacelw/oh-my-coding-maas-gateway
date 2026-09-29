@@ -3,7 +3,7 @@
   "uid": "oh-my-coding-maas-gateway",
   "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, glm-5.2, glm-5.1, deepseek-v4.1-flash) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
   "schemaVersion": 39,
-  "version": 23,
+  "version": 24,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -956,7 +956,7 @@
       "id": 15,
       "type": "timeseries",
       "title": "429s to clients by model",
-      "description": "429 responses the PROXY returned to clients, per requested model, counted over the dashboard time range from litellm_proxy_total_requests_metric_total (status_code 429). Internal health-check traffic is excluded.\n\nSCOPE: This is the client-facing view — it includes router-level pre-call rejections from pooled rate-limit enforcement (requests refused before any deployment was selected) as well as 429s relayed from deployments. The 'Error status codes' pie counts deployment-level failures only, so the two can legitimately disagree: clients seeing 429s while the pie looks clean means the pooled caps (not the provider) are doing the rejecting.\n\nGOOD: Flat at zero — no client-facing rate limiting.\nBAD: Sustained steps or bursts — the pooled RPM/TPM caps are rejecting traffic; check Rate Limits & Capacity to see which model is near its ceiling.",
+      "description": "429 responses the PROXY returned to clients, per requested model, counted over the dashboard time range from litellm_proxy_total_requests_metric_total (status_code 429). Internal health-check traffic is excluded.\n\nSCOPE: This is the client-facing view — it includes router-level rejections — every key skipped by the TPM/RPM check, or every key benched by cooldown — as well as 429s relayed from deployments. The 'Error status codes' pie counts deployment-level failures only, so the two can legitimately disagree: clients seeing 429s while the pie looks clean means the pooled caps (not the provider) are doing the rejecting.\n\nGOOD: Flat at zero — no client-facing rate limiting.\nBAD: Sustained steps or bursts — the pooled RPM/TPM caps are rejecting traffic; check Rate Limits & Capacity to see which model is near its ceiling.",
       "gridPos": {
         "x": 6,
         "y": 14,
@@ -1087,7 +1087,7 @@
       "id": 16,
       "type": "piechart",
       "title": "Error status codes",
-      "description": "Distribution of HTTP status codes for failed client requests in the selected time range, from litellm_deployment_failure_responses_total grouped by exception_status. Internal health-check traffic is excluded. Failures without an HTTP status (exception_status 'None' — connection errors that never got a response) are also excluded from this breakdown; they still count in Errors by model and the request totals.\n\nCOLOR KEY: yellow = 429 (transient rate limit), red = 5xx (provider failure — investigate), orange = 401/403 (auth/key problems), blue = other 4xx (client-side request issues).\n\nSTATUS CODE REFERENCE:\n  400 — Bad Request: malformed request, invalid model name, or bad parameters.\n  401 — Unauthorized: API key invalid, expired, or missing.\n  403 — Forbidden: API key lacks permission for the requested model or action.\n  404 — Not Found: requested model or endpoint does not exist.\n  408 — Timeout: request exceeded the configured timeout limit.\n  429 — Rate Limited: a deployment hit its MaaS RPM/TPM limit. Transient; should recover automatically via cooldown and retry. NOTE: router-level pre-call rejections (proxy-enforced pooled limits) are refused before a deployment is chosen, so they do not appear in this deployment-level panel — if clients report 429s but this panel looks clean, that is likely why.\n  500 — Internal Server Error: upstream provider returned an unexpected error. Investigate provider status.\n  502 — Bad Gateway: upstream provider unreachable or returned invalid response. Provider may be down.\n  503 — Service Unavailable: upstream temporarily overloaded. Usually transient.\n  504 — Gateway Timeout: upstream did not respond in time. Provider is slow or unresponsive.\n\nGOOD: Empty (no errors) or dominated by yellow 429 (transient rate limits that auto-recover).\nBAD: Large red 5xx slices — upstream provider issues requiring investigation.",
+      "description": "Distribution of HTTP status codes for failed client requests in the selected time range, from litellm_deployment_failure_responses_total grouped by exception_status. Internal health-check traffic is excluded. Failures without an HTTP status (exception_status 'None' — connection errors that never got a response) are also excluded from this breakdown; they still count in Errors by model and the request totals.\n\nCOLOR KEY: yellow = 429 (transient rate limit), red = 5xx (provider failure — investigate), orange = 401/403 (auth/key problems), blue = other 4xx (client-side request issues).\n\nSTATUS CODE REFERENCE:\n  400 — Bad Request: malformed request, invalid model name, or bad parameters.\n  401 — Unauthorized: API key invalid, expired, or missing.\n  403 — Forbidden: API key lacks permission for the requested model or action.\n  404 — Not Found: requested model or endpoint does not exist.\n  408 — Timeout: request exceeded the configured timeout limit.\n  429 — Rate Limited: a deployment hit its MaaS RPM/TPM limit. Transient; should recover automatically via cooldown and retry. NOTE: router-level rejections (no deployment could be selected — every key skipped by the TPM/RPM check or benched by cooldown) never reach a deployment, so they do not appear in this deployment-level panel — if clients report 429s but this panel looks clean, that is likely why.\n  500 — Internal Server Error: upstream provider returned an unexpected error. Investigate provider status.\n  502 — Bad Gateway: upstream provider unreachable or returned invalid response. Provider may be down.\n  503 — Service Unavailable: upstream temporarily overloaded. Usually transient.\n  504 — Gateway Timeout: upstream did not respond in time. Provider is slow or unresponsive.\n\nGOOD: Empty (no errors) or dominated by yellow 429 (transient rate limits that auto-recover).\nBAD: Large red 5xx slices — upstream provider issues requiring investigation.",
       "gridPos": {
         "x": 12,
         "y": 14,
@@ -1359,7 +1359,7 @@
       "id": 18,
       "type": "row",
       "title": "Rate Limits & Capacity",
-      "description": "Traffic versus provider rate ceilings — the capacity-planning view. RPM and TPM by model on top; the configured per-deployment limits below, aligned under the matching chart. The router rejects pre-call when a single deployment would exceed its per-deployment cap (100 RPM / 1M TPM); the upstream rejects with 429 when an API key's per-minute quota is exceeded (per-model pool across 5 keys: 500 RPM / 5M TPM).",
+      "description": "Traffic versus provider rate ceilings — the capacity-planning view. RPM and TPM by model on top; the configured per-deployment limits below, aligned under the matching chart. The router skips deployments whose remaining per-minute TPM/RPM cannot fit the request and only rejects when no key can serve it; the upstream rejects with 429 when an API key's per-minute quota is exceeded (per-model pool across 5 keys: 500 RPM / 5M TPM).",
       "gridPos": {
         "x": 0,
         "y": 26,
@@ -1635,7 +1635,7 @@
       "id": 21,
       "type": "stat",
       "title": "Deployment RPM limits",
-      "description": "Configured requests-per-minute ceiling per deployment, from litellm_deployment_rpm_limit (set in models.sh). Every model allows 100 RPM per API key; with 5 keys per model, the upstream pool is 500 RPM per model (each key's budget is shared by its two wire-format deployments).\n\nHOW TO READ: Compare against 'RPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the upstream pool — requests beyond it draw upstream 429s (the router's per-deployment caps bind earlier only when a single deployment runs hot).",
+      "description": "Configured requests-per-minute ceiling per deployment, from litellm_deployment_rpm_limit (set in models.sh). Every model allows 100 RPM per API key; with 5 keys per model, the upstream pool is 500 RPM per model (each key's budget is shared by its two wire-format deployments).\n\nHOW TO READ: Compare against 'RPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the upstream pool — requests beyond it draw upstream 429s (the router rotates to other keys when one runs hot and only rejects when no key can serve the request).",
       "gridPos": {
         "x": 0,
         "y": 41,
@@ -1754,7 +1754,7 @@
       "id": 22,
       "type": "stat",
       "title": "Deployment TPM limits",
-      "description": "Configured tokens-per-minute ceiling per deployment, from litellm_deployment_tpm_limit (set in models.sh). Every model allows 1M TPM per API key; with 5 keys per model, the upstream pool is 5M TPM per model (each key's budget is shared by its two wire-format deployments).\n\nHOW TO READ: Compare against 'TPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the upstream pool — requests beyond it draw upstream 429s (the router's per-deployment caps bind earlier only when a single deployment runs hot).",
+      "description": "Configured tokens-per-minute ceiling per deployment, from litellm_deployment_tpm_limit (set in models.sh). Every model allows 1M TPM per API key; with 5 keys per model, the upstream pool is 5M TPM per model (each key's budget is shared by its two wire-format deployments).\n\nHOW TO READ: Compare against 'TPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the upstream pool — requests beyond it draw upstream 429s (the router rotates to other keys when one runs hot and only rejects when no key can serve the request).",
       "gridPos": {
         "x": 12,
         "y": 41,
