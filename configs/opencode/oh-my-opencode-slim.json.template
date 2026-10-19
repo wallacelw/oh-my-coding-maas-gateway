@@ -64,9 +64,7 @@
     "main_pane_size": 60
   },
   "backgroundJobs": {
-    "maxSessionsPerAgent": 2,
-    "readContextMinLines": 10,
-    "readContextMaxFiles": 8
+    "maxSessionsPerAgent": 2
   },
   "companion": {
     "enabled": false,
