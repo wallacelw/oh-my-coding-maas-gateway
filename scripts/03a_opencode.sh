@@ -25,6 +25,9 @@ OPENCODE_CONFIG="$OPENCODE_DIR/opencode.json"
 
 # Single source of truth for slim version — also substituted into the
 # $schema URL of oh-my-opencode-slim.json.template at install time.
+# NOTE: configs/opencode/opencode.json.template carries an independent
+# plugin pin that is NOT substituted here — keep both in sync (update.sh
+# does; 04_validate.sh fails on drift).
 SLIM_VERSION="3.0.5"
 OPENCODE_INSTALL_URL="https://opencode.ai/install"
 CURL_TIMEOUT=15
@@ -112,10 +115,25 @@ if { [ -f "$OPENCODE_DIR/oh-my-opencode-slim.json" ] || [ -f "$OPENCODE_DIR/oh-m
    && [ -d "$OPENCODE_DIR/node_modules" ]; then
   log_ok "Plugin already installed — skipping"
 elif [ "$DRY_RUN" = true ]; then
-  log_info "Would run: bunx oh-my-opencode-slim@${SLIM_VERSION} install --companion=no"
+  log_info "Would run: bunx oh-my-opencode-slim@${SLIM_VERSION} install --no-tui --companion=no --background-subagents=yes"
 else
-  run_filtered "slim" bunx "oh-my-opencode-slim@${SLIM_VERSION}" install --companion=no
+  run_filtered "slim" bunx "oh-my-opencode-slim@${SLIM_VERSION}" install --no-tui --companion=no --background-subagents=yes
   log_ok "Plugin installed."
+fi
+
+# ── 3b. Ensure OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS is persistent ──
+# slim v3's background orchestration (its default workflow) needs opencode's
+# experimental background subagents on the v1 host line. The installer's
+# --background-subagents=yes writes a marked ~/.bashrc block on fresh
+# installs, but the skip path above (plugin already installed) never runs
+# the installer — so ensure the env var ourselves, mirroring the
+# OPENCODE_ENABLE_EXA pattern.
+if [ "$DRY_RUN" = false ]; then
+  if ! grep -q "OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS" "$HOME/.bashrc" 2>/dev/null; then
+    printf '\n# Enable slim v3 background orchestration (opencode v1 host)\nexport OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true\n' >> "$HOME/.bashrc"
+    log_ok "Added OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true to ~/.bashrc"
+  fi
+  export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS="${OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS:-true}"
 fi
 
 # ── 4. Acquire virtual key (idempotent) ──

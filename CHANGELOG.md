@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.31.0] - 2026-10-20
+
+### Changed
+
+- **Component update round** — all managed components updated to
+  current stable versions. Each step was gated by a scoped
+  `04_validate.sh` run plus runtime smoke tests; final full validation
+  passed 174/175 (the single warning is the known-benign pattern of
+  `/health` probe bursts tripping MaaS's 4 req/s upstream rate limit —
+  all flagged deployments are 429/TPM rate-limit errors that self-heal
+  on the next successful call).
+  - **LiteLLM 1.102.1 → 1.106.0** — closes critical
+    privilege-escalation GHSA-7hp6-4w63-5g45 (CVSS 9.9, fixed in
+    1.102.2; exploitable by authenticated internal users on the
+    UI-login path). Compatible with our
+    setup: config.yaml is template-generated and read-only mounted
+    (1.103 config-ownership is a no-op here), master-key boot
+    enforcement passes, no response cache or MCP/stdio in use. Behavior
+    notes: Admin UI sessions must re-login (session-token format
+    changed in 1.104); budget-exceeded now returns 422 instead of 429
+    (validation's 429 check targets router cooldown policy —
+    unaffected). PostgreSQL dump taken before the upgrade via
+    `06_backup.sh`.
+  - **Grafana 13.2.2 → 13.2.4** — fixes CVE-2026-15577,
+    CVE-2026-33374, CVE-2026-93294, CVE-2026-95502 (all Medium) and
+    strips sensitive headers from oauth2 cross-host redirects.
+  - **opencode 1.18.34 → 1.19.3** — stays on the 1.x line (OpenCode 2
+    deliberately not adopted). Session sharing removed in 1.19.1;
+    updates are no longer automatic — use `/update`.
+  - **oh-my-opencode-slim 2.2.25 → 3.0.5** — major version. Template
+    updated for the v3 config schema: `backgroundJobs.readContextMinLines`
+    and `readContextMaxFiles` removed (dropped by v3 with no
+    replacement); all other keys (presets, council, fallback,
+    multiplexer, companion) survive unchanged. Background orchestration
+    enabled on the v1 host via `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true`,
+    now persisted to `~/.bashrc` by `03a_opencode.sh` (mirroring the
+    `OPENCODE_ENABLE_EXA` pattern; the installer also passes
+    `--background-subagents=yes`). Pins bumped in `03a_opencode.sh`, both opencode
+    templates, INSTALLATION.md, and REFERENCE.md. Bundled slim skills
+    are not delivered on v1 hosts — unchanged from 2.2.25 (v1
+    limitation, not a regression).
+  - **Codex CLI 0.157.1 → 0.163.0** — the retired zsh-fork shell
+    backend was never enabled here (no flags in config); the bundled
+    default-model change does not apply (our config pins
+    `model = "glm-5.3"`).
+  - **Claude Code 2.1.283 → 2.1.303** — the 2.1.302 permission-mode
+    change affects headless `claude -p`/SDK sessions only; interactive
+    TUI sessions behind the LiteLLM proxy are unaffected.
+  - **Pi agent 0.87.1 → 1.3.0** — major version. The managed install
+    (`~/.pi/agent/bin/pi`, which shadows the npm global on this host)
+    was updated via `pi update --self`. `models.json` needed no changes
+    — the generated custom-provider shape (`baseUrl` with `/v1`,
+    `openai-completions`) already matches the 1.3.0 schema. The TUI is
+    now fullscreen by default; set `"tuiMode": "regular"` in
+    `~/.pi/agent/settings.json` to restore the previous behavior.
+
 ## [1.30.0] - 2026-09-29
 
 ### Changed

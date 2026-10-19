@@ -122,8 +122,9 @@ the oh-my-opencode-slim plugin (v3.0.5, via bunx — 4 presets, 8 agents, output
 filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.
-Also ensures `OPENCODE_ENABLE_EXA=1` is set in `~/.bashrc` for built-in
-websearch (EXA-backed, no API key required).
+Also ensures `OPENCODE_ENABLE_EXA=1` (built-in websearch, EXA-backed, no
+API key required) and `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true`
+(slim v3 background orchestration) are set in `~/.bashrc`.
 
 ### `03b_codex.sh`
 

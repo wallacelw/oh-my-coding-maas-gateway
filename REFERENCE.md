@@ -454,6 +454,7 @@ determines routing.
 - **Model chains** — each agent has a primary model plus an optional fallback chain; client-side fallback is disabled (`fallback.enabled: false`), so agents always run on their primary model
 - **Image analysis** — pasting a screenshot auto-routes it to the observer agent for visual analysis (see Image Analysis Workflow below)
 - **Websearch** — opencode's built-in EXA-backed web search tool (no API key required). Enabled via `OPENCODE_ENABLE_EXA=1` (env) + `"permission": {"websearch": "allow"}` (config). Required for custom providers; automatic with the default OpenCode provider.
+- **Background orchestration** — slim v3's default workflow (background subagents, job board, wake scheduler). Requires `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` on the opencode v1 host line; `03a_opencode.sh` persists it to `~/.bashrc`.
 
 ### Presets
 
