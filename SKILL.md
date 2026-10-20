@@ -385,7 +385,7 @@ container may have loaded a config without `off_peak_pricing` blocks — check
 | `git pull` conflicts on upgrade | `git stash && git pull && git stash pop` |
 | Coding tool outdated version | `./scripts/update.sh --check` to see available updates, then `./scripts/update.sh` to update |
 | Background orchestration env var missing from `~/.bashrc` (validation fails on it) | `./scripts/03a_opencode.sh` (re-persists `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true`) |
-| Stale models in config (deepseek-v4-pro, deepseek-v4-flash) | `./scripts/03a_opencode.sh && ./scripts/03d_pi.sh` to regenerate configs from current catalog |
+| Stale models in tool configs after a catalog change | `./scripts/03a_opencode.sh && ./scripts/03d_pi.sh` to regenerate configs from current catalog |
 
 ## Remote Access
 

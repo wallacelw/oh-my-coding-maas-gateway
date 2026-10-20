@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.31.3] - 2026-10-20
+
+### Fixed
+
+- **SKILL.md: stale-models recovery row generalized** — the row named
+  deepseek-v4-pro/deepseek-v4-flash (removed from the catalog on
+  2026-09-23, replaced by deepseek-v4.1-flash); it now describes the
+  generic scenario (stale models in tool configs after a catalog
+  change) so it stays correct across future model replacements. The
+  catalog (models.sh) and all live tool configs were already clean —
+  this was the last live reference; CHANGELOG history entries
+  intentionally retain the old names. Companion skill copies refreshed
+  in all four agents via 05_skill.sh.
+
 ## [1.31.2] - 2026-10-20
 
 ### Fixed
