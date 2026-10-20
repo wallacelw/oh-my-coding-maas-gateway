@@ -102,7 +102,6 @@ if ! command -v pi &>/dev/null; then
     for _dir in \
       "$HOME/.local/bin" \
       "$HOME/.npm-global/bin" \
-      "$HOME/.local/share/pi-node/current/bin" \
       "$HOME/.pi/agent/bin" \
       "/usr/local/bin"; do
       [ -x "$_dir/pi" ] && export PATH="$_dir:$PATH"
@@ -132,7 +131,15 @@ if ! command -v pi &>/dev/null; then
     log_ok "Installed: $(pi --version 2>/dev/null || echo 'unknown')"
   fi
 else
-  log_ok "Already installed: $(pi --version 2>/dev/null || echo 'unknown')"
+  _pi_cur=$(pi --version 2>/dev/null || echo "unknown")
+  log_ok "Already installed: $_pi_cur"
+  # Surface version drift — 03d installs, it does not update (update.sh owns that)
+  if command -v npm &>/dev/null; then
+    _pi_latest=$(timeout 15 npm view @earendil-works/pi-coding-agent version 2>/dev/null || true)
+    if [ -n "$_pi_latest" ] && [ "$_pi_cur" != "$_pi_latest" ]; then
+      log_dim "  Update available: $_pi_cur → $_pi_latest — run: ./scripts/update.sh"
+    fi
+  fi
 fi
 
 # ── 3. Acquire virtual key (idempotent) ──

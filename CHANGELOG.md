@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.31.1] - 2026-10-20
+
+### Fixed
+
+- **update.sh: pi updates on managed installs** — the npm method silently
+  no-oped on hosts where the pi.dev-managed install (~/.pi/agent/bin/pi)
+  shadows the npm global, while reporting success from the registry
+  version. update.sh now detects the managed install (readlink -f under
+  ~/.pi/) and routes to `pi update --self` with post-update version
+  verification; the npm path reports the npm package version honestly.
+- **update.sh: slim installer flags aligned with 03a** — now passes
+  `--no-tui --background-subagents=yes` so interactive runs don't rely
+  on incidental non-TTY behavior to skip the prompt.
+- **bootstrap.sh: PATH refresh includes ~/.pi/agent/bin** — the default
+  fresh-install-with-pi flow ended with a false "pi not found"
+  validation failure because the managed install's bin dir was missing
+  from refresh_path. Stale pi-node/current/bin entry dropped (versioned
+  dirs are already handled).
+- **uninstall.sh: slim v3 cleanup complete** — removes the 03a §3b
+  background-orchestration bashrc line (matching the EXA treatment) and
+  tui.jsonc / tui.json.bak* alongside tui.json.
+- **03d_pi.sh: skip path surfaces version drift** — "Already installed"
+  now prints the current version and hints at update.sh when a newer one
+  exists (03d installs; update.sh owns updates).
+- **04_validate.sh hardening** — new negative check that v3-removed
+  backgroundJobs keys (readContext*) are absent from the live slim
+  config; new check that OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS is
+  persisted in ~/.bashrc; slim `$schema` version mismatch upgraded from
+  warn to fail (matching the plugin-pin check's strictness).
+- **Docs** — OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS added to the
+  INSTALLATION.md env-var table and the REFERENCE.md Key Contract
+  table; REFERENCE.md update.sh row corrected (LiteLLM/Grafana/
+  Prometheus get active docker-method updates; only PostgreSQL is
+  pinned, display-only).
+
+### Changed
+
+- **Claude Code 2.1.303 → 2.1.304** — released mid-round; bug-fix only.
+
 ## [1.31.0] - 2026-10-20
 
 ### Changed

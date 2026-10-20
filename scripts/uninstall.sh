@@ -253,6 +253,8 @@ if [ "$REMOVE_OPENCODE" = true ]; then
   remove_path "$HOME/.config/opencode/oh-my-opencode-slim.json" "slim plugin config"
   remove_path "$HOME/.config/opencode/.oh-my-opencode-slim" "slim plugin state"
   remove_path "$HOME/.config/opencode/tui.json" "TUI state"
+  remove_path "$HOME/.config/opencode/tui.jsonc" "TUI state"
+  remove_glob "$HOME/.config/opencode/tui.json.bak*" "TUI state backup"
   remove_path "$HOME/.config/opencode/package.json" "plugin manifest"
   remove_path "$HOME/.config/opencode/package-lock.json" "plugin lockfile"
   remove_glob "$HOME/.config/opencode/opencode.json.bak.*" "config backup"
@@ -289,6 +291,7 @@ if [ "$REMOVE_OPENCODE" = true ]; then
     remove_bashrc_section "^# bun$"
     remove_bashrc_section "^# opencode$"
     remove_bashrc_section "Enable opencode built-in websearch"
+    remove_bashrc_section "Enable slim v3 background orchestration"
     remove_bashrc_block "^# >>> oh-my-opencode-slim" "^# <<< oh-my-opencode-slim"
     [ -f "$HOME/.bashrc" ] && log_ok "Cleaned .bashrc entries"
   fi

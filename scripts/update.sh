@@ -135,7 +135,14 @@ check_components() {
   name="pi"
   cur=$(pi --version 2>/dev/null || echo "")
   new=$(npm_latest @earendil-works/pi-coding-agent)
-  method="npm:@earendil-works/pi-coding-agent"
+  # pi.dev-managed install (~/.pi/agent/bin/pi) shadows the npm global —
+  # npm install -g cannot update it. Route to pi's own self-updater.
+  _pi_real=$(readlink -f "$(command -v pi 2>/dev/null)" 2>/dev/null || true)
+  if [ -n "$_pi_real" ] && [[ "$_pi_real" == "$HOME/.pi/"* ]]; then
+    method="pi-self"
+  else
+    method="npm:@earendil-works/pi-coding-agent"
+  fi
   _store_component "$name" "$cur" "$new" "$method" "tool"
 
   # ── Infrastructure (LiteLLM + Observability) ──
@@ -355,6 +362,18 @@ update_component() {
   fi
 
   case "$method" in
+    pi-self)
+      # Managed install — pi's self-updater is the only working method.
+      run_filtered "pi" pi update --self || { log_error "pi update --self failed"; return 1; }
+      hash -r 2>/dev/null || true
+      local now_ver
+      now_ver=$(pi --version 2>/dev/null || echo "")
+      if [ -n "$now_ver" ] && [ "$now_ver" != "$cur_ver" ]; then
+        log_ok "pi updated to $now_ver"
+      else
+        log_warn "pi still at ${cur_ver:-unknown} after pi update --self (latest known: $new_ver)"
+      fi
+      ;;
     npm:*)
       local pkg="${method#npm:}"
       local npm_prefix
@@ -365,7 +384,8 @@ update_component() {
         log_info "npm global prefix not writable — using sudo"
         run_filtered "npm" sudo npm install -g "$pkg@latest" || { log_error "$name update failed"; return 1; }
       fi
-      log_ok "$name updated to $(npm_latest "$pkg")"
+      hash -r 2>/dev/null || true
+      log_ok "$name npm package updated to $(npm_latest "$pkg")"
       ;;
 
     curl:*)
@@ -396,7 +416,7 @@ update_component() {
         return 1
       fi
       # Update slim plugin
-      run_filtered "slim" bunx "oh-my-opencode-slim@latest" install --companion=no \
+      run_filtered "slim" bunx "oh-my-opencode-slim@latest" install --no-tui --companion=no --background-subagents=yes \
         || { log_error "oh-my-opencode-slim update failed"; return 1; }
       # Update SLIM_VERSION in 03a_opencode.sh (repo file mutation)
       log_warn "Updating SLIM_VERSION in tracked file scripts/03a_opencode.sh"

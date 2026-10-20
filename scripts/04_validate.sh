@@ -653,6 +653,17 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Balanced librarian primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
       "Balanced fixer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].fixer.model[0] == "LiteLLM/deepseek-v4.1-flash"'
 
+    # B4a: v3-removed keys must be absent (slim 3.x drops them with a
+    # warning at load; a config still carrying them is stale)
+    if printf '%s' "$CLEAN_SLIM" | jq -e \
+        '(.backgroundJobs.readContextMinLines // null) == null and (.backgroundJobs.readContextMaxFiles // null) == null' \
+        >/dev/null 2>&1; then
+      pass "No v3-removed backgroundJobs keys (readContext*)"
+    else
+      fail "Slim config carries v3-removed keys (readContextMinLines/readContextMaxFiles)"
+      log_dim "  Fix: ./scripts/03a_opencode.sh (regenerates config from template)"
+    fi
+
     # B4b: Verify Huawei-MaaS presets match LiteLLM presets (prefix substitution)
     if LL_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Default"]' 2>/dev/null) && \
        HM_DEF=$(echo "$CLEAN_SLIM" | jq -c '.presets["Huawei-MaaS-Default"]' 2>/dev/null); then
@@ -693,9 +704,18 @@ if [ "$RUN_OPENCODE" = true ]; then
       if [ "$EXPECTED_SLIM" = "$INSTALLED_SLIM" ]; then
         pass "Slim version: $INSTALLED_SLIM (matches 03a_opencode.sh)"
       else
-        warn "Slim version: $INSTALLED_SLIM (expected $EXPECTED_SLIM from 03a_opencode.sh)"
+        fail "Slim version: $INSTALLED_SLIM (expected $EXPECTED_SLIM from 03a_opencode.sh)"
         log_dim "  Fix: ./scripts/03a_opencode.sh (reinstalls plugin at v$EXPECTED_SLIM)"
       fi
+    fi
+
+    # M2: Background-orchestration env var persisted (slim v3 default
+    # workflow needs it on the opencode v1 host line)
+    if grep -q "OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS" "$HOME/.bashrc" 2>/dev/null; then
+      pass "OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS persisted in ~/.bashrc"
+    else
+      fail "OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS missing from ~/.bashrc"
+      log_dim "  Fix: ./scripts/03a_opencode.sh (ensures the env var)"
     fi
   else
     fail_n 49 "No oh-my-opencode-slim config — skipping 49 preset checks"

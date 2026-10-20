@@ -266,7 +266,7 @@ refresh_path() {
     "$HOME/.bun/bin" \
     "$HOME/.local/bin" \
     "$HOME/.npm-global/bin" \
-    "$HOME/.local/share/pi-node/current/bin" \
+    "$HOME/.pi/agent/bin" \
     /usr/local/bin; do
     if [ -d "$dir" ] && [[ ":$PATH:" != *":$dir:"* ]]; then
       export PATH="$dir:$PATH"

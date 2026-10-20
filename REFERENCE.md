@@ -11,7 +11,8 @@ Reference documentation for both humans and agents. For the install procedure an
 ### Key Contract
 
 **Key configuration variables** (all live in `.env` unless noted —
-`OPENCODE_ENABLE_EXA` is exported in `~/.bashrc`, and
+`OPENCODE_ENABLE_EXA` and `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS`
+are exported in `~/.bashrc`, and
 `LITELLM_DISABLE_NO_REDIS_WARNING` is fixed in `docker-compose.yml`):
 
 | Env var | Set by | Read by | Format | Rotate risk |
@@ -29,6 +30,7 @@ Reference documentation for both humans and agents. For the install procedure an
 | `HUAWEI_MAAS_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`) | `02_litellm.sh` | URL | None — config value |
 | `BIND_ADDRESS` | `01_env.sh` (default `127.0.0.1`) | docker-compose | `127.0.0.1` or `0.0.0.0` | None — config value |
 | `OPENCODE_ENABLE_EXA` | `03a_opencode.sh` (default `1`) | `03a_opencode.sh`, opencode runtime | `1` or unset | None — feature flag |
+| `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` | `03a_opencode.sh` (default `true`) | `03a_opencode.sh`, opencode runtime | `true` or unset | None — feature flag |
 | `LITELLM_DISABLE_NO_REDIS_WARNING` | `docker-compose.yml` (fixed `true`) | LiteLLM container | `true` or unset | None — suppresses no-Redis banner for single-worker setup |
 
 **Virtual keys (stored in tool config files, not `.env`):**
@@ -125,7 +127,7 @@ Reference documentation for both humans and agents. For the install procedure an
 | 05 | `05_skill.sh` | Install/refresh companion skill in detected coding agents (--dry-run, --no-skill, --yes); stale copies are refreshed on re-run |
 | 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
 | 07 | `07_dashboard_shots.sh` | Capture the rendered Grafana dashboard as PNG screenshots (full.png + band-NN.png) for vision-model review (--out=DIR, --dry-run). Requires python3 + playwright + chromium. Maintenance — not run by bootstrap |
-| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus, PostgreSQL — pinned, display-only, never auto-updated). Does not touch keys or passwords; the slim and docker methods also bump pinned versions in tracked files (including the version references in these docs) and commit those changes |
+| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus — active docker-method updates that bump the compose pin, pull, restart, and commit; PostgreSQL — pinned, display-only, never auto-updated). Does not touch keys or passwords; the slim and docker methods also bump pinned versions in tracked files (including the version references in these docs) and commit those changes |
 | — | `install-skill.sh` | Install any skill into all detected coding agents (--name=<name>, --source=<path-or-url>, --dry-run). Standalone utility — not called by 05_skill.sh (which uses helpers/skills.sh directly) |
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker), sourced by bootstrap.sh and steps 01–04 |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
