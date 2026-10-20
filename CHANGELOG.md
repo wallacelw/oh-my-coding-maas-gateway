@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.31.2] - 2026-10-20
+
+### Fixed
+
+- **Docs: infrastructure-update scope corrected in SKILL.md and
+  INSTALLATION.md** — both still claimed LiteLLM/Grafana/Prometheus
+  are "pinned, display-only — never auto-updated" (the 1.31.1 fix
+  landed only in REFERENCE.md, and both documents contradicted their
+  own next paragraphs). Now scoped correctly: active docker-method
+  updates for LiteLLM/Grafana/Prometheus; PostgreSQL pinned.
+- **SKILL.md: background-orchestration coverage** — added a recovery
+  row for the validation-enforced
+  `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` bashrc check, documented
+  that update.sh's slim/docker methods bump tracked pins and commit,
+  and noted that the raw key-minting curl does not rotate (unlike
+  keys.sh, which deletes the previous same-alias key).
+- **configs/.env.template** — reference entry for
+  `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` alongside
+  `OPENCODE_ENABLE_EXA` (same persistence mechanism).
+- **"slim.json.template" shorthand replaced with the real path**
+  (`configs/opencode/oh-my-opencode-slim.json.template`) in
+  INSTALLATION.md, REFERENCE.md, and models.sh.
+- **common.sh** — run_filtered usage comment matches the current slim
+  installer flags.
+
+Companion skill copies in all four agents (~/.config/opencode,
+~/.codex, ~/.pi/agent, ~/.claude) refreshed to match via 05_skill.sh.
+
 ## [1.31.1] - 2026-10-20
 
 ### Fixed

@@ -286,7 +286,7 @@ prompt_password() {
 # Run a command, capture output, filter known noise (star prompts,
 # npm warnings, blank lines), and display remaining lines with a
 # dim [tag] prefix. Returns the command's exit code.
-# Usage: run_filtered "slim" bunx oh-my-opencode-slim@<version> install --companion=no
+# Usage: run_filtered "slim" bunx oh-my-opencode-slim@<version> install --no-tui --companion=no --background-subagents=yes
 run_filtered() {
   local tag="$1"; shift
   local rc output line

@@ -104,8 +104,8 @@ pipeline. Components are grouped into two categories:
 
 - **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
   Code, Pi agent
-- **Infrastructure** — LiteLLM, Grafana, Prometheus, PostgreSQL (pinned,
-  display-only — never auto-updated)
+- **Infrastructure** — LiteLLM, Grafana, Prometheus (active docker-method
+  updates); PostgreSQL (pinned, display-only — never auto-updated)
 
 ```bash
 ./scripts/update.sh              # interactive: show grouped table, select which to update
@@ -117,8 +117,9 @@ pipeline. Components are grouped into two categories:
 The script detects installed components, checks current vs latest
 versions, and offers selective updates. It does NOT touch passwords,
 API keys, or virtual keys — only updates binaries, npm packages, and
-Docker images. After updating Docker images, the affected service is
-automatically pulled and restarted.
+Docker images; the slim and docker methods also bump pinned versions
+in tracked files and commit those changes. After updating Docker
+images, the affected service is automatically pulled and restarted.
 
 ## Option 4: Uninstall
 
@@ -215,6 +216,10 @@ curl -X POST http://127.0.0.1:4000/key/generate \
   -H "Content-Type: application/json" \
   -d '{"key_alias": "<alias>", "max_budget": <budget>}'
 ```
+
+Note: unlike `keys.sh`, this raw curl does not rotate — re-minting an
+existing alias leaves the previous key active. Disable the old key via
+the Admin UI (`http://127.0.0.1:4000/ui`) if rotating.
 
 **Step 4**: Show the returned key to the user and tell them to use it as
 the API key in their tool's config.
@@ -379,6 +384,7 @@ container may have loaded a config without `off_peak_pricing` blocks — check
 | Need to preserve spend history before a reset | `./scripts/06_backup.sh` first — then `docker compose down -v` is safe |
 | `git pull` conflicts on upgrade | `git stash && git pull && git stash pop` |
 | Coding tool outdated version | `./scripts/update.sh --check` to see available updates, then `./scripts/update.sh` to update |
+| Background orchestration env var missing from `~/.bashrc` (validation fails on it) | `./scripts/03a_opencode.sh` (re-persists `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true`) |
 | Stale models in config (deepseek-v4-pro, deepseek-v4-flash) | `./scripts/03a_opencode.sh && ./scripts/03d_pi.sh` to regenerate configs from current catalog |
 
 ## Remote Access
