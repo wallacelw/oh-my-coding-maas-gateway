@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.32.1] - 2026-10-28
+
+### Changed
+
+- **Component refresh** — all eight updatable components bumped, each
+  gated by scoped validation plus a final full run (176/177; the single
+  warning is the known health-probe false-positive — background probes
+  429 themselves against MaaS's 4 rps per-key limit):
+  - LiteLLM 1.106.0 → 1.106.4
+  - Grafana 13.2.4 → 13.3.0 (minor; dashboard v25 re-provisioned and
+    verified — 44 panels, datasource intact)
+  - Prometheus 3.15.0 → 3.15.1
+  - opencode 1.19.3 → 1.19.4
+  - oh-my-opencode-slim 3.0.5 → 3.0.6 (pins bumped across 03a, both
+    opencode templates, and docs)
+  - Codex CLI 0.163.0 → 0.164.0 (model pin `glm-5.3` intact)
+  - Claude Code 2.1.304 → 2.1.311
+  - Pi agent 1.3.0 → 1.4.0 (via `pi update --self` — first use of the
+    managed-install update path fixed in 1.31.1)
+
 ## [1.32.0] - 2026-10-28
 
 ### Changed
