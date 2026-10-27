@@ -69,8 +69,8 @@
       "experimental_supported_tools": []
     },
     {
-      "slug": "deepseek-v4.1-flash",
-      "id": "deepseek-v4.1-flash",
+      "slug": "deepseek-v4.1-flash-1017",
+      "id": "deepseek-v4.1-flash-1017",
       "display_name": "DeepSeek V4.1 Flash",
       "context_window": 1000000,
       "max_output_tokens": 384000,

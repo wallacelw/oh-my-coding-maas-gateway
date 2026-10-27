@@ -265,5 +265,5 @@ fi
 
 echo ""
 log_step "opencode installation complete"
-log_dim "Preset: LiteLLM-Default (quality) — glm-5.3 reasoning core, deepseek-v4.1-flash recon/vision, observer enabled"
+log_dim "Preset: LiteLLM-Default (quality) — glm-5.3 reasoning core, deepseek-v4.1-flash-1017 recon/vision, observer enabled"
 log_dim "Switch preset: /preset LiteLLM-Balanced (cost-effective)"

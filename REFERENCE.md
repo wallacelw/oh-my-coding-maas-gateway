@@ -68,7 +68,7 @@ are exported in `~/.bashrc`, and
 
   Each tool: separate virtual key (sk-...) · unlimited budget · all 4 models
   LiteLLM: load-balances across N MaaS API keys · PostgreSQL (:5432)
-  Models: glm-5.3 · glm-5.2 · glm-5.1 · deepseek-v4.1-flash
+  Models: glm-5.3 · glm-5.2 · glm-5.1 · deepseek-v4.1-flash-1017
 
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
 ```
@@ -144,16 +144,16 @@ are exported in `~/.bashrc`, and
 | `glm-5.2` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ | — |
 | `glm-5.3` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ | — |
 | `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ | $0.270 × 10⁻⁶ | — |
-| `deepseek-v4.1-flash` | 1M/384K | 100 | $0.300 / $1.200 × 10⁻⁶ | $0.030 × 10⁻⁶ | ✓ |
+| `deepseek-v4.1-flash-1017` | 1M/384K | 100 | $0.300 / $1.200 × 10⁻⁶ | $0.030 × 10⁻⁶ | ✓ |
 
 **Pricing notes:**
-- Peak (Period 1: 08:00–20:59 GMT+8) and off-peak (Period 2: 21:00–07:59 GMT+8 = 13:00–00:00 UTC) are modeled via LiteLLM `off_peak_pricing` in `model_info` for glm-5.2, glm-5.1 (70% of peak), and deepseek-v4.1-flash (50% of peak). GLM-5.3 has flat pricing.
+- Peak (Period 1: 08:00–20:59 GMT+8) and off-peak (Period 2: 21:00–07:59 GMT+8 = 13:00–00:00 UTC) are modeled via LiteLLM `off_peak_pricing` in `model_info` for glm-5.2, glm-5.1 (70% of peak), and deepseek-v4.1-flash-1017 (50% of peak). GLM-5.3 has flat pricing.
 - glm-5.1 uses ≥32K token tier. <32K tier: input $0.809, output $2.265, cache hit $0.175 (per 1M tokens). Tracked spend applies ≥32K-tier rates to all glm-5.1 requests, so requests under 32K tokens bill ~25-40% less than tracked — tracked spend is an upper bound for glm-5.1.
 - Cache hit pricing applies to all four models.
-- Off-peak pricing applies to glm-5.2 and glm-5.1 at 70% of peak, and to deepseek-v4.1-flash at 50% of peak. GLM-5.3 has flat pricing (no time-based differential).
+- Off-peak pricing applies to glm-5.2 and glm-5.1 at 70% of peak, and to deepseek-v4.1-flash-1017 at 50% of peak. GLM-5.3 has flat pricing (no time-based differential).
 - Source: [Huawei MaaS pricing](https://support.huaweicloud.com/intl/en-us/price-maas/price-maas-0002.html)
 
-**Multimodal usage:** deepseek-v4.1-flash accepts image input (JPEG, PNG,
+**Multimodal usage:** deepseek-v4.1-flash-1017 accepts image input (JPEG, PNG,
 GIF, WebP) — the first multimodal model in the stack. OpenAI-format requests
 pass images as `image_url` content blocks; Anthropic-format requests pass
 them as base64 `image` source blocks. Both paths are verified end-to-end
@@ -462,10 +462,10 @@ determines routing.
 
 | Preset | Route | Models |
 |--------|-------|--------|
-| **LiteLLM-Default** (default, quality) | Proxy → MaaS | glm-5.3 reasoning core + deepseek-v4.1-flash recon/vision |
-| **LiteLLM-Balanced** (cost-effective) | Proxy → MaaS | glm-5.1 reasoning core + deepseek-v4.1-flash recon/edits |
-| **Huawei-MaaS-Default** (quality) | Direct → MaaS | glm-5.3 reasoning core + deepseek-v4.1-flash recon/vision |
-| **Huawei-MaaS-Balanced** (cost-effective) | Direct → MaaS | glm-5.1 reasoning core + deepseek-v4.1-flash recon/edits |
+| **LiteLLM-Default** (default, quality) | Proxy → MaaS | glm-5.3 reasoning core + deepseek-v4.1-flash-1017 recon/vision |
+| **LiteLLM-Balanced** (cost-effective) | Proxy → MaaS | glm-5.1 reasoning core + deepseek-v4.1-flash-1017 recon/edits |
+| **Huawei-MaaS-Default** (quality) | Direct → MaaS | glm-5.3 reasoning core + deepseek-v4.1-flash-1017 recon/vision |
+| **Huawei-MaaS-Balanced** (cost-effective) | Direct → MaaS | glm-5.1 reasoning core + deepseek-v4.1-flash-1017 recon/edits |
 
 Switch at runtime: `/preset LiteLLM-Balanced`
 
@@ -481,17 +481,17 @@ direct MaaS).
 | orchestrator | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
 | oracle | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.3` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.3` (high) |
 | council | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
-| librarian | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) |
-| explorer | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) | `deepseek-v4.1-flash` → `glm-5.2` (low) |
+| librarian | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) |
+| explorer | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) |
 | designer | `glm-5.3` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.3` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) |
-| fixer | `glm-5.3` → `glm-5.2` (high) | `deepseek-v4.1-flash` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `deepseek-v4.1-flash` → `glm-5.2` (high) |
-| observer | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) | `deepseek-v4.1-flash` (low) |
+| fixer | `glm-5.3` → `glm-5.2` (high) | `deepseek-v4.1-flash-1017` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `deepseek-v4.1-flash-1017` → `glm-5.2` (high) |
+| observer | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) |
 
 > **Note:** In Balanced presets, glm-5.1 (primary) does not support
 > `reasoning_effort` — the variant is silently ignored. Reasoning would
 > only activate on fallback to glm-5.2/glm-5.3 (dormant while fallback is
 > disabled). In Default presets, glm-5.3 always thinks (cannot disable);
-> `low` = enhanced, `high` = deep. deepseek-v4.1-flash variant mapping is
+> `low` = enhanced, `high` = deep. deepseek-v4.1-flash-1017 variant mapping is
 > unverified and may be silently ignored (same precedent as glm-5.1).
 
 > **Note:** Client-side fallback is disabled (`fallback.enabled: false`).
@@ -521,18 +521,18 @@ agent automatically:
    them from the orchestrator message — raw image bytes stay out of the
    main context window.
 2. The plugin nudges delegation to @observer.
-3. Observer (deepseek-v4.1-flash) interprets the image — screenshots,
+3. Observer (deepseek-v4.1-flash-1017) interprets the image — screenshots,
    PDFs, diagrams — OCR-extracts exact text, and returns structured
    observations to the orchestrator.
 
 `image_routing` is omitted from the config and auto-resolves to "auto"
-when observer is enabled. If all deepseek-v4.1-flash deployments fail,
+when observer is enabled. If all deepseek-v4.1-flash-1017 deployments fail,
 vision is lost — observer fails fast rather than falling back to a blind
 glm model (by design). Zero cost in text-only sessions: nothing runs
 unless an image is pasted.
 
 Image input is declared to opencode via `"modalities": { "input": ["text", "image"] }`
-on the deepseek-v4.1-flash model entries in `opencode.json` (both provider
+on the deepseek-v4.1-flash-1017 model entries in `opencode.json` (both provider
 blocks). The `attachment` field does not work for this — opencode's read
 tool checks `capabilities.input.image`, populated only from
 `modalities.input`. Without it, the read tool refuses images and the
@@ -609,7 +609,7 @@ Models use base names (e.g., `glm-5.3`). All 4 models are available. Switch
 at runtime with `--model`:
 
 ```bash
-codex --model deepseek-v4.1-flash  # fast, accepts image input
+codex --model deepseek-v4.1-flash-1017  # fast, accepts image input
 codex --model glm-5.3              # general purpose (default)
 ```
 
@@ -683,7 +683,7 @@ Anthropic endpoint. All 4 models are available. Switch at runtime with
 `--model`:
 
 ```bash
-claude --bare --model claude-deepseek-v4.1-flash  # fast, accepts image input
+claude --bare --model claude-deepseek-v4.1-flash-1017  # fast, accepts image input
 claude --bare --model claude-glm-5.3              # general purpose (default)
 ```
 

@@ -503,8 +503,8 @@ opencode          # or:  codex  or:  claude --bare  or:  pi
 opencode
 # Switch preset: /preset LiteLLM-Balanced
 # Available presets:
-#   LiteLLM-Default   (default, quality — glm-5.3 reasoning core + deepseek-v4.1-flash recon/vision)
-#   LiteLLM-Balanced  (cost-effective — glm-5.1 reasoning core + deepseek-v4.1-flash recon/edits)
+#   LiteLLM-Default   (default, quality — glm-5.3 reasoning core + deepseek-v4.1-flash-1017 recon/vision)
+#   LiteLLM-Balanced  (cost-effective — glm-5.1 reasoning core + deepseek-v4.1-flash-1017 recon/edits)
 #   Huawei-MaaS-Default           (direct, quality)
 #   Huawei-MaaS-Balanced          (direct, cost-effective)
 # Paste a screenshot (Ctrl-V) — observer reads it and reports back structured observations
@@ -520,7 +520,7 @@ and `OPENCODE_ENABLE_EXA=1` in the environment activate it for custom providers.
 
 ```bash
 codex
-codex --model deepseek-v4.1-flash  # fast, accepts image input
+codex --model deepseek-v4.1-flash-1017  # fast, accepts image input
 codex --model glm-5.1              # cost-efficient
 ```
 
@@ -528,7 +528,7 @@ codex --model glm-5.1              # cost-efficient
 
 ```bash
 claude --bare
-claude --bare --model claude-deepseek-v4.1-flash  # fast, accepts image input
+claude --bare --model claude-deepseek-v4.1-flash-1017  # fast, accepts image input
 claude --bare --model claude-glm-5.1              # cost-efficient
 ```
 

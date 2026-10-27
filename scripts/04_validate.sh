@@ -644,14 +644,14 @@ if [ "$RUN_OPENCODE" = true ]; then
       "Default explorer has 2-model array" '(.presets["LiteLLM-Default"].explorer.model | length) == 2' \
       "Default designer has 2-model array" '(.presets["LiteLLM-Default"].designer.model | length) == 2' \
       "Default fixer has 2-model array" '(.presets["LiteLLM-Default"].fixer.model | length) == 2' \
-      "Default observer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Default"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
+      "Default observer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Default"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
       "Observer is single-model (no blind fallback)" '(.presets["LiteLLM-Default"].observer.model | length) == 1' \
-      "Balanced observer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
-      "Default explorer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Default"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
-      "Default librarian primary is deepseek-v4.1-flash" '.presets["LiteLLM-Default"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
-      "Balanced explorer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
-      "Balanced librarian primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash"' \
-      "Balanced fixer primary is deepseek-v4.1-flash" '.presets["LiteLLM-Balanced"].fixer.model[0] == "LiteLLM/deepseek-v4.1-flash"'
+      "Balanced observer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Balanced"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Default explorer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Default"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Default librarian primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Default"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Balanced explorer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Balanced"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Balanced librarian primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Balanced"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Balanced fixer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Balanced"].fixer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"'
 
     # B4a: v3-removed keys must be absent (slim 3.x drops them with a
     # warning at load; a config still carrying them is stale)

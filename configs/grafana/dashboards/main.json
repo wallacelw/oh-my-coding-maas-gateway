@@ -1,9 +1,9 @@
 {
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
-  "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, glm-5.2, glm-5.1, deepseek-v4.1-flash) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
+  "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, glm-5.2, glm-5.1, deepseek-v4.1-flash-1017) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
   "schemaVersion": 39,
-  "version": 24,
+  "version": 25,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -909,7 +909,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -1040,7 +1040,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -1457,7 +1457,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -1603,7 +1603,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -1721,7 +1721,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -1851,7 +1851,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -1982,7 +1982,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -2098,7 +2098,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -2214,7 +2214,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -2330,7 +2330,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -2446,7 +2446,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -2562,7 +2562,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -2692,7 +2692,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -2808,7 +2808,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -2924,7 +2924,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -3040,7 +3040,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -3237,7 +3237,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -3353,7 +3353,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -3549,7 +3549,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -3581,7 +3581,7 @@
       "id": 42,
       "type": "timeseries",
       "title": "Spend rate",
-      "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate; use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nOFF-PEAK DISCOUNT: 13:00–00:00 UTC, glm-5.2 and glm-5.1 bill at 70% of peak rates and deepseek-v4.1-flash at 50% (glm-5.3 has no off-peak discount). Expect visibly lower $/min for the same workload inside that window — a flat rate across the boundary suggests the discount is not being applied.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
+      "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate; use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nOFF-PEAK DISCOUNT: 13:00–00:00 UTC, glm-5.2 and glm-5.1 bill at 70% of peak rates and deepseek-v4.1-flash-1017 at 50% (glm-5.3 has no off-peak discount). Expect visibly lower $/min for the same workload inside that window — a flat rate across the boundary suggests the discount is not being applied.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
       "gridPos": {
         "x": 18,
         "y": 101,
@@ -3665,7 +3665,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "deepseek-v4.1-flash"
+              "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
               {
@@ -3697,7 +3697,7 @@
       "id": 43,
       "type": "piechart",
       "title": "Spend by tool",
-      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1, light agents on deepseek-v4.1-flash).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
+      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1, light agents on deepseek-v4.1-flash-1017).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
       "gridPos": {
         "x": 0,
         "y": 111,
@@ -3755,7 +3755,7 @@
       "id": 44,
       "type": "table",
       "title": "Spend by tool × model",
-      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model. The footer row sums total window spend across all pairs. Rows are sorted by spend, descending — the biggest line items are always on top; scroll for the tail (the footer total always covers every row).\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs explorer on deepseek-v4.1-flash. Useful for tuning preset assignments for cost efficiency.",
+      "description": "USD spend in the selected time range broken down by coding tool and model, from litellm_spend_metric_total. Most granular cost attribution: which tool spent on which model. The footer row sums total window spend across all pairs. Rows are sorted by spend, descending — the biggest line items are always on top; scroll for the tail (the footer total always covers every row).\n\nHOW TO READ: Cross-reference with agent presets — e.g. opencode orchestrator on glm-5.3 vs explorer on deepseek-v4.1-flash-1017. Useful for tuning preset assignments for cost efficiency.",
       "gridPos": {
         "x": 8,
         "y": 111,

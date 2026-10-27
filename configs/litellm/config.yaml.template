@@ -93,9 +93,9 @@ model_list:
       description: "glm-5.1 on Huawei Cloud MaaS"
       organization: Huawei Cloud
 
-  - model_name: deepseek-v4.1-flash
+  - model_name: deepseek-v4.1-flash-1017
     litellm_params:
-      model: openai/deepseek-v4.1-flash
+      model: openai/deepseek-v4.1-flash-1017
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       use_chat_completions_api: true
@@ -118,7 +118,7 @@ model_list:
       supports_prompt_caching: true
       supports_vision: true
       supports_reasoning: true
-      description: "deepseek-v4.1-flash on Huawei Cloud MaaS"
+      description: "deepseek-v4.1-flash-1017 on Huawei Cloud MaaS"
       organization: Huawei Cloud
 
 

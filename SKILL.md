@@ -241,7 +241,7 @@ Off-peak pricing is configured separately in the `OFF_PEAK_PRICING` array
 (format: `model_name|hours_utc|input_cost|output_cost|cache_read_cost`).
 Only models with off-peak pricing are listed; rates are absolute values.
 
-Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4.1-flash`.
+Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4.1-flash-1017`.
 
 **List models**:
 ```bash
@@ -339,14 +339,14 @@ The response is a bare JSON array, newest first, up to 10000 entries. A
 string (`"True"`/`"False"`/`"None"`), not a boolean.
 
 **Off-peak window**: glm-5.2 and glm-5.1 bill at 70% of peak rates and
-deepseek-v4.1-flash at 50%, from 13:00 to 00:00 UTC (21:00–07:59 Beijing).
+deepseek-v4.1-flash-1017 at 50%, from 13:00 to 00:00 UTC (21:00–07:59 Beijing).
 glm-5.3 has flat pricing (no off-peak discount). LiteLLM checks the window
 when the request completes, so a request started at 23:59 UTC bills at peak
 if it finishes after 00:00 UTC.
 
 **Verify the discount**: recompute a request's cost from the peak rates and
 compare — off-peak spend is exactly 70% (glm-5.2/glm-5.1) or 50%
-(deepseek-v4.1-flash) of the peak cost for the same tokens.
+(deepseek-v4.1-flash-1017) of the peak cost for the same tokens.
 Observed examples (small requests, no cache):
 
 ```text
