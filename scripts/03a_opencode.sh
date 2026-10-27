@@ -28,7 +28,7 @@ OPENCODE_CONFIG="$OPENCODE_DIR/opencode.json"
 # NOTE: configs/opencode/opencode.json.template carries an independent
 # plugin pin that is NOT substituted here — keep both in sync (update.sh
 # does; 04_validate.sh fails on drift).
-SLIM_VERSION="3.0.5"
+SLIM_VERSION="3.0.6"
 OPENCODE_INSTALL_URL="https://opencode.ai/install"
 CURL_TIMEOUT=15
 
