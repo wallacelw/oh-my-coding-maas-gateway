@@ -456,7 +456,7 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
 
     # Off-peak pricing only on OFF_PEAK_PRICING models (both formats, all keys)
     # Verify each expected model has at least one off_peak_pricing block per format.
-    # Pattern matches both OpenAI (glm-5.2) and Anthropic (claude-glm-5.2) variants.
+    # Pattern matches both OpenAI (deepseek-v4.1-flash-1017) and Anthropic (claude-deepseek-v4.1-flash-1017) variants.
     for off_peak_entry in "${OFF_PEAK_PRICING[@]}"; do
       off_peak_model="${off_peak_entry%%|*}"
       OFF_PEAK_FOR_MODEL=$(grep -A 20 "model_name: \\(claude-\\)\\?$off_peak_model" "$CONFIG_FILE" 2>/dev/null | grep -c 'off_peak_pricing:' || true); OFF_PEAK_FOR_MODEL=${OFF_PEAK_FOR_MODEL:-0}
@@ -608,50 +608,30 @@ if [ "$RUN_OPENCODE" = true ]; then
     CLEAN_SLIM=$(strip_jsonc "$SLIM_CONFIG")
     check_jq "$CLEAN_SLIM" \
       "LiteLLM-Default preset" '.presets["LiteLLM-Default"]' \
-      "LiteLLM-Balanced preset" '.presets["LiteLLM-Balanced"]' \
       "Huawei-MaaS-Default direct preset" '.presets["Huawei-MaaS-Default"]' \
-      "Huawei-MaaS-Balanced direct preset" '.presets["Huawei-MaaS-Balanced"]' \
       "Default is LiteLLM-Default" '.preset == "LiteLLM-Default"' \
-      "Orchestrator model set" '.presets["LiteLLM-Default"].orchestrator.model' \
-      "Oracle model set (array for fallback)" '.presets["LiteLLM-Default"].oracle.model' \
-      "Council model set (array for fallback)" '.presets["LiteLLM-Default"].council.model' \
-      "Librarian model set" '.presets["LiteLLM-Default"].librarian.model' \
-      "Explorer model set" '.presets["LiteLLM-Default"].explorer.model' \
-      "Designer model set" '.presets["LiteLLM-Default"].designer.model' \
-      "Fixer model set (array for fallback)" '.presets["LiteLLM-Default"].fixer.model' \
-      "Observer model set" '.presets["LiteLLM-Default"].observer.model' \
+      "Balanced presets removed (with glm-5.1/glm-5.2)" '(.presets["LiteLLM-Balanced"] // null) == null and (.presets["Huawei-MaaS-Balanced"] // null) == null' \
+      "Orchestrator model is glm-5.3" '.presets["LiteLLM-Default"].orchestrator.model[0] == "LiteLLM/glm-5.3"' \
+      "Orchestrator single-model (no fallback)" '(.presets["LiteLLM-Default"].orchestrator.model | length) == 1' \
+      "Oracle model is glm-5.3" '.presets["LiteLLM-Default"].oracle.model[0] == "LiteLLM/glm-5.3"' \
+      "Oracle single-model (no fallback)" '(.presets["LiteLLM-Default"].oracle.model | length) == 1' \
+      "Council agent model is deepseek" '.presets["LiteLLM-Default"].council.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Librarian model is deepseek" '.presets["LiteLLM-Default"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Explorer model is deepseek" '.presets["LiteLLM-Default"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Designer model is deepseek" '.presets["LiteLLM-Default"].designer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Fixer model is deepseek" '.presets["LiteLLM-Default"].fixer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Observer model is deepseek" '.presets["LiteLLM-Default"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "All agents single-model (no fallback chains)" '([.presets["LiteLLM-Default"][].model | length] | all(. == 1))' \
       "No agents disabled (observer enabled)" '.disabled_agents == []' \
       "Fallback disabled" '.fallback.enabled == false' \
       "Fallback has no chains (v2 format)" '(.fallback.chains // null) == null' \
       "Council presets defined" '.council.presets' \
       "Council has 3 councillors" '(.council.presets.default | keys | length) == 3' \
-      "Council alpha model is LiteLLM/glm-5.3" '.council.presets.default.alpha.model[0] == "LiteLLM/glm-5.3"' \
-      "Council alpha has fallback array" '(.council.presets.default.alpha.model | length) == 2' \
-      "Council beta model is LiteLLM/glm-5.3" '.council.presets.default.beta.model[0] == "LiteLLM/glm-5.3"' \
-      "Council beta has fallback array" '(.council.presets.default.beta.model | length) == 2' \
-      "Council gamma model is LiteLLM/glm-5.3" '.council.presets.default.gamma.model[0] == "LiteLLM/glm-5.3"' \
-      "Council gamma has fallback array" '(.council.presets.default.gamma.model | length) == 2' \
-      "Huawei-MaaS-Default orchestrator model set" '.presets["Huawei-MaaS-Default"].orchestrator.model' \
-      "Huawei-MaaS-Balanced orchestrator model set" '.presets["Huawei-MaaS-Balanced"].orchestrator.model' \
-      "Balanced orchestrator primary is glm-5.1" '.presets["LiteLLM-Balanced"].orchestrator.model[0] == "LiteLLM/glm-5.1"' \
-      "Balanced orchestrator has 2-model fallback" '(.presets["LiteLLM-Balanced"].orchestrator.model | length) == 2' \
-      "Balanced oracle fallback is glm-5.3" '.presets["LiteLLM-Balanced"].oracle.model[1] == "LiteLLM/glm-5.3"' \
-      "Default orchestrator primary is glm-5.3" '.presets["LiteLLM-Default"].orchestrator.model[0] == "LiteLLM/glm-5.3"' \
-      "Default orchestrator has 2-model array" '(.presets["LiteLLM-Default"].orchestrator.model | length) == 2' \
-      "Default oracle has 2-model array" '(.presets["LiteLLM-Default"].oracle.model | length) == 2' \
-      "Default council has 2-model array" '(.presets["LiteLLM-Default"].council.model | length) == 2' \
-      "Default librarian has 2-model array" '(.presets["LiteLLM-Default"].librarian.model | length) == 2' \
-      "Default explorer has 2-model array" '(.presets["LiteLLM-Default"].explorer.model | length) == 2' \
-      "Default designer has 2-model array" '(.presets["LiteLLM-Default"].designer.model | length) == 2' \
-      "Default fixer has 2-model array" '(.presets["LiteLLM-Default"].fixer.model | length) == 2' \
-      "Default observer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Default"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
-      "Observer is single-model (no blind fallback)" '(.presets["LiteLLM-Default"].observer.model | length) == 1' \
-      "Balanced observer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Balanced"].observer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
-      "Default explorer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Default"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
-      "Default librarian primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Default"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
-      "Balanced explorer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Balanced"].explorer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
-      "Balanced librarian primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Balanced"].librarian.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
-      "Balanced fixer primary is deepseek-v4.1-flash-1017" '.presets["LiteLLM-Balanced"].fixer.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"'
+      "Council alpha is glm-5.3" '.council.presets.default.alpha.model[0] == "LiteLLM/glm-5.3"' \
+      "Council beta is glm-5.3" '.council.presets.default.beta.model[0] == "LiteLLM/glm-5.3"' \
+      "Council gamma is deepseek" '.council.presets.default.gamma.model[0] == "LiteLLM/deepseek-v4.1-flash-1017"' \
+      "Councillors single-model (no fallback chains)" '([.council.presets.default[].model | length] | all(. == 1))' \
+      "Huawei-MaaS-Default orchestrator is glm-5.3" '.presets["Huawei-MaaS-Default"].orchestrator.model[0] == "Huawei-MaaS/glm-5.3"'
 
     # B4a: v3-removed keys must be absent (slim 3.x drops them with a
     # warning at load; a config still carrying them is stale)
@@ -675,17 +655,6 @@ if [ "$RUN_OPENCODE" = true ]; then
       fi
     else
       fail "B4b: cannot read presets (corrupt slim config)"
-    fi
-    if LL_BAL=$(echo "$CLEAN_SLIM" | jq -c '.presets["LiteLLM-Balanced"]' 2>/dev/null) && \
-       HM_BAL=$(echo "$CLEAN_SLIM" | jq -c '.presets["Huawei-MaaS-Balanced"]' 2>/dev/null); then
-      LL_BAL_SUB=$(echo "$LL_BAL" | sed 's|LiteLLM/|Huawei-MaaS/|g')
-      if [ "$LL_BAL_SUB" = "$HM_BAL" ]; then
-        pass "Huawei-MaaS-Balanced = LiteLLM-Balanced (prefix substitution)"
-      else
-        fail "Huawei-MaaS-Balanced drifts from LiteLLM-Balanced"
-      fi
-    else
-      fail "B4b: cannot read balanced presets (corrupt slim config)"
     fi
 
     PERMS=$(file_perms "$SLIM_CONFIG")
@@ -718,7 +687,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       log_dim "  Fix: ./scripts/03a_opencode.sh (ensures the env var)"
     fi
   else
-    fail_n 49 "No oh-my-opencode-slim config — skipping 49 preset checks"
+    fail_n 30 "No oh-my-opencode-slim config — skipping 30 preset checks"
   fi
 
   echo ""
@@ -750,7 +719,7 @@ CURLCFG
         MODEL_LIST=$(printf '%s' "$MODELS_JSON" | jq -r '.data[].id' 2>/dev/null)
         log_dim "Discovered $LITELLM_MODEL_COUNT model(s): $(echo "$MODEL_LIST" | tr '\n' ' ' | sed 's/ $//')"
 
-        SMOKE_MODEL="glm-5.1"
+        SMOKE_MODEL="deepseek-v4.1-flash-1017"
         if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
             --config - \
             -H "Content-Type: application/json" \
@@ -986,7 +955,7 @@ if [ "$RUN_CODEX" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Responses API smoke test"
   elif [ -n "$CODEX_VK" ]; then
-    SMOKE_MODEL="glm-5.1"
+    SMOKE_MODEL="deepseek-v4.1-flash-1017"
     if curl -sf -m 30 "$LITELLM_URL/v1/responses" \
         --config - \
         -H "Content-Type: application/json" \
@@ -1071,7 +1040,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Messages API smoke test"
   elif [ -n "$CLAUDE_VK" ]; then
-    SMOKE_MODEL="claude-glm-5.1"
+    SMOKE_MODEL="claude-deepseek-v4.1-flash-1017"
     if curl -sf -m 30 "$LITELLM_URL/v1/messages" \
         --config - \
         -H "Content-Type: application/json" \
@@ -1164,7 +1133,7 @@ if [ "$RUN_PI" = true ]; then
   if [ "$DRY_RUN" = true ]; then
     skip "Inference smoke test"
   elif [ -n "${PI_API_KEY:-}" ]; then
-    SMOKE_MODEL="glm-5.1"
+    SMOKE_MODEL="deepseek-v4.1-flash-1017"
     if curl -sf -m 30 "$LITELLM_URL/v1/chat/completions" \
         --config - \
         -H "Content-Type: application/json" \

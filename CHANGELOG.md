@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.33.0] - 2026-10-28
+
+### Changed
+
+- **Catalog reduced to 2 models** — glm-5.3 (reasoning core) and
+  deepseek-v4.1-flash-1017 (recon/vision/economy). glm-5.2 and glm-5.1
+  removed from the catalog, all config templates, the Grafana dashboard
+  (v26 — dead-model color overrides removed, pooled-RPM ceiling
+  recalibrated to 2 models), validation assertions, and docs.
+  Deployments: 40 → 20 (2 models × 5 keys × 2 formats).
+- **Preset restructure (LiteLLM-Default, mirrored as
+  Huawei-MaaS-Default)** — orchestrator + oracle: glm-5.3; all other
+  agents (council, librarian, explorer, designer, fixer, observer):
+  deepseek-v4.1-flash-1017. Council Mode seats: alpha + beta = glm-5.3,
+  gamma = deepseek-v4.1-flash-1017. Single-model assignments — fallback
+  chains removed entirely (client-side fallback was already disabled,
+  so runtime behavior of primaries is unchanged). The Balanced presets
+  (LiteLLM-Balanced, Huawei-MaaS-Balanced) are deleted — their glm-5.1
+  core is gone from the catalog.
+- **Small/fast models** — opencode `small_model` and Claude Code
+  `ANTHROPIC_SMALL_FAST_MODEL` moved from glm-5.1 to
+  deepseek-v4.1-flash-1017 / claude-deepseek-v4.1-flash-1017.
+- **TPM corrected to the official MaaS limit** — per-key TPM raised
+  1,000,000 → 2,000,000 for both models per the official model list
+  (support.huaweicloud.com/model-list-maas); pooled capacity is now
+  10M TPM per model. Pricing verified against the official price page —
+  all rates matched exactly. Note: an upstream 1M TPM enforcement was
+  observed in October; the 429 graceful-degradation path covers any
+  residual mismatch.
+- Validation smoke models moved from glm-5.1 to deepseek-v4.1-flash-1017
+  (B5/D4/E4/F4 and the 03a-03d key-validation probes); B4 preset
+  assertions rewritten for the new structure (25 assertions including
+  negative checks for the removed presets and fallback chains).
+
 ## [1.32.1] - 2026-10-28
 
 ### Changed

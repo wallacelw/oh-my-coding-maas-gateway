@@ -1,9 +1,9 @@
 {
   "title": "oh-my-coding-maas-gateway",
   "uid": "oh-my-coding-maas-gateway",
-  "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, glm-5.2, glm-5.1, deepseek-v4.1-flash-1017) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
+  "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, deepseek-v4.1-flash-1017) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
   "schemaVersion": 39,
-  "version": 25,
+  "version": 26,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -367,7 +367,7 @@
       "id": 6,
       "type": "stat",
       "title": "RPS",
-      "description": "Requests per second over the selected window, from litellm_proxy_total_requests_metric_total (all HTTP requests including health checks). Use this to gauge real-time traffic volume. Compare with RPM (×60) for sanity.\n\nGOOD: Matches expected traffic pattern.\nBAD: Unexpected drop to zero (proxy down) or sudden 10× spike (retry storms, runaway clients).\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-glm-5.1). Selecting specific models counts only those.",
+      "description": "Requests per second over the selected window, from litellm_proxy_total_requests_metric_total (all HTTP requests including health checks). Use this to gauge real-time traffic volume. Compare with RPM (×60) for sanity.\n\nGOOD: Matches expected traffic pattern.\nBAD: Unexpected drop to zero (proxy down) or sudden 10× spike (retry storms, runaway clients).\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-deepseek-v4.1-flash-1017). Selecting specific models counts only those.",
       "gridPos": {
         "x": 0,
         "y": 5,
@@ -433,7 +433,7 @@
       "id": 7,
       "type": "stat",
       "title": "RPM",
-      "description": "Requests per minute over the selected window, totaled across selected models — the number to compare against the pooled RPM ceiling.\n\nThresholds are calibrated for All models selected: pooled ceiling = 500 RPM per model (100 per key × 5 keys) × 4 models = 2000. Yellow at 1400 (70% of ceiling), red at 2000 — at the ceiling, the upstream per-key quota rejects requests with 429 (see '429s to clients by model' in Errors & Health).\n\nNOTE: With fewer models selected the effective ceiling shrinks (500 per selected model); read the colors with All selected.\n\nGOOD: Green — comfortable headroom.\nBAD: Yellow/Red — approaching or at the pooled ceiling; expect client-facing 429s.\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-glm-5.1). Selecting specific models counts only those.",
+      "description": "Requests per minute over the selected window, totaled across selected models — the number to compare against the pooled RPM ceiling.\n\nThresholds are calibrated for All models selected: pooled ceiling = 500 RPM per model (100 per key × 5 keys) × 2 models = 1000. Yellow at 700 (70% of ceiling), red at 1000 — at the ceiling, the upstream per-key quota rejects requests with 429 (see '429s to clients by model' in Errors & Health).\n\nNOTE: With fewer models selected the effective ceiling shrinks (500 per selected model); read the colors with All selected.\n\nGOOD: Green — comfortable headroom.\nBAD: Yellow/Red — approaching or at the pooled ceiling; expect client-facing 429s.\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-deepseek-v4.1-flash-1017). Selecting specific models counts only those.",
       "gridPos": {
         "x": 6,
         "y": 5,
@@ -879,36 +879,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -917,21 +887,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#FF9830"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "claude-glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#3FC9C0"
                 }
               }
             ]
@@ -1010,36 +965,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -1048,21 +973,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#FF9830"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "claude-glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#3FC9C0"
                 }
               }
             ]
@@ -1373,7 +1283,7 @@
       "id": 19,
       "type": "timeseries",
       "title": "RPM by model",
-      "description": "Requests per minute broken down by model, from litellm_proxy_total_requests_metric_total. Each line shows traffic volume for one model. Use this to understand which models receive the most traffic and spot usage pattern changes.\n\nGOOD: Matches expected traffic distribution.\nBAD: One model suddenly dominates (misconfigured client) or a model drops to zero (clients can't reach it).\n\nNOTE: With All selected, internal health-check traffic appears as a separate 'health-check' line (it carries no requested_model label) — it is real pool consumption. Requests made via model aliases (e.g. claude-glm-5.1) appear under the alias name.",
+      "description": "Requests per minute broken down by model, from litellm_proxy_total_requests_metric_total. Each line shows traffic volume for one model. Use this to understand which models receive the most traffic and spot usage pattern changes.\n\nGOOD: Matches expected traffic distribution.\nBAD: One model suddenly dominates (misconfigured client) or a model drops to zero (clients can't reach it).\n\nNOTE: With All selected, internal health-check traffic appears as a separate 'health-check' line (it carries no requested_model label) — it is real pool consumption. Requests made via model aliases (e.g. claude-deepseek-v4.1-flash-1017) appear under the alias name.",
       "gridPos": {
         "x": 0,
         "y": 27,
@@ -1427,36 +1337,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -1480,21 +1360,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#808080"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "claude-glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#3FC9C0"
                 }
               }
             ]
@@ -1566,36 +1431,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -1684,36 +1519,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -1814,36 +1619,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -1952,36 +1727,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -2061,36 +1806,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -2184,36 +1899,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -2293,36 +1978,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -2416,36 +2071,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -2525,36 +2150,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -2662,36 +2257,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -2771,36 +2336,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -2894,36 +2429,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -3003,36 +2508,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -3207,36 +2682,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -3316,36 +2761,6 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
                 }
               }
             ]
@@ -3519,36 +2934,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -3581,7 +2966,7 @@
       "id": 42,
       "type": "timeseries",
       "title": "Spend rate",
-      "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate; use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nOFF-PEAK DISCOUNT: 13:00–00:00 UTC, glm-5.2 and glm-5.1 bill at 70% of peak rates and deepseek-v4.1-flash-1017 at 50% (glm-5.3 has no off-peak discount). Expect visibly lower $/min for the same workload inside that window — a flat rate across the boundary suggests the discount is not being applied.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
+      "description": "USD per minute per model — the derivative of cumulative spend, from litellm_spend_metric_total. This is the real-time cost rate; use it to spot runaway costs immediately rather than waiting for cumulative totals.\n\nOFF-PEAK DISCOUNT: 13:00–00:00 UTC, deepseek-v4.1-flash-1017 bills at 50% of peak rates (glm-5.3 has no off-peak discount). Expect visibly lower $/min for the same workload inside that window — a flat rate across the boundary suggests the discount is not being applied.\n\nGOOD: Stable and within expected rate.\nBAD: Sudden spikes — a client switched to an expensive model or is making excessive high-cost requests.",
       "gridPos": {
         "x": 18,
         "y": 101,
@@ -3635,36 +3020,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "glm-5.2"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#B877D9"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "glm-5.1"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2CC0E"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "deepseek-v4.1-flash-1017"
             },
             "properties": [
@@ -3697,7 +3052,7 @@
       "id": 43,
       "type": "piechart",
       "title": "Spend by tool",
-      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — tools on the quality preset (glm-5.3) will spend more than those on Balanced (glm-5.1, light agents on deepseek-v4.1-flash-1017).\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
+      "description": "USD spend in the selected time range broken down by API key alias (coding tool), from litellm_spend_metric_total. Each coding tool (opencode, codex, claude-code, pi) has its own virtual key, so this shows cost attribution per tool.\n\nHOW TO READ: Identifies which tool consumes the most budget. Use with the preset system — glm-5.3 agents (orchestrator, oracle) cost more per token than deepseek-v4.1-flash-1017 agents.\n\nGOOD: Spend distribution matches expected usage patterns.\nBAD: One tool dominates unexpectedly — check for runaway sessions or retry loops.",
       "gridPos": {
         "x": 0,
         "y": 111,

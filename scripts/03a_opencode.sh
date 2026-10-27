@@ -148,7 +148,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$OPENCODE_CONFIG" ]; then
     elif retry_curl -sf -m $CURL_TIMEOUT "http://127.0.0.1:4000/v1/chat/completions" \
          --config - \
          -H "Content-Type: application/json" \
-         -d '{"model":"glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}' <<CURLCFG; then
+         -d '{"model":"deepseek-v4.1-flash-1017","messages":[{"role":"user","content":"ok"}],"max_tokens":1}' <<CURLCFG; then
 header = "Authorization: Bearer $EXISTING_KEY"
 CURLCFG
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
@@ -265,5 +265,4 @@ fi
 
 echo ""
 log_step "opencode installation complete"
-log_dim "Preset: LiteLLM-Default (quality) — glm-5.3 reasoning core, deepseek-v4.1-flash-1017 recon/vision, observer enabled"
-log_dim "Switch preset: /preset LiteLLM-Balanced (cost-effective)"
+log_dim "Preset: LiteLLM-Default — glm-5.3 orchestrator/oracle + council alpha/beta, deepseek-v4.1-flash-1017 for all other agents"

@@ -66,9 +66,9 @@ are exported in `~/.bashrc`, and
   Claude Code: Anthropic Messages API forwarded to MaaS Anthropic endpoint
   Pi agent: OpenAI Chat Completions API, all models from models.sh
 
-  Each tool: separate virtual key (sk-...) · unlimited budget · all 4 models
+  Each tool: separate virtual key (sk-...) · unlimited budget · all models
   LiteLLM: load-balances across N MaaS API keys · PostgreSQL (:5432)
-  Models: glm-5.3 · glm-5.2 · glm-5.1 · deepseek-v4.1-flash-1017
+  Models: glm-5.3 · deepseek-v4.1-flash-1017
 
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
 ```
@@ -141,16 +141,13 @@ are exported in `~/.bashrc`, and
 
 | Name | Input/Output | RPM | Cost (in/out per token) | Cache hit | Vision |
 |------|-------------|-----|------------------------|----------|--------|
-| `glm-5.2` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ | — |
 | `glm-5.3` | 1M/128K | 100 | $1.400 / $4.400 × 10⁻⁶ | $0.260 × 10⁻⁶ | — |
-| `glm-5.1` | 192K/128K | 100 | $1.078 / $3.774 × 10⁻⁶ | $0.270 × 10⁻⁶ | — |
 | `deepseek-v4.1-flash-1017` | 1M/384K | 100 | $0.300 / $1.200 × 10⁻⁶ | $0.030 × 10⁻⁶ | ✓ |
 
 **Pricing notes:**
-- Peak (Period 1: 08:00–20:59 GMT+8) and off-peak (Period 2: 21:00–07:59 GMT+8 = 13:00–00:00 UTC) are modeled via LiteLLM `off_peak_pricing` in `model_info` for glm-5.2, glm-5.1 (70% of peak), and deepseek-v4.1-flash-1017 (50% of peak). GLM-5.3 has flat pricing.
-- glm-5.1 uses ≥32K token tier. <32K tier: input $0.809, output $2.265, cache hit $0.175 (per 1M tokens). Tracked spend applies ≥32K-tier rates to all glm-5.1 requests, so requests under 32K tokens bill ~25-40% less than tracked — tracked spend is an upper bound for glm-5.1.
-- Cache hit pricing applies to all four models.
-- Off-peak pricing applies to glm-5.2 and glm-5.1 at 70% of peak, and to deepseek-v4.1-flash-1017 at 50% of peak. GLM-5.3 has flat pricing (no time-based differential).
+- Peak (Period 1: 08:00–20:59 GMT+8) and off-peak (Period 2: 21:00–07:59 GMT+8 = 13:00–00:00 UTC) are modeled via LiteLLM `off_peak_pricing` in `model_info` for deepseek-v4.1-flash-1017 (50% of peak). GLM-5.3 has flat pricing.
+- Cache hit pricing applies to both models.
+- Off-peak pricing applies to deepseek-v4.1-flash-1017 at 50% of peak. GLM-5.3 has flat pricing (no time-based differential).
 - Source: [Huawei MaaS pricing](https://support.huaweicloud.com/intl/en-us/price-maas/price-maas-0002.html)
 
 **Multimodal usage:** deepseek-v4.1-flash-1017 accepts image input (JPEG, PNG,
@@ -183,9 +180,9 @@ Never edit it directly — change `.env` and re-run `02_litellm.sh`.
 ```yaml
 model_list:
   # ── OpenAI deployments (for opencode + Codex CLI) ──
-  - model_name: glm-5.2                    # base name
+  - model_name: glm-5.3                    # base name
     litellm_params:
-      model: openai/glm-5.2                # provider prefix
+      model: openai/glm-5.3                # provider prefix
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       use_chat_completions_api: true       # bridge Responses → Chat Completions
@@ -208,13 +205,13 @@ model_list:
       supports_prompt_caching: true        # false for models without cache support
       supports_reasoning: true             # true only for REASONING_MODELS entries
       supports_vision: false               # true only for VISION_MODELS entries
-      description: "glm-5.2 on Huawei Cloud MaaS"
+      description: "glm-5.3 on Huawei Cloud MaaS"
       organization: Huawei Cloud
 
   # ── Anthropic deployments (for Claude Code CLI) ──
-  - model_name: claude-glm-5.2             # claude- prefix
+  - model_name: claude-glm-5.3             # claude- prefix
     litellm_params:
-      model: anthropic/glm-5.2             # provider prefix
+      model: anthropic/glm-5.3             # provider prefix
       api_base: os.environ/HUAWEI_MAAS_ANTHROPIC_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       tpm: 1000000
@@ -267,8 +264,8 @@ can use the same underlying MaaS models:
 
 | Type | `model_name` | Provider model | Example |
 |------|------------|----------------|---------|
-| OpenAI | `{model}` | `openai/{model}` | `glm-5.2` → `openai/glm-5.2` |
-| Anthropic | `claude-{model}` | `anthropic/{model}` | `claude-glm-5.2` → `anthropic/glm-5.2` |
+| OpenAI | `{model}` | `openai/{model}` | `glm-5.3` → `openai/glm-5.3` |
+| Anthropic | `claude-{model}` | `anthropic/{model}` | `claude-glm-5.3` → `anthropic/glm-5.3` |
 
 The `claude-` prefix on Anthropic `model_name` avoids routing conflicts.
 LiteLLM routes by `model_name`, not by request format. Without the prefix,
@@ -462,37 +459,33 @@ determines routing.
 
 | Preset | Route | Models |
 |--------|-------|--------|
-| **LiteLLM-Default** (default, quality) | Proxy → MaaS | glm-5.3 reasoning core + deepseek-v4.1-flash-1017 recon/vision |
-| **LiteLLM-Balanced** (cost-effective) | Proxy → MaaS | glm-5.1 reasoning core + deepseek-v4.1-flash-1017 recon/edits |
-| **Huawei-MaaS-Default** (quality) | Direct → MaaS | glm-5.3 reasoning core + deepseek-v4.1-flash-1017 recon/vision |
-| **Huawei-MaaS-Balanced** (cost-effective) | Direct → MaaS | glm-5.1 reasoning core + deepseek-v4.1-flash-1017 recon/edits |
-
-Switch at runtime: `/preset LiteLLM-Balanced`
+| **LiteLLM-Default** (default) | Proxy → MaaS | glm-5.3 orchestrator/oracle + deepseek-v4.1-flash-1017 all other agents |
+| **Huawei-MaaS-Default** | Direct → MaaS | same agent-model mapping, direct to MaaS |
 
 ### Agent → Model Mapping
 
-`A → B` = configured fallback chain — currently dormant (client-side
-fallback disabled; A always serves). `(variant)` = reasoning effort. Model
-names omit the provider prefix (preset name indicates LiteLLM proxy vs
-direct MaaS).
+Single-model assignments — no fallback chains (client-side fallback
+disabled). `(variant)` = reasoning effort. Model names omit the provider
+prefix (preset name indicates LiteLLM proxy vs direct MaaS).
 
-| Agent | LiteLLM-Default | LiteLLM-Balanced | MaaS-Default | MaaS-Balanced |
-|-------|-----------------|------------------|--------------|---------------|
-| orchestrator | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
-| oracle | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.3` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.3` (high) |
-| council | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `glm-5.1` → `glm-5.2` (high) |
-| librarian | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) |
-| explorer | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) | `deepseek-v4.1-flash-1017` → `glm-5.2` (low) |
-| designer | `glm-5.3` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) | `glm-5.3` → `glm-5.2` (low) | `glm-5.1` → `glm-5.2` (low) |
-| fixer | `glm-5.3` → `glm-5.2` (high) | `deepseek-v4.1-flash-1017` → `glm-5.2` (high) | `glm-5.3` → `glm-5.2` (high) | `deepseek-v4.1-flash-1017` → `glm-5.2` (high) |
-| observer | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) |
+| Agent | LiteLLM-Default | MaaS-Default |
+|-------|-----------------|--------------|
+| orchestrator | `glm-5.3` (high) | `glm-5.3` (high) |
+| oracle | `glm-5.3` (high) | `glm-5.3` (high) |
+| council | `deepseek-v4.1-flash-1017` (high) | `deepseek-v4.1-flash-1017` (high) |
+| librarian | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) |
+| explorer | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) |
+| designer | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) |
+| fixer | `deepseek-v4.1-flash-1017` (high) | `deepseek-v4.1-flash-1017` (high) |
+| observer | `deepseek-v4.1-flash-1017` (low) | `deepseek-v4.1-flash-1017` (low) |
 
-> **Note:** In Balanced presets, glm-5.1 (primary) does not support
-> `reasoning_effort` — the variant is silently ignored. Reasoning would
-> only activate on fallback to glm-5.2/glm-5.3 (dormant while fallback is
-> disabled). In Default presets, glm-5.3 always thinks (cannot disable);
-> `low` = enhanced, `high` = deep. deepseek-v4.1-flash-1017 variant mapping is
-> unverified and may be silently ignored (same precedent as glm-5.1).
+Council Mode seats (3-councillor consensus): alpha = glm-5.3, beta =
+glm-5.3, gamma = deepseek-v4.1-flash-1017 (all `high`).
+
+> **Note:** glm-5.3 always thinks (cannot disable); `low` = enhanced,
+> `high` = deep. deepseek-v4.1-flash-1017 thinking mode is configurable
+> (96K max reasoning length); its variant mapping is unverified and may
+> be silently ignored.
 
 > **Note:** Client-side fallback is disabled (`fallback.enabled: false`).
 > The plugin's fallback was sticky: once a session switched models it never
@@ -654,7 +647,7 @@ Set in the `env` block of `~/.claude/settings.json`:
 | `ANTHROPIC_BASE_URL` | `http://127.0.0.1:4000` | LiteLLM proxy URL (no `/v1`) |
 | `ANTHROPIC_API_KEY` | `sk-...` (virtual key) | LiteLLM auth (alias: claude-code) |
 | `ANTHROPIC_MODEL` | `claude-glm-5.3` | Primary model |
-| `ANTHROPIC_SMALL_FAST_MODEL` | `claude-glm-5.1` | Fast model for background tasks |
+| `ANTHROPIC_SMALL_FAST_MODEL` | `claude-deepseek-v4.1-flash-1017` | Fast model for background tasks |
 | `CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL` | `1` | Prevent VSCode extension auto-install |
 
 ### VSCode Extension Disabled

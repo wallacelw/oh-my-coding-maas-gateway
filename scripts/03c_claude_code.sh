@@ -92,7 +92,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CLAUDE_SETTINGS" ]; then
          --config - \
          -H "Content-Type: application/json" \
          -H "anthropic-version: 2023-06-01" \
-         -d '{"model":"claude-glm-5.1","messages":[{"role":"user","content":"ok"}],"max_tokens":1}' <<CURLCFG; then
+         -d '{"model":"claude-deepseek-v4.1-flash-1017","messages":[{"role":"user","content":"ok"}],"max_tokens":1}' <<CURLCFG; then
 header = "x-api-key: $EXISTING_KEY"
 CURLCFG
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
@@ -133,7 +133,7 @@ NEW_ENV_BLOCK=$(jq -n \
   --arg base_url "http://127.0.0.1:4000" \
   --arg api_key "$VIRTUAL_KEY" \
   --arg model "claude-glm-5.3" \
-  --arg fast_model "claude-glm-5.1" \
+  --arg fast_model "claude-deepseek-v4.1-flash-1017" \
   '{env: {ANTHROPIC_BASE_URL: $base_url, ANTHROPIC_API_KEY: $api_key, ANTHROPIC_MODEL: $model, ANTHROPIC_SMALL_FAST_MODEL: $fast_model, CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL: "1"}}')
 
 if [ -f "$CLAUDE_SETTINGS" ]; then

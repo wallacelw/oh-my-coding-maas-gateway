@@ -241,7 +241,7 @@ Off-peak pricing is configured separately in the `OFF_PEAK_PRICING` array
 (format: `model_name|hours_utc|input_cost|output_cost|cache_read_cost`).
 Only models with off-peak pricing are listed; rates are absolute values.
 
-Current models: `glm-5.3`, `glm-5.2`, `glm-5.1`, `deepseek-v4.1-flash-1017`.
+Current models: `glm-5.3`, `deepseek-v4.1-flash-1017`.
 
 **List models**:
 ```bash
@@ -287,7 +287,7 @@ MASTER_KEY=$(grep '^LITELLM_MASTER_KEY=' .env | cut -d= -f2 | tr -d '"')
 curl -X POST http://127.0.0.1:4000/v1/chat/completions \
   -H "Authorization: Bearer $MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "glm-5.1", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+  -d '{"model": "deepseek-v4.1-flash-1017", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
 ```
 
 ## View Metrics
@@ -338,20 +338,19 @@ The response is a bare JSON array, newest first, up to 10000 entries. A
 `startTime` is an ISO 8601 UTC string; `spend` is USD; `cache_hit` is a
 string (`"True"`/`"False"`/`"None"`), not a boolean.
 
-**Off-peak window**: glm-5.2 and glm-5.1 bill at 70% of peak rates and
-deepseek-v4.1-flash-1017 at 50%, from 13:00 to 00:00 UTC (21:00–07:59 Beijing).
-glm-5.3 has flat pricing (no off-peak discount). LiteLLM checks the window
-when the request completes, so a request started at 23:59 UTC bills at peak
-if it finishes after 00:00 UTC.
+**Off-peak window**: deepseek-v4.1-flash-1017 bills at 50% of peak rates,
+from 13:00 to 00:00 UTC (21:00–07:59 Beijing). glm-5.3 has flat pricing
+(no off-peak discount). LiteLLM checks the window when the request
+completes, so a request started at 23:59 UTC bills at peak if it finishes
+after 00:00 UTC.
 
 **Verify the discount**: recompute a request's cost from the peak rates and
-compare — off-peak spend is exactly 70% (glm-5.2/glm-5.1) or 50%
-(deepseek-v4.1-flash-1017) of the peak cost for the same tokens.
-Observed examples (small requests, no cache):
+compare — off-peak spend is exactly 50% (deepseek-v4.1-flash-1017) of the
+peak cost for the same tokens. Worked example (small request, no cache):
 
 ```text
-peak:      01:39 UTC  glm-5.2  13 in / 38 out   → $0.0001854 = 13×$1.4/M  + 38×$4.4/M
-off-peak:  23:58 UTC  glm-5.2  13 in / 252 out  → $0.0007889 = 13×$0.98/M + 252×$3.08/M
+peak:      01:39 UTC  deepseek-v4.1-flash-1017  13 in / 38 out   → $0.0000495 = 13×$0.3/M  + 38×$1.2/M
+off-peak:  23:58 UTC  deepseek-v4.1-flash-1017  13 in / 252 out  → $0.0001532 = 13×$0.15/M + 252×$0.6/M
 ```
 
 Large requests rarely match the simple formula — cached input tokens are

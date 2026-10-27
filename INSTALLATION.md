@@ -501,12 +501,9 @@ opencode          # or:  codex  or:  claude --bare  or:  pi
 
 ```bash
 opencode
-# Switch preset: /preset LiteLLM-Balanced
 # Available presets:
-#   LiteLLM-Default   (default, quality — glm-5.3 reasoning core + deepseek-v4.1-flash-1017 recon/vision)
-#   LiteLLM-Balanced  (cost-effective — glm-5.1 reasoning core + deepseek-v4.1-flash-1017 recon/edits)
-#   Huawei-MaaS-Default           (direct, quality)
-#   Huawei-MaaS-Balanced          (direct, cost-effective)
+#   LiteLLM-Default     (default — glm-5.3 orchestrator/oracle, deepseek-v4.1-flash-1017 all other agents)
+#   Huawei-MaaS-Default (direct — same agent-model mapping, direct to MaaS)
 # Paste a screenshot (Ctrl-V) — observer reads it and reports back structured observations
 ```
 
@@ -520,16 +517,16 @@ and `OPENCODE_ENABLE_EXA=1` in the environment activate it for custom providers.
 
 ```bash
 codex
-codex --model deepseek-v4.1-flash-1017  # fast, accepts image input
-codex --model glm-5.1              # cost-efficient
+codex --model deepseek-v4.1-flash-1017  # fast, cost-efficient, accepts image input
+codex --model glm-5.3                   # deepest reasoning
 ```
 
 ### Using Claude Code CLI
 
 ```bash
 claude --bare
-claude --bare --model claude-deepseek-v4.1-flash-1017  # fast, accepts image input
-claude --bare --model claude-glm-5.1              # cost-efficient
+claude --bare --model claude-deepseek-v4.1-flash-1017  # fast, cost-efficient, accepts image input
+claude --bare --model claude-glm-5.3                   # deepest reasoning
 ```
 
 ### Using Pi agent
@@ -537,7 +534,7 @@ claude --bare --model claude-glm-5.1              # cost-efficient
 ```bash
 pi
 # Switch model at runtime via Pi's model selection UI
-# For cost-efficient operation: select glm-5.1 in the model picker
+# For cost-efficient operation: select deepseek-v4.1-flash-1017 in the model picker
 ```
 
 ### Monitoring

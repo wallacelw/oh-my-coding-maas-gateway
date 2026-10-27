@@ -93,7 +93,7 @@ if [ -z "$VIRTUAL_KEY" ] && [ -f "$CODEX_DIR/.env" ]; then
     elif retry_curl -sf -m $CURL_TIMEOUT "$LITELLM_URL/v1/responses" \
          --config - \
          -H "Content-Type: application/json" \
-         -d '{"model":"glm-5.1","input":"ok"}' <<CURLCFG; then
+         -d '{"model":"deepseek-v4.1-flash-1017","input":"ok"}' <<CURLCFG; then
 header = "Authorization: Bearer $EXISTING_KEY"
 CURLCFG
       log_ok "Existing virtual key is valid. Reusing: $(mask_key "$EXISTING_KEY")"
