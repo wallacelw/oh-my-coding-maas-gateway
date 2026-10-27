@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.32.0] - 2026-10-28
+
+### Changed
+
+- **deepseek-v4.1-flash → deepseek-v4.1-flash-1017** — natural evolution
+  of the flash model on Huawei MaaS (verified live: listed on MaaS and
+  responds to inference; same limits, pricing, off-peak window, and
+  vision capability). Renamed across the model catalog (models.sh
+  MODELS / OFF_PEAK_PRICING / VISION_MODELS), all config templates
+  (LiteLLM, opencode ×2 providers, slim presets, codex catalog), the
+  Grafana dashboard model selector (dashboard version 24 → 25), seven
+  04_validate.sh preset assertions, and all docs. LiteLLM config
+  regenerated (40 deployments) and tool configs re-applied; full
+  validation passed with the new model responding through the proxy.
+  The predecessor remains available on MaaS but is no longer routed.
+
 ## [1.31.3] - 2026-10-20
 
 ### Fixed
