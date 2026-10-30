@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.33.2] - 2026-10-31
+
+### Fixed
+
+- **Security: 04_validate.sh no longer leaks secrets to stdout** — the
+  `jqc` helper passed matched JSON values through (check_jq's if-gates
+  consume only the exit code), so the B3 provider checks printed the
+  opencode provider blocks — including the raw Huawei MaaS key and the
+  opencode virtual key — into every validation log. `jqc` is now
+  exit-code-only with stdout suppressed. Found in the key-exposure
+  security audit; 14 accumulated world-readable validation logs
+  containing key material were shredded, along with stale 644-perm
+  config backups and audit scan artifacts. All remaining key-bearing
+  files verified 600 root-only. Git history verified clean (686
+  commits, zero committed secrets; .env never committed).
+
 ## [1.33.1] - 2026-10-28
 
 ### Fixed

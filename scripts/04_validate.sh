@@ -113,7 +113,9 @@ skip() { log_dim "$1 (skipped)"; }
 # Record N failed checks at once (for skipped sub-checks when config is missing)
 fail_n() { local n="$1"; shift; FAIL=$((FAIL + n)); log_error "$*"; }
 
-jqc() { printf '%s' "$1" | jq -e "$2" 2>/dev/null; }
+# jq check: exit-code-only by design. stdout is suppressed so matched
+# values (which can include apiKey fields) never leak into logs.
+jqc() { printf '%s' "$1" | jq -e "$2" >/dev/null 2>&1; }
 
 # Get file permissions (Linux stat -c or BSD stat -f)
 file_perms() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null; }
