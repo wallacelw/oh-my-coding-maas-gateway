@@ -8,7 +8,7 @@ umask 077  # written configs hold API keys — deny group/world access
 # Order:         03a (after LiteLLM proxy is live)
 # Optional:      yes (runs only if opencode is in the selection)
 # Description:   Install the opencode binary, the oh-my-opencode-slim plugin
-#                (4 presets, 8 agents), mint a LiteLLM virtual key (alias
+#                (2 presets, 8 agents), mint a LiteLLM virtual key (alias
 #                "opencode"), and write opencode.json + slim config pointing
 #                to the LiteLLM proxy.
 # Inputs:        .env (LITELLM_MASTER_KEY, HUAWEI_MAAS_API_KEY), --virtual-key,

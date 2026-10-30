@@ -107,7 +107,7 @@ secrets (for key rotation).
 ### `02_litellm.sh`
 
 Generates `configs/litellm/config.yaml` from `.env` — N deployments per model
-per format (dual OpenAI + Anthropic), 8N total. Checks ports 4000/5432/9090/
+per format (dual OpenAI + Anthropic), 4N total. Checks ports 4000/5432/9090/
 3000 are free. Logs the image versions being deployed, then runs
 `docker compose up -d` (LiteLLM + PostgreSQL + Prometheus + Grafana).
 Waits up to 90s for LiteLLM to become healthy. Supports
@@ -118,7 +118,7 @@ nothing, and skips prereq installs and MaaS key validation).
 ### `03a_opencode.sh`
 
 Installs the opencode binary (via curl, output filtered with `run_filtered`),
-the oh-my-opencode-slim plugin (v3.0.6, via bunx — 4 presets, 8 agents, output
+the oh-my-opencode-slim plugin (v3.0.6, via bunx — 2 presets, 8 agents, output
 filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.
@@ -595,7 +595,7 @@ group, `ufw allow from <your-ip> to any port 4000`).
 | Pi agent | `pi` | OpenAI Chat Completions | `~/.pi/agent/models.json` |
 
 Each tool gets its own virtual key with unlimited budget and access to all
-models. opencode also gets 4 presets and 8 agents via the
+models. opencode also gets 2 presets and 8 agents via the
 oh-my-opencode-slim plugin.
 
 ### Install Modes

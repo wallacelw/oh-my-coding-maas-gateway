@@ -61,7 +61,7 @@ are exported in `~/.bashrc`, and
   Claude Code ──→ /v1/messages         ──→ anthropic/ provider ──→ /anthropic/v1/messages
   Pi agent    ──→ /v1/chat/completions ──→ openai/ provider    ──→ /openai/v1/chat/completions
 
-  opencode: 8 agents, 4 presets (LiteLLM-Default default)
+  opencode: 8 agents, 2 presets (LiteLLM-Default default)
   Codex CLI: Responses API bridged to Chat Completions by LiteLLM
   Claude Code: Anthropic Messages API forwarded to MaaS Anthropic endpoint
   Pi agent: OpenAI Chat Completions API, all models from models.sh
@@ -186,7 +186,7 @@ model_list:
       api_base: os.environ/HUAWEI_MAAS_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
       use_chat_completions_api: true       # bridge Responses → Chat Completions
-      tpm: 1000000
+      tpm: 2000000
       rpm: 100
     model_info:
       max_tokens: 1000000
@@ -195,11 +195,8 @@ model_list:
       input_cost_per_token: 0.0000014
       output_cost_per_token: 0.0000044
       cache_read_input_token_cost: 0.00000026  # omitted when 0
-      off_peak_pricing:                    # omitted when no off-peak rates
-        hours_utc: "13:00-00:00"
-        input_cost_per_token: 0.00000098
-        output_cost_per_token: 0.00000308
-        cache_read_input_token_cost: 0.000000182
+      # off_peak_pricing is omitted for glm-5.3 (flat pricing); the block
+      # is present only for models with off-peak rates (deepseek-v4.1-flash-1017)
       mode: chat
       supports_function_calling: true
       supports_prompt_caching: true        # false for models without cache support
@@ -214,7 +211,7 @@ model_list:
       model: anthropic/glm-5.3             # provider prefix
       api_base: os.environ/HUAWEI_MAAS_ANTHROPIC_API_BASE
       api_key: os.environ/HUAWEI_MAAS_API_KEY_0
-      tpm: 1000000
+      tpm: 2000000
       rpm: 100
     model_info: ...                        # identical model_info to the OpenAI deployment
 
@@ -259,8 +256,8 @@ Two provider types, each pointing to a different Huawei MaaS endpoint:
 
 ### Dual-Format Deployments
 
-Each model has two deployments — one OpenAI, one Anthropic — so all three tools
-can use the same underlying MaaS models:
+Each model has 2N deployments (N keys × 2 formats — OpenAI and Anthropic)
+so all four tools can use the same underlying MaaS models:
 
 | Type | `model_name` | Provider model | Example |
 |------|------------|----------------|---------|
@@ -288,7 +285,7 @@ the request's input tokens alone would exceed its per-minute `tpm`).
 This rotates across keys even for sequential (non-concurrent) traffic,
 so pooled throughput scales with key count.
 
-Total deployments: 4 models × N keys × 2 formats = 8N.
+Total deployments: 2 models × N keys × 2 formats = 4N.
 
 Per-deployment `tpm`/`rpm` are enforced at routing time by
 `usage-based-routing-v2` itself: a deployment is skipped when its
@@ -428,7 +425,7 @@ startup: `CHOWN`, `SETUID`, `SETGID`, `DAC_OVERRIDE`, `FOWNER`.
 **Connection:** opencode → `/v1/chat/completions` → `openai/` provider → `/openai/v1/chat/completions`
 
 opencode connects to LiteLLM via the OpenAI Chat Completions API. The
-`oh-my-opencode-slim` plugin (installed via `bunx`) configures 4 presets and
+`oh-my-opencode-slim` plugin (installed via `bunx`) configures 2 presets and
 agent→model mappings.
 
 ### Config Files
@@ -447,10 +444,10 @@ determines routing.
 
 `oh-my-opencode-slim` (v3.0.6) installed via `bunx`. Provides:
 
-- **4 presets** — control routing (proxy vs direct) and model selection
+- **2 presets** — control routing (proxy vs direct) and model selection
 - **8 agents** — orchestrator, oracle, council, librarian, explorer, designer, fixer, observer
 - **Council** — 3 councillors running in parallel for consensus decisions
-- **Model chains** — each agent has a primary model plus an optional fallback chain; client-side fallback is disabled (`fallback.enabled: false`), so agents always run on their primary model
+- **Model chains** — the plugin supports primary + fallback chains per agent, but our config uses single-model assignments with client-side fallback disabled (`fallback.enabled: false`); agents always run on their configured model
 - **Image analysis** — pasting a screenshot auto-routes it to the observer agent for visual analysis (see Image Analysis Workflow below)
 - **Websearch** — opencode's built-in EXA-backed web search tool (no API key required). Enabled via `OPENCODE_ENABLE_EXA=1` (env) + `"permission": {"websearch": "allow"}` (config). Required for custom providers; automatic with the default OpenCode provider.
 - **Background orchestration** — slim v3's default workflow (background subagents, job board, wake scheduler). Requires `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` on the opencode v1 host line; `03a_opencode.sh` persists it to `~/.bashrc`.
@@ -533,18 +530,19 @@ observer degrades to external OCR.
 
 ### Council
 
-3 councillors run in parallel, all using glm-5.3, each with a different focus:
+3 councillors run in parallel — two on glm-5.3, one on deepseek-v4.1-flash-1017 — each with a different focus:
 
 | Councillor | Model | Focus |
 |------------|-------|-------|
 | **alpha** | glm-5.3 | Deep reasoning, logical correctness, subtle bugs/edge cases |
 | **beta** | glm-5.3 | Architecture, maintainability, trade-offs, long-term implications |
-| **gamma** | glm-5.3 | Practical implementation, cost-efficiency, verification steps |
+| **gamma** | deepseek-v4.1-flash-1017 | Practical implementation, cost-efficiency, verification steps |
 
 > **Note:** Council report labels in the orchestrator's output may show
 > hardcoded example model names (e.g. `gpt-5.6-luna`, `gemini-3-pro`) from
 > the plugin's Council Mode prompt template. These are display labels only —
-> the councillors actually run with the configured model (`glm-5.3`). Verify
+> the councillors actually run with their configured models (alpha/beta:
+> glm-5.3, gamma: deepseek-v4.1-flash-1017). Verify
 > actual models via LiteLLM logs or the Grafana dashboard.
 
 ### Prerequisites
@@ -598,7 +596,7 @@ Why a custom provider:
 
 ### Model Selection
 
-Models use base names (e.g., `glm-5.3`). All 4 models are available. Switch
+Models use base names (e.g., `glm-5.3`). Both models are available. Switch
 at runtime with `--model`:
 
 ```bash
@@ -672,7 +670,7 @@ routes to the Anthropic deployment directly.
 ### Model Selection
 
 Models use `claude-` prefixed names (e.g., `claude-glm-5.3`) for the
-Anthropic endpoint. All 4 models are available. Switch at runtime with
+Anthropic endpoint. Both models are available. Switch at runtime with
 `--model`:
 
 ```bash

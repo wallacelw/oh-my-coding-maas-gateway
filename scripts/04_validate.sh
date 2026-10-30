@@ -687,7 +687,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       log_dim "  Fix: ./scripts/03a_opencode.sh (ensures the env var)"
     fi
   else
-    fail_n 30 "No oh-my-opencode-slim config — skipping 30 preset checks"
+    fail_n 29 "No oh-my-opencode-slim config — skipping 29 preset checks"
   fi
 
   echo ""

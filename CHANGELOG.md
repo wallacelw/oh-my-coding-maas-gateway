@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.33.1] - 2026-10-28
+
+### Fixed
+
+- **Docs: Council section corrected** (REFERENCE.md) — the dedicated
+  Council section still described the old all-glm-5.3 council; gamma
+  is deepseek-v4.1-flash-1017 (now consistent with the preset table,
+  the slim template, and validation).
+- **Docs: deployment math corrected** — "4 models × N keys × 2 formats
+  = 8N" → "2 models × N keys × 2 formats = 4N" (REFERENCE.md,
+  INSTALLATION.md); "All 4 models" → "Both models" in the Codex and
+  Claude model-selection sections; dual-format wording now says 2N
+  deployments per model and four tools.
+- **Docs: model-chains bullet reworded** — notes the plugin supports
+  chains but our config uses single-model assignments.
+- **04_validate.sh** — B4 fail_n count corrected 30 → 29 (one check in
+  the block is warn-only).
+- **AGENTS.md** — project structure list now includes update.sh,
+  uninstall.sh, and install-skill.sh.
+- **SKILL.md** — key-count sed example writes the quoted form matching
+  the existing .env style.
+- Confirmed during re-validation: upstream MaaS now enforces the 2M
+  TPM per-key limit (matching the 1.33.0 catalog correction; observed
+  directly in a 429 error message).
+
 ## [1.33.0] - 2026-10-28
 
 ### Changed

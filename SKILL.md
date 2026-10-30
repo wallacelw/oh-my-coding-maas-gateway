@@ -180,7 +180,7 @@ NEW_COUNT=$((CURRENT_COUNT + 1))
 **Step 3**: Append the new key to `.env` and update the count:
 ```bash
 echo "HUAWEI_MAAS_API_KEY_${NEW_INDEX}=\"sk-the-new-key\"" >> .env
-sed -i "s/^HUAWEI_MAAS_API_KEY_COUNT=.*/HUAWEI_MAAS_API_KEY_COUNT=${NEW_COUNT}/" .env
+sed -i "s/^HUAWEI_MAAS_API_KEY_COUNT=.*/HUAWEI_MAAS_API_KEY_COUNT=\"${NEW_COUNT}\"/" .env
 ```
 
 **Step 4**: Regenerate LiteLLM config and restart (this creates

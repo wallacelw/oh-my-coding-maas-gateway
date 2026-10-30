@@ -569,7 +569,7 @@ if [ "$INSTALL_OPENCODE" = true ]; then
   else
     log_desc "Installing opencode + oh-my-opencode-slim plugin"
     "$SCRIPT_DIR/03a_opencode.sh" "${OPENCODE_ARGS[@]}"
-    log_done "opencode configured — LiteLLM provider, 4 presets, 8 agents"
+    log_done "opencode configured — LiteLLM provider, 2 presets, 8 agents"
     refresh_path
   fi
 else
