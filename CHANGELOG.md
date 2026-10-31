@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.34.0] - 2026-10-31
+
+### Changed
+
+- **MaaS key rotation + reduction to 3 keys** — all 5 previous keys
+  replaced with 3 fresh keys (rotated after the v1.33.2 security audit
+  found key 0 exposed in world-readable validation logs); deployments
+  20 → 12 (2 models × 3 keys × 2 formats). Pooled capacity: 300 RPM /
+  6M TPM per model.
+- **LiteLLM Admin UI login hardened** — env-credential login disabled
+  (`disable_env_credential_login: true` in 02_litellm.sh's generated
+  config and the reference template): the master key can no longer sign
+  in to the UI. Sign-in is via a DB-backed admin account
+  (admin@localhost.dev; password generated once, stored in .env as
+  LITELLM_UI_PASSWORD, hashed in the DB). Verified: master-key UI login
+  → 401, DB-account login → 200, API bearer auth unaffected, and the
+  startup "environment-credential login is enabled" warning is gone.
+  The unused setup invitation was deleted from the DB.
+- **Grafana dashboard v27** — pooled-ceiling descriptions and panel
+  thresholds recalibrated for 3 keys and 2 models (RPM: 600 total,
+  yellow 420 / red 600 — the previous panel thresholds still carried
+  4-model-era 1400/2000 values that disagreed with their own
+  description; TPM sparkline: 12M total, yellow 8.4M / red 12M).
+- **Docs** — UI login instructions updated across SKILL/REFERENCE/
+  INSTALLATION; `LITELLM_UI_USERNAME`/`LITELLM_UI_PASSWORD` documented
+  in .env.template and both env-var tables.
+
 ## [1.33.2] - 2026-10-31
 
 ### Fixed

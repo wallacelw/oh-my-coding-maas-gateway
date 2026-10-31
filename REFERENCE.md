@@ -31,6 +31,7 @@ are exported in `~/.bashrc`, and
 | `BIND_ADDRESS` | `01_env.sh` (default `127.0.0.1`) | docker-compose | `127.0.0.1` or `0.0.0.0` | None — config value |
 | `OPENCODE_ENABLE_EXA` | `03a_opencode.sh` (default `1`) | `03a_opencode.sh`, opencode runtime | `1` or unset | None — feature flag |
 | `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` | `03a_opencode.sh` (default `true`) | `03a_opencode.sh`, opencode runtime | `true` or unset | None — feature flag |
+| `LITELLM_UI_USERNAME` / `LITELLM_UI_PASSWORD` | User (one-time, via `/user/update`) | LiteLLM Admin UI login (DB-backed account; env-credential login disabled) | Email + strong password | Low — rotate via UI `/user/password/change` |
 | `LITELLM_DISABLE_NO_REDIS_WARNING` | `docker-compose.yml` (fixed `true`) | LiteLLM container | `true` or unset | None — suppresses no-Redis banner for single-worker setup |
 
 **Virtual keys (stored in tool config files, not `.env`):**
@@ -83,7 +84,7 @@ are exported in `~/.bashrc`, and
 | Chat Completions | `http://127.0.0.1:4000/v1/chat/completions` | Virtual key |
 | Responses API | `http://127.0.0.1:4000/v1/responses` | Virtual key |
 | Anthropic Messages | `http://127.0.0.1:4000/v1/messages` | Virtual key |
-| Admin UI | `http://127.0.0.1:4000/ui` | Master key |
+| Admin UI | `http://127.0.0.1:4000/ui` | Admin account (`LITELLM_UI_USERNAME` + `LITELLM_UI_PASSWORD`) |
 | Liveness | `http://127.0.0.1:4000/health/liveliness` | None |
 | Health | `http://127.0.0.1:4000/health` | Master key |
 | Metrics | `http://127.0.0.1:4000/metrics` | None (Prometheus format) |

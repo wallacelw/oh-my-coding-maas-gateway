@@ -3,7 +3,7 @@
   "uid": "oh-my-coding-maas-gateway",
   "description": "Operational view of the self-hosted LiteLLM proxy gateway routing Huawei Cloud MaaS models (glm-5.3, deepseek-v4.1-flash-1017) to coding agents (opencode, Codex CLI, Claude Code, Pi).\n\nREADING ORDER: At-a-glance answers 'is everything OK?' in one scan. Errors & Health and Rate Limits & Capacity drive incident triage (rate limits, cooldowns, failures). Latency diagnoses performance. Tokens, Cache, and Cost & Budget track spend and capacity economics.\n\nEvery panel carries a description (hover the ⓘ icon) stating what GOOD looks like.",
   "schemaVersion": 39,
-  "version": 26,
+  "version": 27,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -433,7 +433,7 @@
       "id": 7,
       "type": "stat",
       "title": "RPM",
-      "description": "Requests per minute over the selected window, totaled across selected models — the number to compare against the pooled RPM ceiling.\n\nThresholds are calibrated for All models selected: pooled ceiling = 500 RPM per model (100 per key × 5 keys) × 2 models = 1000. Yellow at 700 (70% of ceiling), red at 1000 — at the ceiling, the upstream per-key quota rejects requests with 429 (see '429s to clients by model' in Errors & Health).\n\nNOTE: With fewer models selected the effective ceiling shrinks (500 per selected model); read the colors with All selected.\n\nGOOD: Green — comfortable headroom.\nBAD: Yellow/Red — approaching or at the pooled ceiling; expect client-facing 429s.\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-deepseek-v4.1-flash-1017). Selecting specific models counts only those.",
+      "description": "Requests per minute over the selected window, totaled across selected models — the number to compare against the pooled RPM ceiling.\n\nThresholds are calibrated for All models selected: pooled ceiling = 300 RPM per model (100 per key × 3 keys) × 2 models = 600. Yellow at 420 (70% of ceiling), red at 600 — at the ceiling, the upstream per-key quota rejects requests with 429 (see '429s to clients by model' in Errors & Health).\n\nNOTE: With fewer models selected the effective ceiling shrinks (300 per selected model); read the colors with All selected.\n\nGOOD: Green — comfortable headroom.\nBAD: Yellow/Red — approaching or at the pooled ceiling; expect client-facing 429s.\n\nNOTE: 'All models' matches every request the proxy served, including internal health checks (which carry no requested_model label) and model aliases (e.g. claude-deepseek-v4.1-flash-1017). Selecting specific models counts only those.",
       "gridPos": {
         "x": 6,
         "y": 5,
@@ -469,11 +469,11 @@
               },
               {
                 "color": "yellow",
-                "value": 1400
+                "value": 420
               },
               {
                 "color": "red",
-                "value": 2000
+                "value": 600
               }
             ]
           }
@@ -557,7 +557,7 @@
       "id": 9,
       "type": "stat",
       "title": "TPM",
-      "description": "Tokens per minute (input + output combined), totaled across selected models. Same as TPS scaled to per-minute. Use for capacity planning against the pooled TPM ceiling: 5M per model (1M per key × 5 keys) × 4 models = 20M with All selected. Thresholds tint the sparkline only (yellow at 14M = 70%, red at 20M) — the value text stays neutral by design, since throughput is not an alarm.\n\nGOOD: Well below the ceiling.\nBAD: Approaching the ceiling — expect throttling; see Rate Limits & Capacity for per-model utilization.",
+      "description": "Tokens per minute (input + output combined), totaled across selected models. Same as TPS scaled to per-minute. Use for capacity planning against the pooled TPM ceiling: 6M per model (2M per key × 3 keys) × 2 models = 12M with All selected. Thresholds tint the sparkline only (yellow at 8.4M = 70%, red at 12M) — the value text stays neutral by design, since throughput is not an alarm.\n\nGOOD: Well below the ceiling.\nBAD: Approaching the ceiling — expect throttling; see Rate Limits & Capacity for per-model utilization.",
       "gridPos": {
         "x": 18,
         "y": 5,
@@ -593,11 +593,11 @@
               },
               {
                 "color": "yellow",
-                "value": 14000000
+                "value": 8400000
               },
               {
                 "color": "red",
-                "value": 20000000
+                "value": 12000000
               }
             ]
           }
@@ -1470,7 +1470,7 @@
       "id": 21,
       "type": "stat",
       "title": "Deployment RPM limits",
-      "description": "Configured requests-per-minute ceiling per deployment, from litellm_deployment_rpm_limit (set in models.sh). Every model allows 100 RPM per API key; with 5 keys per model, the upstream pool is 500 RPM per model (each key's budget is shared by its two wire-format deployments).\n\nHOW TO READ: Compare against 'RPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the upstream pool — requests beyond it draw upstream 429s (the router rotates to other keys when one runs hot and only rejects when no key can serve the request).",
+      "description": "Configured requests-per-minute ceiling per deployment, from litellm_deployment_rpm_limit (set in models.sh). Every model allows 100 RPM per API key; with 3 keys per model, the upstream pool is 300 RPM per model (each key's budget is shared by its two wire-format deployments).\n\nHOW TO READ: Compare against 'RPM by model' directly above — usage near the pooled ceiling means 429s are expected.\n\nGOOD: Traffic well below the ceiling.\nBAD: Traffic approaching the upstream pool — requests beyond it draw upstream 429s (the router rotates to other keys when one runs hot and only rejects when no key can serve the request).",
       "gridPos": {
         "x": 0,
         "y": 41,

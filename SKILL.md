@@ -62,7 +62,7 @@ contains `scripts/04_validate.sh`.
 | Service | URL | Auth |
 |---------|-----|------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key |
-| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key (from `.env`) |
+| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | admin account (`LITELLM_UI_PASSWORD` from `.env`) |
 | Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) |
 | Prometheus | `http://127.0.0.1:9090` | None |
 
@@ -225,7 +225,8 @@ the Admin UI (`http://127.0.0.1:4000/ui`) if rotating.
 the API key in their tool's config.
 
 **Step 5**: Remind the user they can view all keys at
-`http://127.0.0.1:4000/ui` (login: `admin` / master key).
+`http://127.0.0.1:4000/ui` (login: `admin@localhost.dev` / `LITELLM_UI_PASSWORD`
+from `.env` — env-credential login is disabled, the master key cannot sign in).
 
 ---
 
