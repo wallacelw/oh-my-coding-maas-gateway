@@ -90,3 +90,68 @@ skill_uninstall_all() {
     "skill_uninstall_$tool" 2>/dev/null || true
   done
 }
+
+# ── Directory-based bundles (REA + drawio skills) ─────────────
+# Unlike the single-file companion functions above, a bundle is a whole skill
+# directory (e.g. skills/drawio/ with SKILL.md + scripts/find-shapes.js).
+# Drift detection compares EVERY file in the tree, so edits to any vendored
+# file (not just SKILL.md) are detected.
+#
+# Installed skill dirs per tool:
+#   opencode: ~/.config/opencode/skills/<name>
+#   codex:    ~/.codex/skills/<name>
+#   pi:       ~/.pi/agent/skills/<name>
+#   claude:   ~/.claude/skills/<name>
+
+# Echo the installed bundle dir for <tool> <name>. Returns 1 for unknown tool.
+bundle_dest_dir() {
+  case "$1" in
+    opencode) echo "$HOME/.config/opencode/skills/$2" ;;
+    codex)    echo "$HOME/.codex/skills/$2" ;;
+    pi)       echo "$HOME/.pi/agent/skills/$2" ;;
+    claude)   echo "$HOME/.claude/skills/$2" ;;
+    *)        return 1 ;;
+  esac
+}
+
+# True when the bundle dir exists for <tool> <name>.
+bundle_exists_one() {
+  local dir
+  dir=$(bundle_dest_dir "$1" "$2") || return 1
+  [ -d "$dir" ]
+}
+
+# True when the installed bundle matches the source tree exactly (every file).
+# Returns 1 when any file is missing or differs (NEW/STALE both → not current).
+bundle_is_current() {
+  local tool="$1" name="$2" src="$3" dest f rel
+  dest=$(bundle_dest_dir "$tool" "$name") || return 1
+  [ -d "$dest" ] || return 1
+  while IFS= read -r -d '' f; do
+    rel="${f#"$src"/}"
+    cmp -s "$f" "$dest/$rel" || return 1
+  done < <(find "$src" -type f -print0 2>/dev/null)
+  return 0
+}
+
+# Install a bundle directory into <tool> <name>. Echoes the dest dir.
+# Preserves 600 on files and 700 on dirs (skill trees hold no secrets, but
+# keep them owner-only for consistency with the rest of the pipeline).
+bundle_install_one() {
+  local tool="$1" name="$2" src="$3" dest
+  dest=$(bundle_dest_dir "$tool" "$name") || return 1
+  [ -d "$src" ] || return 1
+  mkdir -p "$(dirname "$dest")" || return 1
+  rm -rf "$dest"
+  cp -r "$src" "$dest" || return 1
+  find "$dest" -type f -exec chmod 600 {} + 2>/dev/null || true
+  find "$dest" -type d -exec chmod 700 {} + 2>/dev/null || true
+  echo "$dest"
+}
+
+# Remove the installed bundle dir for <tool> <name>.
+bundle_uninstall_one() {
+  local dir
+  dir=$(bundle_dest_dir "$1" "$2") || return 1
+  rm -rf "$dir"
+}

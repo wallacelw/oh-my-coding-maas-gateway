@@ -146,6 +146,30 @@ fi
 TEMPLATE="$PROJECT_DIR/configs/codex/config.toml.template"
 NEW_CONFIG=$(sed "s|<CODEX_HOME>|$CODEX_DIR|g" "$TEMPLATE")
 
+# Preserve any [mcp_servers.*] blocks already in the existing config (REA,
+# drawio, or user-added). 04_skills_mcps writes these; regenerating from the
+# template alone would otherwise wipe them. Blocks are captured verbatim
+# between line-anchored `[mcp_servers.` headers (consumed until the next `[`
+# table or EOF) and sentinel-wrapped `# >>> mcp:` blocks. Appending BEFORE the
+# unchanged comparison keeps a no-change re-run a true no-op.
+if [ -f "$CODEX_CONFIG" ]; then
+  MCP_BLOCKS=$(awk '
+    {
+      if (in_sentinel) { print; if ($0 ~ /^# <<< mcp:/) in_sentinel=0; next }
+      if ($0 ~ /^# >>> mcp:/) { in_sentinel=1; print; next }
+      if (in_header) {
+        if ($0 ~ /^\[/) { in_header=0; next }
+        print; next
+      }
+      if ($0 ~ /^\[mcp_servers\./) { in_header=1; print; next }
+      next
+    }
+  ' "$CODEX_CONFIG")
+  if [ -n "$MCP_BLOCKS" ]; then
+    NEW_CONFIG="$NEW_CONFIG"$'\n\n'"$MCP_BLOCKS"
+  fi
+fi
+
 if [ -f "$CODEX_CONFIG" ]; then
   if [ "$NEW_CONFIG" = "$(cat "$CODEX_CONFIG")" ]; then
     log_info "Config unchanged — skipping write"

@@ -16,7 +16,7 @@ multiple unrelated changes in one commit. Do not leave uncommitted changes.
 
 Before committing, validate the change from **all** relevant perspectives:
 
-1. **Script validation:** Run `./scripts/04_validate.sh` (or
+1. **Script validation:** Run `./scripts/05_validate.sh` (or
    `--litellm-only` / `--opencode-only` / `--skip-*` as appropriate).
    Must pass (or fail only on expected checks like placeholder MaaS key).
 
@@ -40,7 +40,7 @@ Before committing, validate the change from **all** relevant perspectives:
 4. **Edge cases:** Consider:
    - Interactive mode vs env-var override (HUAWEI_MAAS_API_KEY + --tool=)
    - `--tool=` mode variants (litellm, opencode, codex, claude, custom combos)
-   - `--litellm-only` vs full mode (on 04_validate.sh)
+   - `--litellm-only` vs full mode (on 05_validate.sh)
    - `--dry-run` mode
    - Idempotent re-run (existing .env, running containers)
     - Upgrade path (existing installation, missing vars)
@@ -65,7 +65,7 @@ code actually does, not what it was supposed to do.
 2. Oracle reports findings (HIGH / MEDIUM / LOW).
 3. The same `@fixer` session uses oracle's findings to fix HIGH and
    MEDIUM issues.
-4. Re-validate: `./scripts/04_validate.sh`.
+4. Re-validate: `./scripts/05_validate.sh`.
 5. LOW findings may be deferred to a follow-up.
 6. Commit only after fixes are validated.
 
@@ -350,7 +350,8 @@ consistent, and readable. These standards apply to ALL scripts.
 ```
 scripts/          — install pipeline (bootstrap, numbered steps 01-07 + 03a-03d,
                    update.sh, uninstall.sh, install-skill.sh)
-scripts/helpers/   — shared helper libraries (prereqs, keys, common, models, skills, versions, grafana_shots)
+scripts/helpers/   — shared helper libraries (prereqs, keys, common, models, skills, mcp, versions, grafana_shots)
+skills/            — vendored agent tool bundle skills (drawio), installed by 04_skills_mcps.sh
 configs/          — component configs grouped by service
 configs/litellm/   — LiteLLM config, entrypoint, template
 configs/prometheus/ — Prometheus config

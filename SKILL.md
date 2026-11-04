@@ -40,16 +40,16 @@ cd /home/oh-my-coding-maas-gateway
 ```
 
 If installed elsewhere, locate the repo by finding the directory that
-contains `scripts/04_validate.sh`.
+contains `scripts/05_validate.sh`.
 
 ## Available Scripts
 
 | Script | Purpose | Key flags |
 |--------|---------|-----------|
-| `scripts/bootstrap.sh` | Install or upgrade the entire stack | `--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--dry-run`, `--no-skill` |
+| `scripts/bootstrap.sh` | Install or upgrade the entire stack | `--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--dry-run`, `--no-skill`, `--no-bundles` |
 | `scripts/update.sh` | Check and update individual components (tools + infrastructure); shows project + component versions | `--check`, `--all`, `--dry-run` |
-| `scripts/04_validate.sh` | End-to-end validation (run anytime) | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--dry-run` |
-| `scripts/05_skill.sh` | Install THIS companion skill into agents | `--yes`, `--dry-run`, `--no-skill` |
+| `scripts/04_skills_mcps.sh` | Install THIS companion skill + agent tool bundles (REA, drawio) into agents | `--yes`, `--dry-run`, `--no-skill`, `--no-rea`, `--no-drawio`, `--refresh-only`, `--strict` |
+| `scripts/05_validate.sh` | End-to-end validation (run anytime) | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--skip-bundles`, `--dry-run` |
 | `scripts/06_backup.sh` | Dump/restore the LiteLLM PostgreSQL DB (spend history, virtual keys, budgets) | `--restore FILE`, `--keep N`, `--dry-run`, `--yes` |
 | `scripts/07_dashboard_shots.sh` | Capture dashboard screenshots for visual verification | `--out=`, `--dry-run` |
 | `scripts/install-skill.sh` | Install ANY skill into all detected agents | `--name=`, `--source=`, `--dry-run` |
@@ -82,7 +82,7 @@ If problems found, suggest fixes from the Recovery table below.
 ## Option 2: Run Validation
 
 ```bash
-./scripts/04_validate.sh
+./scripts/05_validate.sh
 ```
 
 If failures occur, match them against the Recovery table, suggest the fix,
@@ -191,7 +191,7 @@ deployments for all models across all keys including the new one):
 
 **Step 5**: Verify:
 ```bash
-./scripts/04_validate.sh
+./scripts/05_validate.sh
 ```
 
 **b) Mint a LiteLLM virtual key**
@@ -262,7 +262,7 @@ assigned the new model. Then regenerate (this creates 2N deployments per model,
 two per API key — one per format):
 ```bash
 ./scripts/02_litellm.sh
-./scripts/04_validate.sh
+./scripts/05_validate.sh
 ```
 
 **Remove a model**: delete the line from `MODELS`, then same regenerate +
@@ -314,7 +314,7 @@ about layout, colors, or broken queries.
 Feed the bands to a vision-capable agent and have it check them against
 the design intent: row order, panel alignment, color semantics, units in
 titles, and empty or broken panels. Fix defects, re-run the script, and
-re-verify until clean. `04_validate.sh` reports whether the capture
+re-verify until clean. `05_validate.sh` reports whether the capture
 capability is installed (pass/skip — optional, no hard dependency).
 One-time setup:
 

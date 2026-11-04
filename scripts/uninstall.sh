@@ -9,6 +9,7 @@
 #   ./scripts/uninstall.sh --docker             # remove Docker stack
 #   ./scripts/uninstall.sh --repo               # remove repo (incl. .env, configs)
 #   ./scripts/uninstall.sh --all                # everything
+#   ./scripts/uninstall.sh --bundles --tool=all # remove only REA/drawio bundle artifacts
 #   ./scripts/uninstall.sh --dry-run            # show what would be removed
 #   ./scripts/uninstall.sh --yes                # skip confirmation
 #
@@ -21,6 +22,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/skills.sh"
+source "$SCRIPT_DIR/helpers/mcp.sh"
 
 # ── Defaults ──
 REMOVE_OPENCODE=false
@@ -32,6 +34,7 @@ REMOVE_REPO=false
 DRY_RUN=false
 SKIP_CONFIRM=false
 TOOL_SPECIFIED=false
+BUNDLES_ONLY=false
 
 # ── Parse args ──
 while [ $# -gt 0 ]; do
@@ -57,6 +60,7 @@ while [ $# -gt 0 ]; do
       ;;
     --docker)    REMOVE_DOCKER=true ;;
     --repo)      REMOVE_REPO=true ;;
+    --bundles)   BUNDLES_ONLY=true ;;
     --all)
       REMOVE_OPENCODE=true; REMOVE_CODEX=true
       REMOVE_CLAUDE=true; REMOVE_PI=true
@@ -72,6 +76,48 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+# ── Bundle-only removal path (--bundles --tool=...) ──
+# Removes just the agent tool bundles (REA + drawio MCP registrations and skill
+# dirs) for the selected tools, leaving binaries/configs intact.
+if [ "$BUNDLES_ONLY" = true ]; then
+  if [ "$TOOL_SPECIFIED" = false ]; then
+    log_error "--bundles requires --tool=<opencode|codex|claude|pi|all>"
+    exit 1
+  fi
+  BUNDLE_TOOLS=""
+  [ "$REMOVE_OPENCODE" = true ] && BUNDLE_TOOLS+="opencode "
+  [ "$REMOVE_CODEX" = true ]    && BUNDLE_TOOLS+="codex "
+  [ "$REMOVE_CLAUDE" = true ]   && BUNDLE_TOOLS+="claude "
+  [ "$REMOVE_PI" = true ]       && BUNDLE_TOOLS+="pi "
+  log_step "Removing agent tool bundles"
+  [ "$DRY_RUN" = true ] && log_dim "(dry-run — nothing will be deleted)"
+  for _bt in $BUNDLE_TOOLS; do
+    if [ "$DRY_RUN" = true ]; then
+      log_dim "  Would remove REA + drawio registrations/skills from $_bt"
+    else
+      "mcp_unregister_$_bt" drawio 2>/dev/null || true
+      "mcp_unregister_$_bt" rea 2>/dev/null || true
+      bundle_uninstall_one "$_bt" drawio 2>/dev/null || true
+      bundle_uninstall_one "$_bt" reverse-engineer-anything 2>/dev/null || true
+      log_ok "Removed agent bundles from $_bt"
+    fi
+  done
+  # Global bundle cleanup only when every agent is selected.
+  if [ "$REMOVE_OPENCODE" = true ] && [ "$REMOVE_CODEX" = true ] && [ "$REMOVE_CLAUDE" = true ] && [ "$REMOVE_PI" = true ]; then
+    if [ "$DRY_RUN" = true ]; then
+      log_dim "  Would run: rea uninstall (global) + npm uninstall -g rea-agents @drawio/mcp"
+    else
+      command -v rea &>/dev/null && { timeout 120 rea uninstall 2>/dev/null || true; } || true
+      command -v npm &>/dev/null && npm uninstall -g rea-agents @drawio/mcp 2>/dev/null || true
+    fi
+  fi
+  # NodeSource Node is intentionally left installed — it is a shared runtime.
+  log_dim "NodeSource Node (if installed for bundles) is left in place (shared runtime)"
+  echo ""
+  log_ok "Bundle removal complete."
+  exit 0
+fi
 
 # ── Interactive menu (no flags) ──
 if [ "$TOOL_SPECIFIED" = false ] \
@@ -414,8 +460,42 @@ for _tool in $REMOVE_TOOLS; do
     fi
     _skill_removed=true
   fi
+  # Remove agent tool bundles for this tool (drawio MCP + skill, REA
+  # registration + skill). Single-tool removal must NOT run the global
+  # `rea uninstall` (it is global scope) — only the per-tool registration.
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "  Would remove REA + drawio registrations/skills from $_tool"
+  else
+    "mcp_unregister_$_tool" drawio 2>/dev/null || true
+    "mcp_unregister_$_tool" rea 2>/dev/null || true
+    bundle_uninstall_one "$_tool" drawio 2>/dev/null || true
+    bundle_uninstall_one "$_tool" reverse-engineer-anything 2>/dev/null || true
+  fi
 done
 [ "$_skill_removed" = true ] && [ "$DRY_RUN" != true ] && log_dim "Companion skill removed from uninstalled agent(s)"
+
+# ── Global agent-bundle cleanup (only when every agent is being removed) ──
+# REA's own uninstaller is GLOBAL (no per-client scope), so it must not run for
+# single-tool removal. When all agents go, tear down the shared bits too.
+if [ "$REMOVE_OPENCODE" = true ] && [ "$REMOVE_CODEX" = true ] \
+   && [ "$REMOVE_CLAUDE" = true ] && [ "$REMOVE_PI" = true ]; then
+  log_step "Removing global agent bundles"
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "  Would run: rea uninstall (global)"
+    log_dim "  Would run: npm uninstall -g rea-agents @drawio/mcp"
+  else
+    if command -v rea &>/dev/null; then
+      timeout 120 rea uninstall 2>/dev/null || log_warn "rea uninstall reported an issue (ignored)"
+    fi
+    if command -v npm &>/dev/null; then
+      npm uninstall -g rea-agents @drawio/mcp 2>/dev/null || true
+    fi
+    log_ok "Removed global REA + drawio packages"
+  fi
+  # NodeSource Node installed for the bundles is intentionally left in place —
+  # it is a shared runtime other tools may depend on.
+  log_dim "NodeSource Node (if installed for bundles) is left in place (shared runtime)"
+fi
 
 # ── Remove Docker stack ──
 if [ "$REMOVE_DOCKER" = true ]; then

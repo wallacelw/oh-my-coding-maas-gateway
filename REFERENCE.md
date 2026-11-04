@@ -24,8 +24,8 @@ are exported in `~/.bashrc`, and
 | `LITELLM_MASTER_KEY` | `01_env.sh` (auto or custom) | `03a-03d` via `helpers/keys.sh` | Must start with `sk-` | **High** — invalidates all virtual keys (`--force` to regenerate) |
 | `LITELLM_SALT_KEY` | `01_env.sh` (auto or custom) | LiteLLM container | Random string | **High** — invalidates all virtual keys (`--force` to regenerate) |
 | `DB_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, postgres | Random string | **High** — breaks DB auth (`--force` to regenerate) |
-| `GRAFANA_ADMIN_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, `04_validate.sh`, `07_dashboard_shots.sh` | Random string | Low — changes dashboard login only |
-| `PROMETHEUS_RETENTION` | `01_env.sh` (default `30d`) | docker-compose, 04_validate.sh | Prometheus duration (`Nd`/`Nh`/`Nw`) | None — config value |
+| `GRAFANA_ADMIN_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, `05_validate.sh`, `07_dashboard_shots.sh` | Random string | Low — changes dashboard login only |
+| `PROMETHEUS_RETENTION` | `01_env.sh` (default `30d`) | docker-compose, 05_validate.sh | Prometheus duration (`Nd`/`Nh`/`Nw`) | None — config value |
 | `HUAWEI_MAAS_ANTHROPIC_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/anthropic`) | `02_litellm.sh` | URL | None — config value |
 | `HUAWEI_MAAS_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`) | `02_litellm.sh` | URL | None — config value |
 | `BIND_ADDRESS` | `01_env.sh` (default `127.0.0.1`) | docker-compose | `127.0.0.1` or `0.0.0.0` | None — config value |
@@ -124,18 +124,19 @@ are exported in `~/.bashrc`, and
 | 03b | `03b_codex.sh` | Install Codex CLI + mint key + write config + model catalog |
 | 03c | `03c_claude_code.sh` | Install Claude Code CLI + mint key + write settings + disable VSCode ext |
 | 03d | `03d_pi.sh` | Install Pi agent + mint key + write models.json |
-| 04 | `04_validate.sh` | Validate all components (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi for partial runs) |
-| 05 | `05_skill.sh` | Install/refresh companion skill in detected coding agents (--dry-run, --no-skill, --yes); stale copies are refreshed on re-run |
+| 04 | `04_skills_mcps.sh` | Install companion skill + agent tool bundles (REA, drawio) into detected coding agents (--dry-run, --no-skill, --no-rea, --no-drawio, --yes, --refresh-only, --strict, --skip-<tool>); stale copies refreshed on re-run; bundles soft-fail |
+| 05 | `05_validate.sh` | Validate all components incl. bundle registrations, section H (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi, --skip-bundles for partial runs) |
 | 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
 | 07 | `07_dashboard_shots.sh` | Capture the rendered Grafana dashboard as PNG screenshots (full.png + band-NN.png) for vision-model review (--out=DIR, --dry-run). Requires python3 + playwright + chromium. Maintenance — not run by bootstrap |
 | — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus — active docker-method updates that bump the compose pin, pull, restart, and commit; PostgreSQL — pinned, display-only, never auto-updated). Does not touch keys or passwords; the slim and docker methods also bump pinned versions in tracked files (including the version references in these docs) and commit those changes |
-| — | `install-skill.sh` | Install any skill into all detected coding agents (--name=<name>, --source=<path-or-url>, --dry-run). Standalone utility — not called by 05_skill.sh (which uses helpers/skills.sh directly) |
-| — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker), sourced by bootstrap.sh and steps 01–04 |
+| — | `install-skill.sh` | Install any skill into all detected coding agents (--name=<name>, --source=<path-or-url>, --dry-run). Standalone utility, single SKILL.md only — not called by 04_skills_mcps.sh (which uses helpers/skills.sh directly, including directory bundles) |
+| — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker/node_mcp), sourced by bootstrap.sh and steps 01–05 |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
-| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, 04_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
-| — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool |
-| — | `helpers/versions.sh` | Component version table for the bootstrap install summary (show_installed_versions) |
+| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, 05_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
+| — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool + directory-based bundle install (per-file drift detection) |
+| — | `helpers/mcp.sh` | Merge-safe MCP server registration per tool (opencode `.mcp`, codex `[mcp_servers.*]` sentinel blocks, claude/pi `.mcpServers`); register/unregister/verify |
+| — | `helpers/versions.sh` | Component version table for the bootstrap install summary (show_installed_versions) + bundle pins (REA_AGENTS_VERSION, DRAWIO_MCP_VERSION, NODE_MCP_MIN_VERSION) |
 | — | `helpers/grafana_shots.py` | Headless Grafana dashboard screenshot capture helper used by `07_dashboard_shots.sh` (playwright-based) |
 
 ### Models
@@ -170,6 +171,53 @@ supports it.
 - MaaS region-locked to `ap-southeast-1`
 
 ---
+
+## Agent Tool Bundles
+
+`04_skills_mcps.sh` installs two optional bundles (default-on, soft-fail)
+alongside the companion skill into every detected coding agent. Versions are
+pinned in `helpers/versions.sh` (`REA_AGENTS_VERSION`, `DRAWIO_MCP_VERSION`,
+`NODE_MCP_MIN_VERSION`).
+
+| Bundle | MCP server | Skill | What it does |
+|--------|-----------|-------|--------------|
+| **REA** (`rea-agents`) | `rea setup` writes its own registration (pinned absolute Node path) per tool | `reverse-engineer-anything` (installed by REA) | Reverse-engineering: native binaries, JS/Electron apps, .NET, APKs, captures. Analysis runs locally. |
+| **drawio** (`@drawio/mcp`) | Registered by `helpers/mcp.sh` with absolute Node + entry-script paths | `drawio` (vendored in `skills/drawio/`) | Diagramming: `.drawio` files, Mermaid/CSV import, editor links. |
+
+Per-tool registration targets: opencode `~/.config/opencode/opencode.json`
+(`.mcp`), codex `~/.codex/config.toml` (`[mcp_servers.*]`, sentinel-managed),
+claude `~/.claude.json` (`.mcpServers`), pi `~/.pi/agent/mcp.json`
+(`.mcpServers`). Node ≥22.23.4 is ensured via NodeSource when either bundle
+runs; registrations pin absolute Node paths so agent-runtime PATH (e.g.
+pi's bundled Node) cannot break them. Analysis engines (Ghidra, IDA, JADX,
+Kuna) are deliberately **not** installed — bring your own; static
+JS/Electron/.NET analysis works without them.
+
+### Data-flow audit (local-only contract)
+
+The only data destination is the model, via the LiteLLM proxy. Verified
+egress paths:
+
+| Path | Direction | Content | Verdict |
+|------|-----------|---------|---------|
+| REA analysis | local → agent context | Decompiled code, evidence — sent to the model via LiteLLM (the sanctioned destination) | ✓ by design |
+| REA package install/update | npm registry → machine | Package downloads (inbound only); REA has no telemetry | ✓ |
+| drawio diagram links | machine → browser | Diagram compressed into the URL **fragment** — fragments are never sent in HTTP requests; opening the link loads the draw.io editor JS from `app.diagrams.net`, which reads the fragment client-side (user-accepted trade-off) | ⚠ accepted |
+| drawio shape search (`find-shapes.js`) | machine → `icons.diagrams.net` / jsdelivr CDN | Icon-name query terms only (e.g. `aws lambda`) — never file content; avoidable by not using shape search | ⚠ minor, documented |
+| npm/NodeSource installs | registry → machine | Build-time package fetches, not user-data egress | ✓ |
+| Hosted `mcp.draw.io` App Server | — | **Excluded** — the cloud MCP option is never configured | ✓ by exclusion |
+
+### Bundle lifecycle
+
+- Install/refresh: `./scripts/04_skills_mcps.sh --yes` (all bundles) or
+  granular `--no-rea` / `--no-drawio` / `--no-skill`.
+- Updates: `update.sh` calls `04_skills_mcps.sh --refresh-only` — refreshes
+  only already-registered bundles, never adds declined ones.
+- Health: `./scripts/05_validate.sh` section H (registrations, skills, Node
+  version, TOML parse, `rea doctor`); `rea doctor --json` directly for REA.
+- Uninstall: `uninstall.sh --bundles --tool=<t>` removes bundle artifacts
+  from one tool; full uninstall runs `rea uninstall` (global) + npm cleanup.
+  NodeSource Node is intentionally left installed (shared with tools).
 
 ## LiteLLM
 
@@ -433,7 +481,7 @@ agent→model mappings.
 
 | File | Purpose |
 |------|---------|
-| `~/.config/opencode/opencode.json` | Provider config (LiteLLM + Huawei-MaaS direct), API key |
+| `~/.config/opencode/opencode.json` | Provider config (LiteLLM + Huawei-MaaS direct), API key, MCP servers (`.mcp` — REA, drawio) |
 | `~/.config/opencode/oh-my-opencode-slim.json` | Plugin config: presets, agents, council |
 
 The `LiteLLM` provider uses `@ai-sdk/openai-compatible` with
@@ -565,7 +613,7 @@ to Huawei MaaS's OpenAI endpoint.
 
 | File | Purpose |
 |------|---------|
-| `~/.codex/config.toml` | Model provider config, default model, feature flags |
+| `~/.codex/config.toml` | Model provider config, default model, feature flags, MCP servers (`[mcp_servers.*]` — REA, drawio) |
 | `~/.codex/model_catalog.json` | Model metadata (context window, max tokens, reasoning levels) |
 | `~/.codex/.env` | API key (`LITELLM_CODEX_API_KEY=sk-...`), auto-loaded by Codex CLI |
 
@@ -626,7 +674,7 @@ forwards directly to Huawei MaaS's Anthropic-compatible endpoint using the
 | File | Purpose |
 |------|---------|
 | `~/.claude/settings.json` | Runtime config: env vars, model selection (chmod 600) |
-| `~/.claude.json` | IDE integration settings: `autoInstallIdeExtension: false` |
+| `~/.claude.json` | IDE integration settings (`autoInstallIdeExtension: false`), MCP servers (`.mcpServers` — REA, drawio) |
 
 Claude Code reads `settings.json` automatically on startup — no `source` or
 `export` needed. Run with `--bare` flag to skip keychain/OAuth checks:
@@ -698,6 +746,7 @@ forwards to Huawei MaaS using the `openai/` provider prefix.
 | File | Purpose |
 |------|---------|
 | `~/.pi/agent/models.json` | Provider config: LiteLLM baseUrl, apiKey, model list (chmod 600) |
+| `~/.pi/agent/mcp.json` | MCP servers (`.mcpServers` — REA, drawio), written by `04_skills_mcps.sh` and REA setup |
 
 ### Model Selection
 
@@ -726,7 +775,7 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 | `unhealthy_count > 0` | Check MaaS key/model/region — may be transient |
 | Virtual key 403 | Check with `/key/info` — may be expired |
 | Port conflict | `ss -tlnp \| grep -E ':(4000\|5432\|9090\|3000) '` |
-| Validation fails | `./scripts/04_validate.sh` — see Recovery table in [SKILL.md](./SKILL.md) |
+| Validation fails | `./scripts/05_validate.sh` — see Recovery table in [SKILL.md](./SKILL.md) |
 | Prometheus not scraping | Check `docker compose logs prometheus --tail 20`; verify `litellm:4000` reachable from Prometheus container |
 | Grafana dashboard blank | Check datasource UID: `curl http://127.0.0.1:3000/api/datasources/name/Prometheus \| jq .uid` — must be `prometheus` |
 | Grafana not loading | `docker compose restart grafana` |
@@ -794,7 +843,7 @@ re-configuration after rotation.
 ./scripts/03d_pi.sh          # mints new key, updates models.json
 
 # 4. Verify
-./scripts/04_validate.sh
+./scripts/05_validate.sh
 ```
 
 **What changes:**

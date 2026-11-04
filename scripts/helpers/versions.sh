@@ -16,6 +16,15 @@
 # a missing tool or file yields an empty value, printed as a dim
 # "(not installed)" — never a set -e trap.
 
+# ── Agent tool bundle pins ───────────────────────────────────
+# Pinned versions for the optional-but-default-on agent tool bundles
+# installed by scripts/04_skills_mcps.sh and checked by scripts/05_validate.sh.
+REA_AGENTS_VERSION="6.8.0"
+DRAWIO_MCP_VERSION="1.10.1"
+# REA (rea-agents) requires Node >= 22.23.4; the drawio stdio server runs on
+# the same resolved node. Both bundles share this floor.
+NODE_MCP_MIN_VERSION="22.23.4"
+
 # ── Print one aligned table row ──
 # Empty value → dim "(not installed)".
 # Usage: _version_row "label" "value"

@@ -94,7 +94,7 @@ if command -v jq >/dev/null 2>&1; then
   HAVE_JQ=true
 fi
 
-# Load .env exactly like 04_validate.sh: source_env exports every variable,
+# Load .env exactly like 05_validate.sh: source_env exports every variable,
 # so GRAFANA_ADMIN_PASSWORD reaches grafana_shots.py through the environment
 # without ever appearing in a command line or log line.
 source_env "$PROJECT_DIR"

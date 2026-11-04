@@ -573,6 +573,14 @@ if [ "$DRY_RUN" = false ]; then
   show_table
 fi
 
+# Refresh agent tool bundles to match any pins changed by the updates above.
+# --refresh-only never adds a bundle to a tool that doesn't already have it.
+if [ "$DRY_RUN" = false ]; then
+  echo ""
+  log_info "Refreshing agent skills & MCP bundles..."
+  "$SCRIPT_DIR/04_skills_mcps.sh" --refresh-only || log_warn "Bundle refresh reported issues"
+fi
+
 # Offer to run validation
 if [ "$DRY_RUN" = false ] && [ ${#SELECTED[@]} -gt 0 ]; then
   if [ $FAILED -gt 0 ]; then
@@ -587,6 +595,6 @@ if [ "$DRY_RUN" = false ] && [ ${#SELECTED[@]} -gt 0 ]; then
     fi
   fi
   if [ "$RUN_VALIDATION" = true ]; then
-    "$SCRIPT_DIR/04_validate.sh"
+    "$SCRIPT_DIR/05_validate.sh"
   fi
 fi

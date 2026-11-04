@@ -123,12 +123,16 @@ Docker images or slim plugin modifies `docker-compose.yml` and
 ## Companion Skill
 
 After installation, bootstrap offers to install
-[SKILL.md](./SKILL.md) as a skill into each detected coding agent. This
-gives your agents operational guidance — health diagnosis, key/model
-management, debug routing, observability, and recovery.
+[SKILL.md](./SKILL.md) as a skill into each detected coding agent, plus two
+optional agent tool bundles: **REA** (reverse-engineering MCP + skill) and
+**drawio** (diagramming MCP + skill). The companion skill gives your agents
+operational guidance — health diagnosis, key/model management, debug
+routing, observability, and recovery. Bundles are default-on and can be
+declined with `--no-bundles`; everything runs locally (see the data-flow
+audit in [REFERENCE.md](./REFERENCE.md)).
 
 ```bash
-./scripts/05_skill.sh --yes    # install manually anytime
+./scripts/04_skills_mcps.sh --yes    # install skills + bundles manually anytime
 ```
 
 ---

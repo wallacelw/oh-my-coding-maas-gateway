@@ -27,7 +27,7 @@ OPENCODE_CONFIG="$OPENCODE_DIR/opencode.json"
 # $schema URL of oh-my-opencode-slim.json.template at install time.
 # NOTE: configs/opencode/opencode.json.template carries an independent
 # plugin pin that is NOT substituted here — keep both in sync (update.sh
-# does; 04_validate.sh fails on drift).
+# does; 05_validate.sh fails on drift).
 SLIM_VERSION="3.0.6"
 OPENCODE_INSTALL_URL="https://opencode.ai/install"
 CURL_TIMEOUT=15
@@ -208,6 +208,18 @@ fi
 if [ -z "$NEW_CONFIG" ] || ! echo "$NEW_CONFIG" | jq -e . >/dev/null 2>&1; then
   log_error "Failed to generate opencode config from template."
   exit 1
+fi
+
+# Preserve any MCP registrations already in the existing config (REA, drawio,
+# or user-added). 04_skills_mcps writes these; regenerating from the template
+# alone would otherwise wipe them. Merging BEFORE the unchanged comparison keeps
+# a no-change re-run a true no-op.
+if [ -f "$OPENCODE_CONFIG" ] && strip_jsonc "$OPENCODE_CONFIG" | jq -e '(.mcp // {}) | length > 0' >/dev/null 2>&1; then
+  EXISTING_MCP=$(strip_jsonc "$OPENCODE_CONFIG" | jq -c '.mcp')
+  MERGED_CONFIG=$(printf '%s' "$NEW_CONFIG" | jq --argjson mcp "$EXISTING_MCP" '.mcp = $mcp')
+  if [ -n "$MERGED_CONFIG" ] && echo "$MERGED_CONFIG" | jq -e . >/dev/null 2>&1; then
+    NEW_CONFIG="$MERGED_CONFIG"
+  fi
 fi
 
 if [ -f "$OPENCODE_CONFIG" ]; then

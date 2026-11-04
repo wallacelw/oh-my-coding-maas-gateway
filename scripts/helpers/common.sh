@@ -10,6 +10,8 @@
 #   strip_jsonc <file>         — strip // and /* */ comments outside strings
 #   mask_key <key>             — print first8...last4 of a key
 #   backup_with_prune <file> [keep] — backup to <file>.bak.<timestamp>, prune to newest N (default 3)
+#   version_compare <a> <b>    — 0 if equal, 1 if a<b, 2 if a>b (numeric per-component)
+#   version_ge <a> <b>         — returns 0 when a >= b (strips leading 'v')
 #
 #   ── Logging (colored, action-labeled) ──
 #   log_step "title"           — bold green box-drawing section header
@@ -141,6 +143,36 @@ mask_key() {
   fi
 }
 
+# ── Version comparison ──────────────────────────────────────
+# Compare dotted versions numerically (a leading 'v' is ignored).
+# Returns 0 if equal, 1 if v1 < v2, 2 if v1 > v2.
+# Usage: version_compare "1.2.0" "1.2.1"
+version_compare() {
+  local v1="${1#v}" v2="${2#v}"
+  if [ "$v1" = "$v2" ]; then return 0; fi
+  local IFS=.
+  local i a1 a2 n1 n2
+  read -ra a1 <<< "$v1"
+  read -ra a2 <<< "$v2"
+  for ((i = 0; i < ${#a1[@]} || i < ${#a2[@]}; i++)); do
+    n1=${a1[i]:-0} n2=${a2[i]:-0}
+    # Guard against non-numeric components (e.g. "1.2.0-rc1")
+    [[ "$n1" =~ ^[0-9]+$ ]] || n1=0
+    [[ "$n2" =~ ^[0-9]+$ ]] || n2=0
+    if (( n1 < n2 )); then return 1; fi
+    if (( n1 > n2 )); then return 2; fi
+  done
+  return 0
+}
+
+# True when $1 >= $2 (both stripped of a leading 'v'). Returns 0/1.
+# Usage: if version_ge "$(node -v)" "22.23.4"; then ...
+version_ge() {
+  local rc=0
+  version_compare "$1" "$2" || rc=$?
+  [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ]
+}
+
 # Backup <file> to <file>.bak.<timestamp>, keeping only the newest N (default 3).
 # Prints the backup path. No-op (returns 0) if the file doesn't exist.
 # Usage: backup_with_prune <file> [keep=3]
@@ -204,10 +236,14 @@ log_dim() {
 # `curl | bash` where stdin is the curl pipe. is_interactive checks
 # for a controlling terminal rather than stdin being a TTY.
 
-# Returns 0 if a controlling terminal is available (/dev/tty is a char device).
+# Returns 0 if a controlling terminal is available (/dev/tty is a char device
+# AND can be opened — on headless hosts (cron, CI, no controlling terminal)
+# the device node exists but opening it fails with ENXIO, which must count
+# as non-interactive or every prompt leaks an error and falls back anyway).
 # Usage: if is_interactive; then ...
 is_interactive() {
-  [ -c /dev/tty ] 2>/dev/null
+  [ -c /dev/tty ] || return 1
+  ( exec 3</dev/tty ) 2>/dev/null
 }
 
 # Yes/no prompt. Returns 0 for yes, 1 for no.

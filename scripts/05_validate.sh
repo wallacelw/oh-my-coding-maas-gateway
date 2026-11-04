@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── 04_validate.sh — Validation (pipeline step 04, core) ─────────────────────
+# ─── 05_validate.sh — Validation (pipeline step 05, core) ─────────────────────
 #
 # Domain:        End-to-end validation
-# Order:         04 (last — checks everything installed)
+# Order:         05 (last — checks everything installed)
 # Optional:      no (core, always runs; scoped via --skip-*)
 # Description:   Validate all installed components: .env completeness, Docker
 #                services, LiteLLM health + config, observability (Prometheus +
 #                Grafana), and each coding tool (opencode, Codex, Claude Code,
-#                Pi). Sections are skipped via --skip-* or selected via
-#                --xxx-only.
+#                Pi) plus the agent tool bundles (companion skill, REA, drawio).
+#                Sections are skipped via --skip-* or selected via --xxx-only.
 # Inputs:        .env, running Docker Compose stack, tool config files
 # Outputs:       pass/fail/warn counts to stdout; exit 0 on pass, 1 on fail
-# Standalone:    yes — ./scripts/04_validate.sh
+# Standalone:    yes — ./scripts/05_validate.sh
 #
 # Usage:
-#   ./04_validate.sh                       # full validation
-#   ./04_validate.sh --dry-run             # structure checks only (no network)
-#   ./04_validate.sh --litellm-only        # only LiteLLM proxy checks
-#   ./04_validate.sh --skip-opencode       # LiteLLM + Codex + Claude Code + Pi
+#   ./05_validate.sh                       # full validation
+#   ./05_validate.sh --dry-run             # structure checks only (no network)
+#   ./05_validate.sh --litellm-only        # only LiteLLM proxy checks
+#   ./05_validate.sh --skip-opencode       # LiteLLM + Codex + Claude Code + Pi
+#   ./05_validate.sh --skip-bundles        # skip the agent tool bundles section
 # ──────────────────────────────────────────────────────────────────────────────
 
 PASS=0
@@ -35,6 +36,7 @@ SKIP_OPENCODE=false
 SKIP_CODEX=false
 SKIP_CLAUDE_CODE=false
 SKIP_PI=false
+SKIP_BUNDLES=false
 LITELLM_URL="http://127.0.0.1:4000"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,6 +45,9 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
+source "$SCRIPT_DIR/helpers/versions.sh"
+source "$SCRIPT_DIR/helpers/mcp.sh"
+source "$SCRIPT_DIR/helpers/skills.sh"
 
 for arg in "$@"; do
   case "$arg" in
@@ -55,6 +60,7 @@ for arg in "$@"; do
     --skip-codex)       SKIP_CODEX=true ;;
     --skip-claude-code) SKIP_CLAUDE_CODE=true ;;
     --skip-pi)          SKIP_PI=true ;;
+    --skip-bundles)     SKIP_BUNDLES=true ;;
     --pi-only)          PI_ONLY=true ;;
     *)                  log_error "Unknown flag: $arg"; exit 1 ;;
   esac
@@ -89,21 +95,23 @@ RUN_CODEX=true
 RUN_CLAUDE_CODE=true
 RUN_PI=true
 RUN_OBSERVABILITY=true
+RUN_BUNDLES=true
 if [ "$LITELLM_ONLY" = true ]; then
-  RUN_OPENCODE=false; RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false
+  RUN_OPENCODE=false; RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false; RUN_BUNDLES=false
 elif [ "$OPENCODE_ONLY" = true ]; then
-  RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false
+  RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false; RUN_BUNDLES=false
 elif [ "$CODEX_ONLY" = true ]; then
-  RUN_OPENCODE=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false
+  RUN_OPENCODE=false; RUN_CLAUDE_CODE=false; RUN_PI=false; RUN_OBSERVABILITY=false; RUN_BUNDLES=false
 elif [ "$CLAUDE_CODE_ONLY" = true ]; then
-  RUN_OPENCODE=false; RUN_CODEX=false; RUN_PI=false; RUN_OBSERVABILITY=false
+  RUN_OPENCODE=false; RUN_CODEX=false; RUN_PI=false; RUN_OBSERVABILITY=false; RUN_BUNDLES=false
 elif [ "$PI_ONLY" = true ]; then
-  RUN_OPENCODE=false; RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_OBSERVABILITY=false
+  RUN_OPENCODE=false; RUN_CODEX=false; RUN_CLAUDE_CODE=false; RUN_OBSERVABILITY=false; RUN_BUNDLES=false
 fi
 [ "$SKIP_OPENCODE" = true ] && RUN_OPENCODE=false
 [ "$SKIP_CODEX" = true ] && RUN_CODEX=false
 [ "$SKIP_CLAUDE_CODE" = true ] && RUN_CLAUDE_CODE=false
 [ "$SKIP_PI" = true ] && RUN_PI=false
+[ "$SKIP_BUNDLES" = true ] && RUN_BUNDLES=false
 
 # ── Validation output helpers ──
 pass() { PASS=$((PASS + 1)); log_ok "$1"; }
@@ -1231,6 +1239,240 @@ CURLCFG
   echo ""
 else
   skip "G. Cross-tool key isolation (no coding-tool sections enabled)"
+fi
+
+# ════════════════════════════════════════════════════════════════════════════
+# SECTION H: Agent tool bundles (companion skill, REA, drawio)
+# ════════════════════════════════════════════════════════════════════════════
+if [ "$RUN_BUNDLES" = true ]; then
+  log_step "H. Agent tool bundles"
+
+  H_TOOLS=""
+  [ "$RUN_OPENCODE" = true ]    && command -v opencode &>/dev/null && H_TOOLS+="opencode "
+  [ "$RUN_CODEX" = true ]       && command -v codex &>/dev/null    && H_TOOLS+="codex "
+  [ "$RUN_CLAUDE_CODE" = true ] && command -v claude &>/dev/null   && H_TOOLS+="claude "
+  [ "$RUN_PI" = true ]          && command -v pi &>/dev/null       && H_TOOLS+="pi "
+
+  if [ -z "$H_TOOLS" ]; then
+    skip "H. Agent tool bundles (no coding agents installed)"
+  else
+    # ── H1. Node runtime used by MCP registrations ──
+    # Extract the node path baked into an actual registration rather than
+    # `command -v node`, which inside bootstrap resolves to the too-old
+    # pi-managed node. Fall back to PATH node only when no registration exists.
+    echo ""
+    log_info "H1. Node runtime for MCP registrations"
+    H_NODE=""
+    if [ -f "$HOME/.config/opencode/opencode.json" ]; then
+      H_NODE=$(strip_jsonc "$HOME/.config/opencode/opencode.json" 2>/dev/null | jq -r '(.mcp.drawio.command[0] // .mcp.rea.command[0] // empty) | select(endswith("/node"))' 2>/dev/null || true)
+    fi
+    if [ -z "$H_NODE" ] && [ -f "$HOME/.codex/config.toml" ]; then
+      H_NODE=$(grep -oE 'command[[:space:]]*=[[:space:]]*"[^"]*/node"' "$HOME/.codex/config.toml" 2>/dev/null | sed 's/.*"\(.*\)"/\1/' | head -1 || true)
+    fi
+    if [ -z "$H_NODE" ] && [ -f "$HOME/.claude.json" ]; then
+      H_NODE=$(jq -r '(.mcpServers.drawio.command // .mcpServers.rea.command // empty) | select(endswith("/node"))' "$HOME/.claude.json" 2>/dev/null || true)
+    fi
+    if [ -z "$H_NODE" ] && [ -f "$HOME/.pi/agent/mcp.json" ]; then
+      H_NODE=$(jq -r '(.mcpServers.drawio.command // .mcpServers.rea.command // empty) | select(endswith("/node"))' "$HOME/.pi/agent/mcp.json" 2>/dev/null || true)
+    fi
+    if [ -z "$H_NODE" ]; then
+      H_NODE=$(command -v node 2>/dev/null || true)
+      [ -n "$H_NODE" ] && log_dim "No MCP registration found — falling back to PATH node"
+    fi
+    if [ -n "$H_NODE" ] && [ -x "$H_NODE" ]; then
+      H_NODE_VER=$("$H_NODE" --version 2>/dev/null | sed 's/^v//' | tr -d '[:space:]' || true)
+      if version_ge "$H_NODE_VER" "$NODE_MCP_MIN_VERSION"; then
+        pass "MCP runtime node $H_NODE_VER >= $NODE_MCP_MIN_VERSION ($H_NODE)"
+      else
+        fail "MCP runtime node $H_NODE_VER < $NODE_MCP_MIN_VERSION ($H_NODE)"
+      fi
+    elif [ -n "$H_NODE" ]; then
+      fail "MCP runtime node path not executable: $H_NODE"
+    else
+      warn "No Node runtime found for MCP registrations"
+    fi
+
+    # ── H2. REA bundle ──
+    echo ""
+    log_info "H2. REA bundle (reverse-engineering MCP + skill)"
+    REA_PRESENT=false
+    command -v rea &>/dev/null && REA_PRESENT=true
+    for tool in $H_TOOLS; do
+      if "mcp_verify_$tool" rea 2>/dev/null; then REA_PRESENT=true; fi
+    done
+    if [ "$REA_PRESENT" = false ]; then
+      warn "REA bundle not installed (optional bundle)"
+    else
+      if command -v rea &>/dev/null; then
+        REA_V=$(rea --version 2>/dev/null | sed 's/^v//' | tr -d '[:space:]' || true)
+        if [ "$REA_V" = "$REA_AGENTS_VERSION" ]; then
+          pass "rea-agents $REA_V (pinned $REA_AGENTS_VERSION)"
+        else
+          fail "rea-agents version '$REA_V' != pinned $REA_AGENTS_VERSION"
+        fi
+      else
+        fail "REA bundle registration present but 'rea' binary not found"
+      fi
+      for tool in $H_TOOLS; do
+        if "mcp_verify_$tool" rea 2>/dev/null; then
+          pass "REA MCP registered ($tool)"
+        else
+          fail "REA MCP not registered ($tool)"
+        fi
+        # REA installs its skill per-client only for claude; opencode/codex/pi
+        # read the shared cross-agent dir (~/.agents/skills). Either counts —
+        # except claude, which does not read the shared dir.
+        REA_SKILL_DIR=$(bundle_dest_dir "$tool" reverse-engineer-anything 2>/dev/null || true)
+        H_REA_SKILL_OK=false
+        [ -n "$REA_SKILL_DIR" ] && [ -f "$REA_SKILL_DIR/SKILL.md" ] && H_REA_SKILL_OK=true
+        if [ "$H_REA_SKILL_OK" = false ] && [ "$tool" != "claude" ] &&
+           [ -f "$HOME/.agents/skills/reverse-engineer-anything/SKILL.md" ]; then
+          H_REA_SKILL_OK=true
+        fi
+        if [ "$H_REA_SKILL_OK" = true ]; then
+          pass "REA skill present ($tool)"
+        else
+          fail "REA skill missing ($tool)"
+        fi
+      done
+    fi
+
+    # ── H3. drawio bundle ──
+    echo ""
+    log_info "H3. drawio bundle (@drawio/mcp MCP + skill)"
+    DRAWIO_PRESENT=false
+    for tool in $H_TOOLS; do
+      if "mcp_verify_$tool" drawio 2>/dev/null; then DRAWIO_PRESENT=true; fi
+    done
+    if [ "$DRAWIO_PRESENT" = false ]; then
+      warn "drawio bundle not installed (optional bundle)"
+    else
+      for tool in $H_TOOLS; do
+        if "mcp_verify_$tool" drawio 2>/dev/null; then
+          pass "drawio MCP registered ($tool)"
+        else
+          fail "drawio MCP not registered ($tool)"
+        fi
+        DRAWIO_SKILL_DIR=$(bundle_dest_dir "$tool" drawio 2>/dev/null || true)
+        if [ -n "$DRAWIO_SKILL_DIR" ] && [ -f "$DRAWIO_SKILL_DIR/SKILL.md" ]; then
+          pass "drawio skill SKILL.md present ($tool)"
+        else
+          fail "drawio skill SKILL.md missing ($tool)"
+        fi
+        if [ -n "$DRAWIO_SKILL_DIR" ] && [ -f "$DRAWIO_SKILL_DIR/scripts/find-shapes.js" ]; then
+          pass "drawio skill find-shapes.js present ($tool)"
+        else
+          fail "drawio skill find-shapes.js missing ($tool)"
+        fi
+      done
+    fi
+
+    # ── H4. Companion skill presence per tool ──
+    # Absent from ALL in-scope tools = deliberate decline (--no-skill) → warn.
+    # Present in some but missing in others = partial install → fail.
+    echo ""
+    log_info "H4. Companion skill presence"
+    H_SKILL_PRESENT_COUNT=0
+    for tool in $H_TOOLS; do
+      if "skill_exists_$tool" 2>/dev/null; then
+        H_SKILL_PRESENT_COUNT=$((H_SKILL_PRESENT_COUNT + 1))
+      fi
+    done
+    for tool in $H_TOOLS; do
+      if "skill_exists_$tool" 2>/dev/null; then
+        pass "Companion skill present ($tool)"
+      elif [ "$H_SKILL_PRESENT_COUNT" -eq 0 ]; then
+        warn "Companion skill not installed (optional — install via 04_skills_mcps.sh)"
+      else
+        fail "Companion skill missing ($tool)"
+      fi
+    done
+
+    # ── H5. Config permissions (600) for registration-bearing configs ──
+    echo ""
+    log_info "H5. MCP config permissions"
+    for f in "$HOME/.config/opencode/opencode.json" "$HOME/.codex/config.toml" "$HOME/.claude.json" "$HOME/.pi/agent/mcp.json"; do
+      [ -f "$f" ] || continue
+      PERMS=$(file_perms "$f")
+      if [ "$PERMS" = "600" ]; then
+        pass "Config permissions 600: ${f/#$HOME/~}"
+      else
+        warn "Config permissions $PERMS (expected 600): ${f/#$HOME/~}"
+      fi
+    done
+
+    # ── H6. TOML parse check (~/.codex/config.toml) ──
+    echo ""
+    log_info "H6. Codex config TOML parse"
+    if command -v codex &>/dev/null && [ -f "$HOME/.codex/config.toml" ]; then
+      if mcp_toml_parse_ok "$HOME/.codex/config.toml"; then
+        pass "~/.codex/config.toml parses as valid TOML"
+      else
+        fail "~/.codex/config.toml is not valid TOML"
+      fi
+      for name in rea drawio; do
+        if mcp_verify_codex "$name" 2>/dev/null; then
+          CNT=$(mcp_toml_count_header "$HOME/.codex/config.toml" "$name")
+          if [ "$CNT" = "1" ]; then
+            pass "codex [mcp_servers.$name] header appears exactly once"
+          else
+            fail "codex [mcp_servers.$name] header appears $CNT times (expected 1)"
+          fi
+        fi
+      done
+    else
+      skip "Codex config TOML parse (codex not installed or no config)"
+    fi
+
+    # ── H7. REA doctor (our clients' registrations; engines warn-only) ──
+    # `rea doctor --json` exits 1 whenever healthy:false — the NORMAL state on
+    # engine-less machines and when unmanaged clients (vscode, copilot_cli)
+    # exist. Parse the JSON regardless of rc; judge only the clients we manage.
+    echo ""
+    log_info "H7. REA doctor"
+    if [ "$DRY_RUN" = true ]; then
+      skip "REA doctor (dry-run)"
+    elif command -v rea &>/dev/null; then
+      H_DOC=$(timeout 120 rea doctor --json 2>/dev/null) && H_DOC_RC=0 || H_DOC_RC=$?
+      if [ -z "$H_DOC" ] || ! printf '%s' "$H_DOC" | jq -e . >/dev/null 2>&1; then
+        warn "rea doctor did not return parseable diagnostics (rc=$H_DOC_RC)"
+      else
+        H_ENG=$(printf '%s' "$H_DOC" | jq -r 'tostring' 2>/dev/null | grep -oiE '(ghidra|ida|jadx|kuna|missing_analysis_engine)' || true)
+        if [ -n "$H_ENG" ]; then
+          warn "rea doctor: optional analysis engines not installed (normal — bring your own)"
+        else
+          pass "rea doctor: no missing optional engines reported"
+        fi
+        # Registration states for installed tools only (tool → REA client id).
+        H_BAD=""
+        for H_TOOL in $H_TOOLS; do
+          case "$H_TOOL" in
+            opencode) H_CID="opencode" ;;
+            codex)    H_CID="codex" ;;
+            claude)   H_CID="claude_code" ;;
+            pi)       H_CID="pi" ;;
+            *) continue ;;
+          esac
+          H_STATE=$(printf '%s' "$H_DOC" | jq -r --arg c "$H_CID" \
+            '[.identity.registrations[]? | select(.client == $c)][0].state // "absent"' 2>/dev/null)
+          if [ "$H_STATE" != "aligned" ]; then
+            H_BAD="$H_BAD $H_CID($H_STATE)"
+          fi
+        done
+        if [ -n "$H_BAD" ]; then
+          fail "rea doctor: registration not aligned:$H_BAD"
+        else
+          pass "rea doctor: registrations aligned for installed tools"
+        fi
+      fi
+    else
+      skip "REA doctor (rea not installed)"
+    fi
+
+    echo ""
+  fi
+else
+  skip "H. Agent tool bundles (bundles skipped)"
 fi
 
 # ── Summary ──

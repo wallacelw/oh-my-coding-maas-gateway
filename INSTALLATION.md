@@ -47,16 +47,22 @@ domain and is independently runnable.
 | 03b | `03b_codex.sh` | Codex CLI | yes | Install Codex CLI; mint virtual key; write config + model catalog. |
 | 03c | `03c_claude_code.sh` | Claude Code CLI | yes | Install Claude Code CLI; mint virtual key; write settings; disable VSCode extension. |
 | 03d | `03d_pi.sh` | Pi agent | yes | Install Pi agent; mint virtual key; write `~/.pi/agent/models.json`. |
-| 04 | `04_validate.sh` | Validation | no | End-to-end validation of all installed components. |
-| 05 | `05_skill.sh` | Companion skill | yes | Install SKILL.md into detected coding agents (opencode, codex, claude, pi); refreshes stale copies on re-run. |
+| 04 | `04_skills_mcps.sh` | Skills & MCP bundles | yes | Install the companion skill plus optional agent tool bundles (REA, drawio — MCP servers + skills) into detected coding agents; refreshes stale copies on re-run. |
+| 05 | `05_validate.sh` | Validation | no | End-to-end validation of all installed components, including bundle registrations (section H). |
 | 06 | `06_backup.sh` | PostgreSQL backup & restore | — | Dump the LiteLLM DB (spend history, virtual keys, budgets) to `backups/`; `--restore FILE` rebuilds it. Maintenance — not run by bootstrap. |
 | 07 | `07_dashboard_shots.sh` | Grafana visual verification | — | Capture the rendered dashboard as PNG screenshots for vision-model review. Maintenance — not run by bootstrap. |
 
 ### Ordering
 
 `01 env` (everything needs `.env`) → `02 litellm` (tools need the proxy live)
-→ `03a/03b/03c/03d` tools (independent, optional, any relative order) → `04 validate`
-(last, checks everything) → `05 skill` (companion skill into installed agents).
+→ `03a/03b/03c/03d` tools (independent, optional, any relative order) →
+`04 skills & MCP bundles` (companion skill + optional REA/drawio bundles into
+installed agents) → `05 validate` (last, checks everything including bundles).
+
+> **Renumbered in v1.35.0:** the old `04_validate.sh` is now `05_validate.sh`,
+> and the old `05_skill.sh` became `04_skills_mcps.sh` (expanded with agent
+> tool bundles) and now runs **before** validation so bundles are validated
+> too. Update any muscle-memory commands accordingly.
 
 `06_backup.sh` and `07_dashboard_shots.sh` are maintenance scripts (like
 `update.sh`) — run manually whenever a database backup/restore or a
@@ -69,12 +75,13 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 
 | File | Used by | Provides |
 |------|---------|----------|
-| `prereqs.sh` | bootstrap, 01–04 | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`. Each install runs under a spinner (`  Installing curl... done`). |
+| `prereqs.sh` | bootstrap, 01–04 | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`, `prereq_ensure_node_mcp` (soft-fail Node ≥22.23.4 via NodeSource for MCP bundles). Each install runs under a spinner (`  Installing curl... done`). |
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
 | `common.sh` | all scripts | `is_interactive`, `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, `backup_with_prune`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
-| `models.sh` | 02, 03d, 04, bootstrap | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, and 04_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
-| `skills.sh` | 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude). |
-| `versions.sh` | bootstrap | `show_installed_versions` — component version table for the install summary. |
+| `models.sh` | 02, 03d, 04, bootstrap | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, and 05_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
+| `skills.sh` | 04, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude) + directory-based bundle install with per-file drift detection. |
+| `mcp.sh` | 04, uninstall | Merge-safe MCP server registration per tool (opencode `.mcp`, codex `[mcp_servers.*]` sentinel blocks, claude/pi `.mcpServers`); register/unregister/verify; backup-before-write, compare-before-write. |
+| `versions.sh` | bootstrap, 04, 05 | `show_installed_versions` — component version table for the install summary; bundle pins (`REA_AGENTS_VERSION`, `DRAWIO_MCP_VERSION`, `NODE_MCP_MIN_VERSION`). |
 
 ---
 
@@ -150,31 +157,57 @@ key (alias "pi"), and writes `~/.pi/agent/models.json` (LiteLLM provider
 pointing to the proxy via OpenAI Chat Completions API). Supports
 `--virtual-key=` and `--dry-run`.
 
-### `04_validate.sh`
+### `04_skills_mcps.sh`
 
-Validates all installed components in sections A–G:
-`.env` completeness, Docker services, LiteLLM health + config, Prometheus +
-Grafana, and each tool's config + API smoke test. Supports `--dry-run`,
-`--litellm-only`/`--opencode-only`/`--codex-only`/`--claude-code-only`/`--pi-only`
-(scoped), and `--skip-opencode`/`--skip-codex`/`--skip-claude-code`/`--skip-pi` (additive).
+Installs the **companion skill** plus two optional **agent tool bundles**
+into each detected coding agent (opencode, codex, claude, pi). Interactive
+runs show a numbered menu (all bundles default-on, comma combos allowed,
+scope summary + confirm); `--yes`/non-interactive runs install with defaults.
 
-### `05_skill.sh`
+- **Companion skill** — this repo's SKILL.md (gateway operations guidance).
+  Failure is a hard error (status quo).
+- **REA bundle** — reverse-engineering MCP server + skill
+  (`rea-agents`, pinned in `helpers/versions.sh`). Registers via
+  `rea setup --yes --client <id>` per installed tool (REA writes its own
+  registration with a pinned absolute Node path and installs its skill).
+  Missing analysis engines (Ghidra/IDA/JADX/Kuna) are warnings only —
+  static JS/Electron/.NET analysis works without them.
+- **drawio bundle** — diagramming MCP server (`@drawio/mcp`, pinned) +
+  vendored skill (`skills/drawio/`). Registered with absolute Node +
+  entry-script paths so agent-runtime PATH cannot break it.
 
-Prompts whether to install SKILL.md as a skill/command into each detected
-coding agent when interactive; non-interactive runs (or `--yes`) install
-with defaults without prompting. `--no-skill` skips the step entirely.
-Detects which tools are installed (opencode, codex, claude, pi)
-and installs only into those present. Idempotent — copies identical to the
-repo SKILL.md are skipped; stale copies (content drifted after an upgrade)
-are refreshed in place.
+Bundles are **soft-fail**: a declined Node install, npm outage, or per-tool
+setup failure logs a warning and continues — the step exits 0 unless the
+companion skill fails (use `--strict` to make bundle failures non-zero).
+Node ≥22.23.4 is ensured automatically when either bundle runs (NodeSource
+22.x; pi's bundled Node is never touched). `--refresh-only` refreshes only
+already-registered bundles — never adds new ones (used by `update.sh`).
 
-Flags: `--dry-run`, `--no-skill`, `--yes`.
+Flags: `--dry-run`, `--no-skill`, `--no-rea`, `--no-drawio`, `--yes`,
+`--refresh-only`, `--strict`, `--skip-opencode`, `--skip-codex`,
+`--skip-claude-code`, `--skip-pi`.
 
 Skill locations:
-- opencode: `~/.config/opencode/skills/oh-my-coding-maas-gateway/SKILL.md`
-- codex: `~/.codex/skills/oh-my-coding-maas-gateway/SKILL.md`
-- pi: `~/.pi/agent/skills/oh-my-coding-maas-gateway/SKILL.md`
-- claude: `~/.claude/skills/oh-my-coding-maas-gateway/SKILL.md`
+- opencode: `~/.config/opencode/skills/<name>/SKILL.md`
+- codex: `~/.codex/skills/<name>/SKILL.md`
+- pi: `~/.pi/agent/skills/<name>/SKILL.md`
+- claude: `~/.claude/skills/<name>/SKILL.md`
+
+(`<name>` is `oh-my-coding-maas-gateway`, `reverse-engineer-anything`
+(installed by REA), or `drawio`.)
+
+### `05_validate.sh`
+
+Validates all installed components in sections A–H:
+`.env` completeness, Docker services, LiteLLM health + config, Prometheus +
+Grafana, each tool's config + API smoke test, and (section H) agent tool
+bundles — Node version used by MCP registrations, REA + drawio registrations
+per tool, bundle skills, config permissions, TOML parse, and `rea doctor`.
+Absent bundles warn (optional); installed-but-broken bundles fail.
+Supports `--dry-run`,
+`--litellm-only`/`--opencode-only`/`--codex-only`/`--claude-code-only`/`--pi-only`
+(scoped), `--skip-opencode`/`--skip-codex`/`--skip-claude-code`/`--skip-pi`
+(additive), and `--skip-bundles`.
 
 ### `06_backup.sh`
 
@@ -231,7 +264,20 @@ section above).
 |------|--------|
 | `--force` | Regenerate all immutable secrets (for key rotation). Invalidates existing virtual keys. |
 
-### `04_validate.sh`
+### `04_skills_mcps.sh`
+
+| Flag | Effect |
+|------|--------|
+| `--dry-run` | Print the plan (including resolved paths), write nothing. |
+| `--yes` | Non-interactive; install all selected bundles with defaults. |
+| `--no-skill` | Skip the companion skill only (bundles still offered). |
+| `--no-rea` | Skip the REA bundle. |
+| `--no-drawio` | Skip the drawio bundle. |
+| `--refresh-only` | Refresh only already-registered bundles/skills; never add new ones. |
+| `--strict` | Bundle failures exit non-zero (default: warn and exit 0). |
+| `--skip-<tool>` | Exclude a tool (`--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`). |
+
+### `05_validate.sh`
 
 | Flag | Effect |
 |------|--------|
@@ -333,7 +379,8 @@ ensures only its own prerequisites; skipped steps install nothing. A
 | `03b_codex.sh` | curl, npm/node, jq, bubblewrap |
 | `03c_claude_code.sh` | curl, npm/node, jq |
 | `03d_pi.sh` | curl, jq |
-| `04_validate.sh` | curl, jq |
+| `04_skills_mcps.sh` | curl, jq, node ≥22.23.4 + npm (auto-installed via NodeSource when bundles run) |
+| `05_validate.sh` | curl, jq |
 
 Interactive mode prompts before each installation. Non-interactive shells
 (piped stdin, CI) auto-confirm. Each install runs under a spinner showing
@@ -354,7 +401,7 @@ systemd.
   works standalone (sources `.env`, resolves the master key, mints, writes
   config).
 - **Optional steps (03a-03d)** are skipped per `--tool=`; skipping never
-  breaks later steps. `04_validate.sh` receives `--skip-*` for skipped tools.
+  breaks later steps. `05_validate.sh` receives `--skip-*` for skipped tools.
 - Idempotent — safe to re-run. Immutable secrets are preserved; existing
   containers, configs, and valid virtual keys are reused.
 
@@ -392,7 +439,7 @@ systemd.
 WARN messages (e.g. `litellm_config.yaml not found`, `unhealthy_count > 0`,
 deployment drift) do NOT cause non-zero exit — they are advisory.
 
-After recovery, re-run `04_validate.sh` **once**. If it still fails, escalate
+After recovery, re-run `05_validate.sh` **once**. If it still fails, escalate
 with full output.
 
 ---
@@ -426,7 +473,7 @@ git pull
 After upgrade, restart opencode if it's running (exit with `/exit` or Ctrl+C,
 start fresh — plugin/preset changes are not hot-reloaded).
 
-**Upgrade is complete when `04_validate.sh` exits 0.**
+**Upgrade is complete when `05_validate.sh` exits 0.**
 
 ### Updating coding tools
 
@@ -629,5 +676,5 @@ for the gateway.
 | Claude Code | `~/.claude/skills/oh-my-coding-maas-gateway/SKILL.md` | Automatic (agent reads skill) |
 
 ```bash
-./scripts/05_skill.sh --yes    # install manually anytime
+./scripts/04_skills_mcps.sh --yes    # install skills + bundles manually anytime
 ```

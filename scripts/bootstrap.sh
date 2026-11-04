@@ -7,7 +7,7 @@ set -euo pipefail
 # Description:   Thin sequencer. Prompts for install location (default /home),
 #                resolves the tool selection (interactive menu or --tool=),
 #                ensures core prerequisites, runs the numbered pipeline steps
-#                (01_env → 02_litellm → 03a/03b/03c/03d tools → 04_validate → 05_skill), and
+#                (01_env → 02_litellm → 03a/03b/03c/03d tools → 04_skills_mcps → 05_validate), and
 #                prints a colored summary. This is the only script a human
 #                needs to run. Each step is independently runnable too.
 #
@@ -35,6 +35,7 @@ DRY_RUN=false
 TOOL_SPECIFIED=false
 TOOL_SELECTION=""
 NO_SKILL=false
+NO_BUNDLES=false
 AUTO_YES=false
 for arg in "$@"; do
   case "$arg" in
@@ -42,13 +43,16 @@ for arg in "$@"; do
     --dry-run)        DRY_RUN=true ;;
     --tool=*)         TOOL_SPECIFIED=true; TOOL_SELECTION="${arg#--tool=}" ;;
     --no-skill)       NO_SKILL=true ;;
+    --no-bundles)     NO_BUNDLES=true ;;
     -y|--yes)         AUTO_YES=true ;;
     --api-key=*)      HUAWEI_MAAS_API_KEY="${arg#--api-key=}" ;;
     *)
-      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--api-key=KEY] [-y|--yes] [--dry-run] [--no-skill]"
+      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--api-key=KEY] [-y|--yes] [--dry-run] [--no-skill] [--no-bundles]"
       echo ""
       echo "  -y, --yes          Auto-accept all prompts (non-interactive mode)"
       echo "  --api-key=KEY      Huawei MaaS API key (alternative to HUAWEI_MAAS_API_KEY env var)"
+      echo "  --no-skill         Skip the companion skill (agent bundles still offered)"
+      echo "  --no-bundles       Skip the agent tool bundles (REA + drawio)"
       exit 1
       ;;
   esac
@@ -70,24 +74,9 @@ elif [ -f "$SCRIPT_DIR/VERSION" ]; then
   PROJECT_VERSION=$(cat "$SCRIPT_DIR/VERSION" | tr -d '[:space:]')
 fi
 
-# Compare versions: returns 0 if equal, 1 if v1 < v2, 2 if v1 > v2
-version_compare() {
-  local v1="$1" v2="$2"
-  if [ "$v1" = "$v2" ]; then return 0; fi
-  local IFS=.
-  local i a1 a2
-  read -ra a1 <<< "$v1"
-  read -ra a2 <<< "$v2"
-  for ((i = 0; i < ${#a1[@]} || i < ${#a2[@]}; i++)); do
-    local n1=${a1[i]:-0} n2=${a2[i]:-0}
-    # Guard against non-numeric values
-    [[ "$n1" =~ ^[0-9]+$ ]] || n1=0
-    [[ "$n2" =~ ^[0-9]+$ ]] || n2=0
-    if (( n1 < n2 )); then return 1; fi
-    if (( n1 > n2 )); then return 2; fi
-  done
-  return 0
-}
+# Version comparison lives in helpers/common.sh (shared version_compare).
+# In the pre-clone standalone block common.sh is not yet available, so
+# show_version_info degrades gracefully to a plain version display there.
 
 # Show version info for an existing install
 show_version_info() {
@@ -102,12 +91,15 @@ show_version_info() {
     echo -e "  ${C_DIM}Existing version: $existing_version${C_RESET}"
   elif [ "$existing_version" = "$PROJECT_VERSION" ]; then
     echo -e "  ${C_DIM}Version: $existing_version (up to date)${C_RESET}"
-  else
+  elif declare -F version_compare >/dev/null 2>&1; then
     version_compare "$existing_version" "$PROJECT_VERSION" && rc=0 || rc=$?
     case $rc in
       1) echo -e "  ${C_GREEN}Update available: $existing_version → $PROJECT_VERSION${C_RESET}" ;;
       2) echo -e "  ${C_YELLOW}Local version $PROJECT_VERSION is newer than existing $existing_version${C_RESET}" ;;
     esac
+  else
+    # Standalone (pre-clone) fallback — no shared helper yet.
+    echo -e "  ${C_DIM}Existing version: $existing_version (current: $PROJECT_VERSION)${C_RESET}"
   fi
 }
 
@@ -487,6 +479,12 @@ if [ "$TOOL_SPECIFIED" = false ] && is_interactive && [ "$AUTO_YES" = false ]; t
     printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Codex:"        "$([ "$INSTALL_CODEX" = true ] && _yes || _no)"
     printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Claude Code:"  "$([ "$INSTALL_CLAUDE_CODE" = true ] && _yes || _no)"
     printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Pi:"           "$([ "$INSTALL_PI" = true ] && _yes || _no)"
+    # Bundles are default-on and confirmed inside step 04 (no toggle here).
+    if [ "$NO_BUNDLES" = true ]; then
+      printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Agent bundles:" "${C_DIM}no (--no-bundles)${C_RESET}"
+    else
+      printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Agent bundles:" "REA + drawio (default on — confirmed in step 04; installs Node 22 if missing)"
+    fi
 
     # ── Selection-driven prerequisite summary (prereq → needed by) ──
     log_dim "Prerequisites to install (as needed):"
@@ -511,6 +509,9 @@ if [ "$TOOL_SPECIFIED" = false ] && is_interactive && [ "$AUTO_YES" = false ]; t
     [ "$INSTALL_OPENCODE" = true ]    && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bun"        "— opencode"
     [ -n "$NPM_TOOLS" ]               && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "npm/node"   "— $NPM_TOOLS"
     [ "$INSTALL_CODEX" = true ]       && printf "    ${C_DIM}%-14s %s${C_RESET}\n" "bubblewrap" "— codex"
+    if [ "$NO_BUNDLES" = false ] && { [ "$INSTALL_OPENCODE" = true ] || [ "$INSTALL_CODEX" = true ] || [ "$INSTALL_CLAUDE_CODE" = true ] || [ "$INSTALL_PI" = true ]; }; then
+      printf "    ${C_DIM}%-14s %s${C_RESET}\n" "node" "— agent bundles (>=22.23.4)"
+    fi
 
     # ── Confirm selection before proceeding ──
     echo ""
@@ -532,6 +533,11 @@ if [ "$TOOL_SPECIFIED" = true ] || ! is_interactive; then
   printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Codex:"        "$([ "$INSTALL_CODEX" = true ] && _yes || _no)"
   printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Claude Code:"  "$([ "$INSTALL_CLAUDE_CODE" = true ] && _yes || _no)"
   printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Pi:"           "$([ "$INSTALL_PI" = true ] && _yes || _no)"
+  if [ "$NO_BUNDLES" = true ]; then
+    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Agent bundles:" "${C_DIM}no (--no-bundles)${C_RESET}"
+  else
+    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Agent bundles:" "REA + drawio (default on — confirmed in step 04; installs Node 22 if missing)"
+  fi
 fi
 echo ""
 
@@ -619,24 +625,57 @@ else
   log_dim "(skipping Pi agent)"
 fi
 
-# ── Step 04: Validate ──
-VALIDATE_ARGS=()
-[ "$INSTALL_OPENCODE" = false ] && VALIDATE_ARGS+=("--skip-opencode")
-[ "$INSTALL_CODEX" = false ] && VALIDATE_ARGS+=("--skip-codex")
-[ "$INSTALL_CLAUDE_CODE" = false ] && VALIDATE_ARGS+=("--skip-claude-code")
-[ "$INSTALL_PI" = false ] && VALIDATE_ARGS+=("--skip-pi")
+# ── Step 04: Agent skills & MCP bundles ──
+# Pass the same tool scope the validator uses: --skip-<tool> for tools not
+# selected this run. --no-skill skips only the companion skill; --no-bundles
+# additionally disables the REA + drawio bundles.
+SKILL_ARGS=()
+[ "$INSTALL_OPENCODE" = false ]    && SKILL_ARGS+=("--skip-opencode")
+[ "$INSTALL_CODEX" = false ]       && SKILL_ARGS+=("--skip-codex")
+[ "$INSTALL_CLAUDE_CODE" = false ] && SKILL_ARGS+=("--skip-claude-code")
+[ "$INSTALL_PI" = false ]          && SKILL_ARGS+=("--skip-pi")
+[ "$NO_SKILL" = true ]             && SKILL_ARGS+=("--no-skill")
+[ "$NO_BUNDLES" = true ]           && SKILL_ARGS+=("--no-rea" "--no-drawio")
 if [ "$DRY_RUN" = true ]; then
-  log_step "Step 04: Validate"
-  if [ ${#VALIDATE_ARGS[@]} -gt 0 ]; then
-    log_dim "Would run: scripts/04_validate.sh ${VALIDATE_ARGS[*]}"
+  log_step "Step 04: Agent skills & MCP bundles"
+  if [ ${#SKILL_ARGS[@]} -gt 0 ]; then
+    log_dim "Would run: scripts/04_skills_mcps.sh ${SKILL_ARGS[*]}"
   else
-    log_dim "Would run: scripts/04_validate.sh"
+    log_dim "Would run: scripts/04_skills_mcps.sh"
+  fi
+  SKILL_RC=0
+else
+  log_desc "Installing agent skills and tool bundles (companion skill + REA + drawio)"
+  set +e
+  "$SCRIPT_DIR/04_skills_mcps.sh" "${SKILL_ARGS[@]}"
+  SKILL_RC=$?
+  set -e
+  if [ "$SKILL_RC" -eq 0 ]; then
+    log_done "Agent skills & bundles installed"
+  else
+    log_warn "Agent skills & bundles completed with issues (see above)"
+  fi
+fi
+
+# ── Step 05: Validate ──
+VALIDATE_ARGS=()
+[ "$INSTALL_OPENCODE" = false ]    && VALIDATE_ARGS+=("--skip-opencode")
+[ "$INSTALL_CODEX" = false ]       && VALIDATE_ARGS+=("--skip-codex")
+[ "$INSTALL_CLAUDE_CODE" = false ] && VALIDATE_ARGS+=("--skip-claude-code")
+[ "$INSTALL_PI" = false ]          && VALIDATE_ARGS+=("--skip-pi")
+[ "$NO_BUNDLES" = true ]           && VALIDATE_ARGS+=("--skip-bundles")
+if [ "$DRY_RUN" = true ]; then
+  log_step "Step 05: Validate"
+  if [ ${#VALIDATE_ARGS[@]} -gt 0 ]; then
+    log_dim "Would run: scripts/05_validate.sh ${VALIDATE_ARGS[*]}"
+  else
+    log_dim "Would run: scripts/05_validate.sh"
   fi
   VALIDATE_RC=0
 else
   log_desc "Running end-to-end validation of all components"
   set +e
-  "$SCRIPT_DIR/04_validate.sh" "${VALIDATE_ARGS[@]}"
+  "$SCRIPT_DIR/05_validate.sh" "${VALIDATE_ARGS[@]}"
   VALIDATE_RC=$?
   set -e
   if [ "$VALIDATE_RC" -eq 0 ]; then
@@ -646,19 +685,6 @@ else
   fi
 fi
 
-# ── Step 05: Companion skill ──
-if [ "$NO_SKILL" = true ]; then
-  log_dim "(skipping companion skill)"
-  SKILL_RC=0
-elif [ "$DRY_RUN" = true ]; then
-  log_step "Step 05: Companion skill"
-  log_dim "Would run: scripts/05_skill.sh"
-  SKILL_RC=0
-else
-  log_desc "Installing companion skill into coding agents"
-  "$SCRIPT_DIR/05_skill.sh" && SKILL_RC=0 || SKILL_RC=$?
-fi
-
 # ── Summary ──
 echo ""
 if [ "$VALIDATE_RC" -eq 0 ] && [ "$SKILL_RC" -eq 0 ]; then
@@ -666,7 +692,7 @@ if [ "$VALIDATE_RC" -eq 0 ] && [ "$SKILL_RC" -eq 0 ]; then
 elif [ "$VALIDATE_RC" -ne 0 ]; then
   echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with validation failures${C_RESET}"
 else
-  echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with skill-install failures${C_RESET}"
+  echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with skill/bundle-install failures${C_RESET}"
 fi
 show_installed_versions "$PROJECT_DIR"
 printf "  ${C_DIM}%-20s${C_RESET} %s\n" "Project dir:"       "$PROJECT_DIR"

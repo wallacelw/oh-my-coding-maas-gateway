@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.0] - 2026-11-04
+
+### Changed — pipeline renumbered
+
+- **`04_validate.sh` is now `05_validate.sh`; `05_skill.sh` became
+  `04_skills_mcps.sh`** and now runs **before** validation, so skills and
+  MCP registrations are validated too (new section H). Update any
+  muscle-memory commands.
+
+### Added — agent tool bundles (default-on, optional)
+
+- **`04_skills_mcps.sh`** installs the companion skill plus two bundles
+  into every detected coding agent (opencode, codex, claude-code, pi),
+  with an interactive menu (all default-on) and soft-fail semantics:
+  - **REA** (`rea-agents` 6.8.0) — reverse-engineering MCP + skill,
+    registered per tool via `rea setup`; analysis runs locally; optional
+    engines (Ghidra/IDA/JADX/Kuna) are never installed and only warn.
+  - **drawio** (`@drawio/mcp` 1.10.1) — diagramming MCP registered with
+    absolute Node + entry-script paths (immune to PATH shadowing) plus a
+    vendored skill (`skills/drawio/`, byte-identical upstream copy with
+    provenance + egress audit in UPSTREAM.md).
+  - Node ≥22.23.4 is ensured via NodeSource when either bundle runs;
+    pi's bundled Node is never touched. Bundle failures warn and exit 0
+    (`--strict` makes them non-zero); the companion skill keeps its
+    hard-fail behavior.
+  - Flags: `--yes`, `--dry-run`, `--no-skill`, `--no-rea`, `--no-drawio`,
+    `--refresh-only` (refresh only already-registered bundles — used by
+    update.sh), `--strict`, `--skip-<tool>`. Bootstrap gains
+    `--no-bundles`; `--no-skill` now means "skip companion skill only".
+- **`05_validate.sh` section H** — Node version used by MCP registrations
+  (read from the registration itself, not PATH), REA + drawio
+  registrations and skills per tool, companion skill presence, config
+  permissions, TOML parse, and `rea doctor` (our clients' registrations;
+  engines warn-only). Absent bundles warn; installed-but-broken fail.
+  New `--skip-bundles` flag.
+- **MCP config preservation** — `03a_opencode.sh` and `03b_codex.sh` now
+  merge-preserve existing MCP entries (`.mcp` / `[mcp_servers.*]`) when
+  regenerating configs, so re-runs no longer wipe registrations.
+- **Local-only contract** — the only data destination is the model via
+  the LiteLLM proxy; the hosted `mcp.draw.io` App Server is excluded.
+  Verified egress paths (drawio URL-fragment viewer, shape-search query
+  terms, npm/NodeSource package downloads) are documented in
+  REFERENCE.md's data-flow audit table.
+- **Hardened `is_interactive`** — verifies `/dev/tty` can be opened, not
+  just that the device node exists, so headless hosts (cron, CI) no
+  longer leak prompt errors before falling back to defaults.
+- Uninstall removes bundle artifacts per tool (`uninstall.sh --bundles`),
+  runs `rea uninstall` only for full removals, and update.sh refreshes
+  bundles via `--refresh-only`.
+
 ## [1.34.0] - 2026-10-31
 
 ### Changed
