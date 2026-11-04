@@ -873,12 +873,24 @@ re-configuration after rotation.
 | claude settings | `~/.claude/settings.json` | `--tool=claude` |
 | claude global config | `~/.claude.json` | `--tool=claude` |
 | pi config | `~/.pi/agent/models.json` | `--tool=pi` |
+| agent skill dirs | `~/.config/opencode/skills/`, `~/.codex/skills/`, `~/.pi/agent/skills/`, `~/.claude/skills/` | `--tool=<t>` (companion + drawio; REA skill via global cleanup) |
+| REA/drawio MCP registrations | per-tool configs | `--tool=<t>` |
+| pi MCP config | `~/.pi/agent/mcp.json` | `--tool=pi` (deleted when empty after unregistration) |
 | Docker containers + volumes + images | — | `--docker` |
 | Repository (`.env`, configs, scripts) | `$PROJECT_DIR` | `--repo` |
 
 Binaries (opencode, codex, claude, pi), runtimes (bun, pi-node), configs,
 and `.bashrc` entries are all removed. Backup files (`*.bak.*`) are also
 removed. Use `--dry-run` to preview before running.
+
+To remove only the REA/drawio bundle artifacts (MCP registrations + skills)
+while leaving binaries and configs intact, use `--bundles --tool=<t|all>` —
+see the [Agent Tool Bundles](#agent-tool-bundles) lifecycle section.
+
+Global `rea`/npm packages and the shared
+`~/.agents/skills/reverse-engineer-anything` are removed only when ALL agents
+are removed (`--tool=all` / `--all`); NodeSource Node is intentionally left
+(shared with tools).
 
 ```bash
 ./scripts/uninstall.sh --all --dry-run        # preview

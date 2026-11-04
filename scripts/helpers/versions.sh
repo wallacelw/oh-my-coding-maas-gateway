@@ -9,7 +9,7 @@
 #       project, opencode, oh-my-opencode-slim, codex, claude-code, pi,
 #       litellm, postgresql, prometheus, grafana
 #
-# Sourced by: bootstrap.sh (helpers/common.sh must be sourced first —
+# Sourced by: bootstrap.sh, 04_skills_mcps.sh, 05_validate.sh (helpers/common.sh must be sourced first —
 # C_BOLD/C_DIM/C_RESET colors come from there).
 #
 # Every version fetch is failure-safe (2>/dev/null + || fallbacks):

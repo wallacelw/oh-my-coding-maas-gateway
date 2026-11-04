@@ -24,6 +24,37 @@ source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/skills.sh"
 source "$SCRIPT_DIR/helpers/mcp.sh"
 
+# ── Removal helpers (defined early so --bundles can use them) ──
+remove_path() {
+  local path="$1" label="$2"
+  if [ -e "$path" ]; then
+    if [ "$DRY_RUN" = true ]; then
+      log_dim "  Would remove: $path"
+    else
+      rm -rf "$path"
+      log_ok "Removed $label: $path"
+    fi
+  fi
+}
+
+remove_glob() {
+  local pattern="$1" label="$2"
+  local dir base count
+  dir=$(dirname "$pattern")
+  base=$(basename "$pattern")
+  count=$(find "$dir" -maxdepth 1 -name "$base" 2>/dev/null | wc -l || true)
+  if [ "$count" -gt 0 ]; then
+    if [ "$DRY_RUN" = true ]; then
+      find "$dir" -maxdepth 1 -name "$base" 2>/dev/null | while IFS= read -r f; do
+        log_dim "  Would remove: $f"
+      done
+    else
+      find "$dir" -maxdepth 1 -name "$base" -exec rm -rf {} + 2>/dev/null || true
+      log_ok "Removed $count $label backup(s)"
+    fi
+  fi
+}
+
 # ── Defaults ──
 REMOVE_OPENCODE=false
 REMOVE_CODEX=false
@@ -69,13 +100,20 @@ while [ $# -gt 0 ]; do
     --dry-run)   DRY_RUN=true ;;
     --yes|-y)    SKIP_CONFIRM=true ;;
     --help|-h)
-      sed -n '2,18p' "$0"
+      sed -n '2,16p' "$0"
       exit 0
       ;;
     *) log_error "Unknown option: $1"; exit 1 ;;
   esac
   shift
 done
+
+# --bundles is bundles-only mode; combining it with --docker/--repo/--all is
+# ambiguous (bundles touch neither the Docker stack nor the repo) — reject early.
+if [ "$BUNDLES_ONLY" = true ] && { [ "$REMOVE_DOCKER" = true ] || [ "$REMOVE_REPO" = true ]; }; then
+  log_error "--bundles cannot be combined with --docker/--repo/--all (bundles-only mode — use --tool=all for every agent's bundles)"
+  exit 1
+fi
 
 # ── Bundle-only removal path (--bundles --tool=...) ──
 # Removes just the agent tool bundles (REA + drawio MCP registrations and skill
@@ -103,6 +141,12 @@ if [ "$BUNDLES_ONLY" = true ]; then
       log_ok "Removed agent bundles from $_bt"
     fi
   done
+  # The bundle pass rewrites configs (unregister → backup-then-write), leaving
+  # fresh credential-bearing .bak.* files behind — clean them for processed tools.
+  [ "$REMOVE_OPENCODE" = true ] && remove_glob "$HOME/.config/opencode/opencode.json.bak.*" "opencode config backups"
+  [ "$REMOVE_CODEX" = true ]    && remove_glob "$HOME/.codex/config.toml.bak.*" "codex config backups"
+  [ "$REMOVE_CLAUDE" = true ]   && remove_glob "$HOME/.claude.json.bak.*" "claude global config backups"
+  [ "$REMOVE_PI" = true ]       && remove_glob "$HOME/.pi/agent/mcp.json.bak.*" "pi MCP config backups"
   # Global bundle cleanup only when every agent is selected.
   if [ "$REMOVE_OPENCODE" = true ] && [ "$REMOVE_CODEX" = true ] && [ "$REMOVE_CLAUDE" = true ] && [ "$REMOVE_PI" = true ]; then
     if [ "$DRY_RUN" = true ]; then
@@ -184,36 +228,6 @@ fi
 echo ""
 log_step "Uninstall summary"
 [ "$DRY_RUN" = true ] && log_dim "(dry-run — nothing will be deleted)"
-
-remove_path() {
-  local path="$1" label="$2"
-  if [ -e "$path" ]; then
-    if [ "$DRY_RUN" = true ]; then
-      log_dim "  Would remove: $path"
-    else
-      rm -rf "$path"
-      log_ok "Removed $label: $path"
-    fi
-  fi
-}
-
-remove_glob() {
-  local pattern="$1" label="$2"
-  local dir base count
-  dir=$(dirname "$pattern")
-  base=$(basename "$pattern")
-  count=$(find "$dir" -maxdepth 1 -name "$base" 2>/dev/null | wc -l || true)
-  if [ "$count" -gt 0 ]; then
-    if [ "$DRY_RUN" = true ]; then
-      find "$dir" -maxdepth 1 -name "$base" 2>/dev/null | while IFS= read -r f; do
-        log_dim "  Would remove: $f"
-      done
-    else
-      find "$dir" -maxdepth 1 -name "$base" -exec rm -rf {} + 2>/dev/null || true
-      log_ok "Removed $count $label backup(s)"
-    fi
-  fi
-}
 
 # Remove lines from ~/.bashrc matching a pattern (or between marker pairs)
 remove_bashrc_block() {
@@ -377,6 +391,7 @@ if [ "$REMOVE_CLAUDE" = true ]; then
   log_step "Removing Claude Code CLI"
   remove_path "$HOME/.claude/settings.json" "settings"
   remove_path "$HOME/.claude.json" "global config"
+  remove_glob "$HOME/.claude.json.bak.*" "claude global config backups"
   remove_glob "$HOME/.claude/settings.json.bak.*" "settings backup"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @anthropic-ai/claude-code"
@@ -403,6 +418,7 @@ if [ "$REMOVE_PI" = true ]; then
   log_step "Removing Pi agent"
   remove_path "$HOME/.pi/agent/models.json" "config"
   remove_glob "$HOME/.pi/agent/models.json.bak.*" "config backup"
+  remove_glob "$HOME/.pi/agent/mcp.json.bak.*" "MCP config backups"
   remove_path "$HOME/.pi/agent/bin" "pi installer binaries"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @earendil-works/pi-coding-agent"

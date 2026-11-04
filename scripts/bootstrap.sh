@@ -37,6 +37,15 @@ TOOL_SELECTION=""
 NO_SKILL=false
 NO_BUNDLES=false
 AUTO_YES=false
+print_usage() {
+  echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--api-key=KEY] [-y|--yes] [--dry-run] [--no-skill] [--no-bundles]"
+  echo ""
+  echo "  -y, --yes          Auto-accept all prompts (non-interactive mode)"
+  echo "  --api-key=KEY      Huawei MaaS API key (alternative to HUAWEI_MAAS_API_KEY env var)"
+  echo "  --no-skill         Skip the companion skill (agent bundles still offered)"
+  echo "  --no-bundles       Skip the agent tool bundles (REA + drawio)"
+  echo "  -h, --help         Show this help and exit"
+}
 for arg in "$@"; do
   case "$arg" in
     --virtual-key=*)  VIRTUAL_KEY="${arg#--virtual-key=}" ;;
@@ -46,13 +55,9 @@ for arg in "$@"; do
     --no-bundles)     NO_BUNDLES=true ;;
     -y|--yes)         AUTO_YES=true ;;
     --api-key=*)      HUAWEI_MAAS_API_KEY="${arg#--api-key=}" ;;
+    --help|-h)        print_usage; exit 0 ;;
     *)
-      echo "Usage: $0 [--tool=all|litellm|opencode|codex|claude|pi|opencode,codex,...] [--virtual-key=sk-...] [--api-key=KEY] [-y|--yes] [--dry-run] [--no-skill] [--no-bundles]"
-      echo ""
-      echo "  -y, --yes          Auto-accept all prompts (non-interactive mode)"
-      echo "  --api-key=KEY      Huawei MaaS API key (alternative to HUAWEI_MAAS_API_KEY env var)"
-      echo "  --no-skill         Skip the companion skill (agent bundles still offered)"
-      echo "  --no-bundles       Skip the agent tool bundles (REA + drawio)"
+      print_usage
       exit 1
       ;;
   esac
@@ -107,7 +112,10 @@ show_version_info() {
 # If helpers/common.sh doesn't exist, we're running outside the repo
 # (e.g., curl | bash). Prompt for install dir, clone, and re-exec.
 # is_interactive checks /dev/tty (not stdin) so it works under curl|bash.
-is_interactive() { [ -c /dev/tty ] 2>/dev/null; }
+is_interactive() {
+  [ -c /dev/tty ] || return 1
+  ( exec 3</dev/tty ) 2>/dev/null
+}
 # Minimal color setup (common.sh not sourced yet in standalone mode)
 if [ -t 1 ]; then
   C_RESET="\033[0m"  C_BOLD="\033[1m"  C_DIM="\033[2m"

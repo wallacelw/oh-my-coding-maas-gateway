@@ -70,27 +70,6 @@ skill_install_claude()   { _skill_install_one claude; }
 skill_exists_claude()    { _skill_exists_one claude; }
 skill_uninstall_claude() { _skill_uninstall_one claude; }
 
-# ── Unified install/uninstall ──
-# Usage: skill_install_all "opencode codex pi" → installs into each
-#        Returns count of successfully installed skills
-skill_install_all() {
-  local tools="$1"
-  local count=0
-  for tool in $tools; do
-    if "skill_install_$tool" 2>/dev/null; then
-      count=$((count + 1))
-    fi
-  done
-  echo "$count"
-}
-
-skill_uninstall_all() {
-  local tools="$1"
-  for tool in $tools; do
-    "skill_uninstall_$tool" 2>/dev/null || true
-  done
-}
-
 # ── Directory-based bundles (REA + drawio skills) ─────────────
 # Unlike the single-file companion functions above, a bundle is a whole skill
 # directory (e.g. skills/drawio/ with SKILL.md + scripts/find-shapes.js).

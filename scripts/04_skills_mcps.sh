@@ -187,12 +187,12 @@ companion_skill_run() {
     log_info "Skipping companion skill (--no-skill)"
     return 0
   fi
-  local NEW="" STALE="" CURRENT="" REFRESH_FAILED=0 tool dest
+  local NEW="" STALE="" CURRENT="" SKIPPED="" REFRESH_FAILED=0 tool dest
   for tool in $TOOLS; do
     if ! "skill_exists_$tool" 2>/dev/null; then
       # Refresh-only never adds the companion skill to a new agent.
       if [ "$REFRESH_ONLY" = true ]; then
-        CURRENT+="$tool "   # not installed by choice — treat as current-for-refresh purposes
+        SKIPPED+="$tool "   # not installed, and refresh-only won't add it
       else
         NEW+="$tool "
       fi
@@ -202,6 +202,7 @@ companion_skill_run() {
       CURRENT+="$tool "
     fi
   done
+  [ -n "$SKIPPED" ] && log_dim "Companion skill not installed (refresh-only never adds): $(echo "$SKIPPED" | tr ' ' ',' | sed 's/,$//')"
   [ -n "$CURRENT" ] && log_dim "Companion skill up to date: $(echo "$CURRENT" | tr ' ' ',' | sed 's/,$//')"
 
   if [ -n "$STALE" ]; then
@@ -228,7 +229,7 @@ companion_skill_run() {
     if [ "$DRY_RUN" = false ] && [ -n "$STALE" ]; then
       log_done "Companion skill refreshed"
     fi
-    if [ -z "$STALE" ]; then
+    if [ -z "$STALE" ] && [ -z "$SKIPPED" ]; then
       log_ok "Companion skill already installed and up to date in all detected agents"
     fi
     return 0
@@ -510,6 +511,7 @@ interactive_bundle_menu() {
   read -r choice < /dev/tty || choice=""
   choice="${choice//[[:space:]]/}"
   [ -z "$choice" ] && choice="$defs"
+  [ -z "$choice" ] && return 0   # Enter at [none] = install nothing, silently
   DO_SKILL=false; DO_REA=false; DO_DRAWIO=false
   local opt
   IFS=',' read -ra _opts <<< "$choice"
@@ -535,14 +537,14 @@ if [ "$REFRESH_ONLY" = true ]; then
   DRAW_TOOLS=$(bundle_present_tools drawio)
   if [ -n "$REA_TOOLS" ] || [ -n "$DRAW_TOOLS" ]; then
     if [ "$DRY_RUN" = true ] || setup_node_for_bundles; then
-      local_save_tools="$TOOLS"
+      _saved_tools="$TOOLS"
       if [ -n "$REA_TOOLS" ]; then
         TOOLS="$REA_TOOLS"; bundle_rea_run || true
       fi
       if [ -n "$DRAW_TOOLS" ]; then
         TOOLS="$DRAW_TOOLS"; bundle_drawio_run || true
       fi
-      TOOLS="$local_save_tools"
+      TOOLS="$_saved_tools"
     else
       log_warn "Node >= $NODE_MCP_MIN_VERSION unavailable — skipping bundle refresh"
     fi
@@ -575,11 +577,16 @@ else
   # Node handling: only when a bundle will run. Soft-fail skips both bundles.
   if [ "$DO_REA" = true ] || [ "$DO_DRAWIO" = true ]; then
     if [ "$DRY_RUN" = true ]; then
-      log_dim "Dry-run: would ensure Node >= $NODE_MCP_MIN_VERSION (no install)"
-    elif ! setup_node_for_bundles; then
-      log_warn "Node >= $NODE_MCP_MIN_VERSION unavailable — skipping REA + drawio bundles"
-      DO_REA=false
-      DO_DRAWIO=false
+      log_dim "Dry-run: would ensure curl/jq + Node >= $NODE_MCP_MIN_VERSION (no install)"
+    else
+      # Standalone contract: jq registers every MCP server, curl fetches NodeSource.
+      prereq_ensure_apt "curl" curl curl "curl is needed for agent tool bundle setup"
+      prereq_ensure_apt "jq"   jq   jq   "jq is needed to register MCP servers"
+      if ! setup_node_for_bundles; then
+        log_warn "Node >= $NODE_MCP_MIN_VERSION unavailable — skipping REA + drawio bundles"
+        DO_REA=false
+        DO_DRAWIO=false
+      fi
     fi
   fi
 

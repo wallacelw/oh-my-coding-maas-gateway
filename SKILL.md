@@ -48,12 +48,12 @@ contains `scripts/05_validate.sh`.
 |--------|---------|-----------|
 | `scripts/bootstrap.sh` | Install or upgrade the entire stack | `--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--dry-run`, `--no-skill`, `--no-bundles` |
 | `scripts/update.sh` | Check and update individual components (tools + infrastructure); shows project + component versions | `--check`, `--all`, `--dry-run` |
-| `scripts/04_skills_mcps.sh` | Install THIS companion skill + agent tool bundles (REA, drawio) into agents | `--yes`, `--dry-run`, `--no-skill`, `--no-rea`, `--no-drawio`, `--refresh-only`, `--strict` |
+| `scripts/04_skills_mcps.sh` | Install THIS companion skill + agent tool bundles (REA, drawio) into agents | `--yes`, `--dry-run`, `--no-skill`, `--no-rea`, `--no-drawio`, `--refresh-only`, `--strict`, `--skip-<tool>` |
 | `scripts/05_validate.sh` | End-to-end validation (run anytime) | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--skip-bundles`, `--dry-run` |
 | `scripts/06_backup.sh` | Dump/restore the LiteLLM PostgreSQL DB (spend history, virtual keys, budgets) | `--restore FILE`, `--keep N`, `--dry-run`, `--yes` |
 | `scripts/07_dashboard_shots.sh` | Capture dashboard screenshots for visual verification | `--out=`, `--dry-run` |
 | `scripts/install-skill.sh` | Install ANY skill into all detected agents | `--name=`, `--source=`, `--dry-run` |
-| `scripts/uninstall.sh` | Remove all or part of the gateway | `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes` |
+| `scripts/uninstall.sh` | Remove all or part of the gateway | `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes`, `--bundles` |
 | `scripts/02_litellm.sh` | Regenerate LiteLLM config + restart (after editing `.env` or `models.sh`) | `--routing-strategy=`, `--dry-run` |
 | `scripts/01_env.sh` | Regenerate `.env` (after key changes) | `--force` |
 

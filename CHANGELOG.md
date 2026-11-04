@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.2] - 2026-11-05
+
+### Fixed — post-release council audit
+
+- **Security:** `uninstall.sh` now removes the credential-bearing config
+  backups created by MCP writes (`opencode.json.bak.*`,
+  `config.toml.bak.*`, `~/.claude.json.bak.*`, `~/.pi/agent/mcp.json.bak.*`)
+  — in the per-tool removal sections and after the `--bundles` pass.
+  REFERENCE's "all `*.bak.*` are removed" claim is now true.
+- `uninstall.sh --bundles` combined with `--docker`/`--repo`/`--all` is
+  rejected with an explicit error instead of silently ignoring those
+  flags.
+- `bootstrap.sh`: standalone (pre-clone) `is_interactive` now uses the
+  hardened `/dev/tty` openability probe — headless `curl | bash` no
+  longer takes interactive branches; added `--help`/`-h` (exit 0).
+- `04_skills_mcps.sh`: ensures curl + jq when bundles run (standalone
+  runs now work on bare hosts); pressing Enter at the all-disabled
+  `[none]` menu prompt no longer logs a spurious warning;
+  `--refresh-only` no longer reports "up to date" for agents that never
+  had the companion skill.
+- `05_validate.sh` H1: the PATH-node fallback warns instead of failing
+  when no MCP registration exists (registration-derived node paths keep
+  the hard version gate).
+- Removed dead `skill_install_all`/`skill_uninstall_all` helpers;
+  `uninstall.sh --help` no longer leaks a `set -euo pipefail` line.
+- **Docs:** INSTALLATION flag tables gained `--no-bundles`,
+  `--skip-bundles`, and `--bundles` rows; the `--no-skill` row corrected
+  (step 04, bundles still offered); helpers "Used by" columns corrected
+  (prereqs 01–05; models 04→05; skills/mcp +05; grafana_shots.py row
+  added); README pipeline order updated (skill + bundles before
+  validation); REFERENCE uninstall artifact table now covers bundle
+  artifacts and documents the global-cleanup gating (global `rea`/npm
+  packages removed only when all agents are removed); AGENTS.md's
+  lingering `04_validate.sh` mentions updated; SKILL.md flag lists
+  completed; step 04 marked `partial` in the pipeline table (always
+  dispatched, bundles declinable).
+
 ## [1.35.0] - 2026-11-04
 
 ### Changed — pipeline renumbered

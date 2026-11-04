@@ -1263,6 +1263,7 @@ if [ "$RUN_BUNDLES" = true ]; then
     echo ""
     log_info "H1. Node runtime for MCP registrations"
     H_NODE=""
+    H_NODE_FROM_REG=false
     if [ -f "$HOME/.config/opencode/opencode.json" ]; then
       H_NODE=$(strip_jsonc "$HOME/.config/opencode/opencode.json" 2>/dev/null | jq -r '(.mcp.drawio.command[0] // .mcp.rea.command[0] // empty) | select(endswith("/node"))' 2>/dev/null || true)
     fi
@@ -1275,7 +1276,9 @@ if [ "$RUN_BUNDLES" = true ]; then
     if [ -z "$H_NODE" ] && [ -f "$HOME/.pi/agent/mcp.json" ]; then
       H_NODE=$(jq -r '(.mcpServers.drawio.command // .mcpServers.rea.command // empty) | select(endswith("/node"))' "$HOME/.pi/agent/mcp.json" 2>/dev/null || true)
     fi
-    if [ -z "$H_NODE" ]; then
+    if [ -n "$H_NODE" ]; then
+      H_NODE_FROM_REG=true
+    else
       H_NODE=$(command -v node 2>/dev/null || true)
       [ -n "$H_NODE" ] && log_dim "No MCP registration found — falling back to PATH node"
     fi
@@ -1283,11 +1286,17 @@ if [ "$RUN_BUNDLES" = true ]; then
       H_NODE_VER=$("$H_NODE" --version 2>/dev/null | sed 's/^v//' | tr -d '[:space:]' || true)
       if version_ge "$H_NODE_VER" "$NODE_MCP_MIN_VERSION"; then
         pass "MCP runtime node $H_NODE_VER >= $NODE_MCP_MIN_VERSION ($H_NODE)"
-      else
+      elif [ "$H_NODE_FROM_REG" = true ]; then
         fail "MCP runtime node $H_NODE_VER < $NODE_MCP_MIN_VERSION ($H_NODE)"
+      else
+        warn "No node-based MCP registration found — PATH node $H_NODE_VER not gated"
       fi
     elif [ -n "$H_NODE" ]; then
-      fail "MCP runtime node path not executable: $H_NODE"
+      if [ "$H_NODE_FROM_REG" = true ]; then
+        fail "MCP runtime node path not executable: $H_NODE"
+      else
+        warn "No MCP registration found — PATH node not executable: $H_NODE"
+      fi
     else
       warn "No Node runtime found for MCP registrations"
     fi

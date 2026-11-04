@@ -173,11 +173,11 @@ then body with `-` bullets for details:
 Fix bugs found in end-to-end review
 
 - bootstrap.sh: duplicate key count message in agent mode
-- 04_validate.sh: --litellm-only --opencode-only silent no-op
+- 05_validate.sh: --litellm-only --opencode-only silent no-op
 - helpers/keys.sh: empty duration display
 ```
 
-Note: `04_validate.sh` uses `--xxx-only` flags (still valid). `bootstrap.sh`
+Note: `05_validate.sh` uses `--xxx-only` flags (still valid). `bootstrap.sh`
 uses `--tool=` flags.
 
 ## Git Author

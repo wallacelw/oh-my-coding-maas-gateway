@@ -47,7 +47,7 @@ domain and is independently runnable.
 | 03b | `03b_codex.sh` | Codex CLI | yes | Install Codex CLI; mint virtual key; write config + model catalog. |
 | 03c | `03c_claude_code.sh` | Claude Code CLI | yes | Install Claude Code CLI; mint virtual key; write settings; disable VSCode extension. |
 | 03d | `03d_pi.sh` | Pi agent | yes | Install Pi agent; mint virtual key; write `~/.pi/agent/models.json`. |
-| 04 | `04_skills_mcps.sh` | Skills & MCP bundles | yes | Install the companion skill plus optional agent tool bundles (REA, drawio — MCP servers + skills) into detected coding agents; refreshes stale copies on re-run. |
+| 04 | `04_skills_mcps.sh` | Skills & MCP bundles | partial | Install the companion skill plus optional agent tool bundles (REA, drawio — MCP servers + skills) into detected coding agents; refreshes stale copies on re-run. Step always runs; bundles declinable via `--no-*`. |
 | 05 | `05_validate.sh` | Validation | no | End-to-end validation of all installed components, including bundle registrations (section H). |
 | 06 | `06_backup.sh` | PostgreSQL backup & restore | — | Dump the LiteLLM DB (spend history, virtual keys, budgets) to `backups/`; `--restore FILE` rebuilds it. Maintenance — not run by bootstrap. |
 | 07 | `07_dashboard_shots.sh` | Grafana visual verification | — | Capture the rendered dashboard as PNG screenshots for vision-model review. Maintenance — not run by bootstrap. |
@@ -75,13 +75,14 @@ Shared libraries sourced by the pipeline steps. Not run directly.
 
 | File | Used by | Provides |
 |------|---------|----------|
-| `prereqs.sh` | bootstrap, 01–04 | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`, `prereq_ensure_node_mcp` (soft-fail Node ≥22.23.4 via NodeSource for MCP bundles). Each install runs under a spinner (`  Installing curl... done`). |
+| `prereqs.sh` | bootstrap, 01–05 | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`, `prereq_ensure_node_mcp` (soft-fail Node ≥22.23.4 via NodeSource for MCP bundles). Each install runs under a spinner (`  Installing curl... done`). |
 | `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
 | `common.sh` | all scripts | `is_interactive`, `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, `backup_with_prune`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
-| `models.sh` | 02, 03d, 04, bootstrap | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, and 05_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
-| `skills.sh` | 04, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude) + directory-based bundle install with per-file drift detection. |
-| `mcp.sh` | 04, uninstall | Merge-safe MCP server registration per tool (opencode `.mcp`, codex `[mcp_servers.*]` sentinel blocks, claude/pi `.mcpServers`); register/unregister/verify; backup-before-write, compare-before-write. |
+| `models.sh` | 02, 03d, 05, bootstrap | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, and 05_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
+| `skills.sh` | 04, 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude) + directory-based bundle install with per-file drift detection. |
+| `mcp.sh` | 04, 05, uninstall | Merge-safe MCP server registration per tool (opencode `.mcp`, codex `[mcp_servers.*]` sentinel blocks, claude/pi `.mcpServers`); register/unregister/verify; backup-before-write, compare-before-write. |
 | `versions.sh` | bootstrap, 04, 05 | `show_installed_versions` — component version table for the install summary; bundle pins (`REA_AGENTS_VERSION`, `DRAWIO_MCP_VERSION`, `NODE_MCP_MIN_VERSION`). |
+| `grafana_shots.py` | 07 | Headless Playwright dashboard screenshot capture. |
 
 ---
 
@@ -93,7 +94,7 @@ The only script a human runs. Prompts for an install directory (default:
 current parent, or `/home` if standalone). If running standalone (no repo
 detected), clones the repo to the target location and re-execs. Parses
 `--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--no-skill`,
-and `--dry-run`. Ensures core prerequisites (git,
+`--no-bundles`, and `--dry-run`. Ensures core prerequisites (git,
 python3, curl, jq). Shows a colored tool-selection menu if `--tool=` is not
 given. Prints a prerequisite→tools mapping for customer validation. Dispatches
 steps 01–05. Prints a colored summary with service URLs, config file paths,
@@ -248,7 +249,9 @@ Requires python3 + playwright + chromium (one-time setup:
 | `--api-key=KEY` | Huawei MaaS API key (alternative to `HUAWEI_MAAS_API_KEY` env var). |
 | `-y`, `--yes` | Auto-accept all prompts, install all tools (non-interactive mode). |
 | `--dry-run` | Preview without side effects — no installs, no file writes, no key validation, no proxy required. Bootstrap prints each step header with the command it would run (e.g. `Would run: scripts/02_litellm.sh`); the steps themselves are not executed. |
-| `--no-skill` | Skip companion skill installation (step 05). |
+| `--no-skill` | Skip the companion skill only (step 04); agent bundles still offered. |
+| `--no-bundles` | Skip the agent tool bundles (REA + drawio); companion skill still offered. |
+| `-h`, `--help` | Print usage and exit 0. |
 
 **Dry-run contract:** `--dry-run` is side-effect-free in every script —
 prerequisite installs, file writes, key validation, and the LiteLLM
@@ -291,6 +294,7 @@ section above).
 | `--skip-codex` | Skip Codex checks (additive). |
 | `--skip-claude-code` | Skip Claude Code checks (additive). |
 | `--skip-pi` | Skip Pi agent checks (additive). |
+| `--skip-bundles` | Skip the agent tool bundles section (H). |
 
 The `--xxx-only` flags are mutually exclusive. The `--skip-*` flags combine
 with anything.
@@ -508,9 +512,10 @@ the script automatically pulls and restarts the affected service.
 
 | Flags | What it removes |
 |-------|-----------------|
-| `--tool=opencode` | opencode config only |
+| `--tool=opencode` | opencode agent (binary, config, skills, bundle registrations, `.bashrc` entries) |
 | `--tool=opencode,codex` | Subset of agent configs |
 | `--tool=all` | All agent configs |
+| `--bundles` `--tool=<t\|all>` | Remove only REA/drawio bundle artifacts (MCP registrations + skills); binaries/configs intact. |
 | `--docker` | Docker containers + volumes + images |
 | `--repo` | This repo (`.env`, configs, scripts, `backups/` — copy any DB dumps you want to keep elsewhere first) |
 | `--all` | Everything above |
@@ -664,9 +669,9 @@ Interactive menu appears when you run bootstrap. Or use `--tool=` flag:
 
 ### Companion Skill
 
-After installation, bootstrap offers to install SKILL.md as a skill into
-each detected coding agent. This gives your agents operational guidance
-for the gateway.
+During installation (step 04), bootstrap installs SKILL.md (plus the
+REA/drawio bundles) into each detected coding agent. This gives your agents
+operational guidance for the gateway.
 
 | Tool | Skill location | How to invoke |
 |------|---------------|---------------|

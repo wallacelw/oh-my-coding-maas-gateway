@@ -34,7 +34,7 @@ input — first multimodal model)
 
 The bootstrap script is the only installation method. It handles
 everything — prerequisites, Docker stack, coding tools, virtual keys,
-validation, and optional companion skill.
+companion skill + agent tool bundles (default-on), then validation.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
@@ -43,7 +43,8 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 Bootstrap will prompt for your Huawei MaaS API key, show an interactive
 menu to select which coding tools to install, auto-install prerequisites,
 deploy the proxy + observability stack, configure each tool with its own
-virtual key, run validation, and offer to install the companion skill.
+virtual key, install the companion skill and agent tool bundles, then run
+validation.
 
 ### Non-interactive
 
@@ -122,10 +123,10 @@ Docker images or slim plugin modifies `docker-compose.yml` and
 
 ## Companion Skill
 
-After installation, bootstrap offers to install
-[SKILL.md](./SKILL.md) as a skill into each detected coding agent, plus two
-optional agent tool bundles: **REA** (reverse-engineering MCP + skill) and
-**drawio** (diagramming MCP + skill). The companion skill gives your agents
+During installation (step 04), bootstrap installs
+[SKILL.md](./SKILL.md) (plus the REA/drawio bundles) into each detected coding
+agent. These include two agent tool bundles: **REA** (reverse-engineering MCP +
+skill) and **drawio** (diagramming MCP + skill). The companion skill gives your agents
 operational guidance — health diagnosis, key/model management, debug
 routing, observability, and recovery. Bundles are default-on and can be
 declined with `--no-bundles`; everything runs locally (see the data-flow
