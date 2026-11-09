@@ -158,8 +158,8 @@ if [ -f "$CODEX_CONFIG" ]; then
       if (in_sentinel) { print; if ($0 ~ /^# <<< mcp:/) in_sentinel=0; next }
       if ($0 ~ /^# >>> mcp:/) { in_sentinel=1; print; next }
       if (in_header) {
-        if ($0 ~ /^\[/) { in_header=0; next }
-        print; next
+        if ($0 ~ /^\[/) { in_header=0 }
+        else { print; next }
       }
       if ($0 ~ /^\[mcp_servers\./) { in_header=1; print; next }
       next

@@ -598,3 +598,9 @@ if [ "$DRY_RUN" = false ] && [ ${#SELECTED[@]} -gt 0 ]; then
     "$SCRIPT_DIR/05_validate.sh"
   fi
 fi
+
+# Surface update failures via exit code (0 on success, 1 when any failed).
+# NOTE: `[ "$FAILED" -gt 0 ] && exit 1` cannot be used here — under
+# `set -e` a failing test as the final command sets the script status to 1,
+# so a clean run would wrongly exit non-zero.
+if [ "$FAILED" -gt 0 ]; then exit 1; fi

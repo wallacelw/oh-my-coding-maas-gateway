@@ -364,6 +364,7 @@ if [ "$REMOVE_CODEX" = true ]; then
   remove_path "$HOME/.codex/model_catalog.json" "model catalog"
   remove_path "$HOME/.codex/.env" "env file"
   remove_glob "$HOME/.codex/config.toml.bak.*" "config backup"
+  remove_glob "$HOME/.codex/model_catalog.json.bak.*" "model catalog backup"
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: npm uninstall -g @openai/codex"
   else
@@ -489,6 +490,9 @@ for _tool in $REMOVE_TOOLS; do
   fi
 done
 [ "$_skill_removed" = true ] && [ "$DRY_RUN" != true ] && log_dim "Companion skill removed from uninstalled agent(s)"
+# The unregister pass above rewrote pi's mcp.json (backup-then-write),
+# creating a fresh .bak.* — remove it again (mirrors the --bundles pass).
+[ "$REMOVE_PI" = true ] && remove_glob "$HOME/.pi/agent/mcp.json.bak.*" "pi MCP config backups"
 
 # ── Global agent-bundle cleanup (only when every agent is being removed) ──
 # REA's own uninstaller is GLOBAL (no per-client scope), so it must not run for
@@ -499,6 +503,7 @@ if [ "$REMOVE_OPENCODE" = true ] && [ "$REMOVE_CODEX" = true ] \
   if [ "$DRY_RUN" = true ]; then
     log_dim "  Would run: rea uninstall (global)"
     log_dim "  Would run: npm uninstall -g rea-agents @drawio/mcp"
+    log_dim "  Would remove: ~/.agents/skills/reverse-engineer-anything (shared REA skill)"
   else
     if command -v rea &>/dev/null; then
       timeout 120 rea uninstall 2>/dev/null || log_warn "rea uninstall reported an issue (ignored)"
@@ -506,6 +511,10 @@ if [ "$REMOVE_OPENCODE" = true ] && [ "$REMOVE_CODEX" = true ] \
     if command -v npm &>/dev/null; then
       npm uninstall -g rea-agents @drawio/mcp 2>/dev/null || true
     fi
+    # Belt-and-braces: rea uninstall normally covers this, but orphan if the
+    # rea binary is already gone. remove_path no-ops when the path is absent.
+    remove_path "$HOME/.agents/skills/reverse-engineer-anything" "shared REA skill"
+    rmdir "$HOME/.agents/skills" 2>/dev/null || true
     log_ok "Removed global REA + drawio packages"
   fi
   # NodeSource Node installed for the bundles is intentionally left in place —

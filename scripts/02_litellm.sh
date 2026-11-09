@@ -123,18 +123,22 @@ if [ "$KEY_COUNT" -lt 1 ]; then
 fi
 
 # ── Validate all keys exist ──
-for i in $(seq 0 $((KEY_COUNT - 1))); do
-  VAR="HUAWEI_MAAS_API_KEY_$i"
-  VAL="${!VAR:-}"
-  if [ -z "$VAL" ]; then
-    log_error "$VAR is not set in .env. Each key must be present."
-    exit 1
-  fi
-  if echo "$VAL" | grep -qi 'change-me\|replace\|xxx'; then
-    log_error "$VAR still has a placeholder value."
-    exit 1
-  fi
-done
+if [ "$DRY_RUN" != true ]; then
+  for i in $(seq 0 $((KEY_COUNT - 1))); do
+    VAR="HUAWEI_MAAS_API_KEY_$i"
+    VAL="${!VAR:-}"
+    if [ -z "$VAL" ]; then
+      log_error "$VAR is not set in .env. Each key must be present."
+      exit 1
+    fi
+    if echo "$VAL" | grep -qi 'change-me\|replace\|xxx'; then
+      log_error "$VAR still has a placeholder value."
+      exit 1
+    fi
+  done
+else
+  log_dim "Dry-run: skipping MaaS key presence checks"
+fi
 
 # ── Model catalog ──
 # (Sourced from helpers/models.sh)

@@ -21,7 +21,7 @@ observability — all through a single local proxy.
   Claude Code ──→ /v1/messages         ──→ anthropic/ provider ──→ MaaS Anthropic endpoint
   Pi agent    ──→ /v1/chat/completions ──→ openai/ provider    ──→ MaaS OpenAI endpoint
 
-  LiteLLM: load-balances across N MaaS keys · PostgreSQL (:5432)
+  LiteLLM: load-balances across N MaaS keys · PostgreSQL (internal :5432, not published)
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
 ```
 

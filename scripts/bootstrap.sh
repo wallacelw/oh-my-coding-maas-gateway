@@ -375,6 +375,11 @@ target_dir="$install_parent/$REPO_NAME"
 
 if [ "$target_dir" != "$PROJECT_DIR" ]; then
   if [ -d "$target_dir/.git" ]; then
+    if [ "$DRY_RUN" = true ]; then
+      log_dim "Dry-run: existing install found at $target_dir — would offer switch/fresh-install; previewing it as-is"
+      cd "$target_dir"
+      exec ./scripts/bootstrap.sh "$@"
+    fi
     log_info "Project already exists at $target_dir"
     show_version_info "$target_dir"
     echo ""

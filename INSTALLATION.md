@@ -96,7 +96,7 @@ detected), clones the repo to the target location and re-execs. Parses
 `--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--no-skill`,
 `--no-bundles`, and `--dry-run`. Ensures core prerequisites (git,
 python3, curl, jq). Shows a colored tool-selection menu if `--tool=` is not
-given. Prints a prerequisite→tools mapping for customer validation. Dispatches
+given. In interactive menu mode, prints a prerequisite→tools mapping for customer validation. Dispatches
 steps 01–05. Prints a colored summary with service URLs, config file paths,
 masked virtual keys, a dim key-rotation tip, and advice to restart the shell.
 
@@ -255,8 +255,9 @@ Requires python3 + playwright + chromium (one-time setup:
 
 **Dry-run contract:** `--dry-run` is side-effect-free in every script —
 prerequisite installs, file writes, key validation, and the LiteLLM
-proxy-reachability check are all skipped, so a fresh machine can preview a
-full install. Standalone step runs print what they would do: the 03x
+proxy-reachability check are all skipped, so an existing clone can preview a
+full install (with no clone yet, the standalone dry-run stops after the
+would-clone step). Standalone step runs print what they would do: the 03x
 scripts list the installs, config writes, and key mint they would perform;
 `02_litellm.sh` prints the would-be config with a diff summary (see its
 section above).
@@ -597,9 +598,10 @@ pi
   7 sections: At-a-glance, Errors & Health, Rate Limits & Capacity, Latency,
   Tokens, Cache, Cost & Budget. Time window selectable (default 1h).
 - **LiteLLM Admin UI:** `http://127.0.0.1:4000/ui` — view deployments, virtual
-  keys, spend, budgets. Login: `admin@localhost.dev` / `LITELLM_UI_PASSWORD`
-  from `.env` (env-credential login is disabled; the master key cannot sign
-  in to the UI).
+  keys, spend, budgets. Login: the admin account you create once via the UI's
+  `/user/update` (e.g. `admin@localhost.dev`) — optionally record its password in
+  `.env` as `LITELLM_UI_PASSWORD` (slot in `configs/.env.template`). Env-credential
+  login is disabled; the master key cannot sign in to the UI.
 - **Prometheus:** `http://127.0.0.1:9090` — raw metrics.
 
 ### Remote Access
@@ -635,7 +637,7 @@ group, `ufw allow from <your-ip> to any port 4000`).
 | Service | URL | Auth | Purpose |
 |---------|-----|------|---------|
 | LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key | API gateway |
-| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | Master key | View keys, spend, deployments |
+| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | DB-backed admin account (created via /user/update) | View keys, spend, deployments |
 | Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 44-panel observability dashboard |
 | Prometheus | `http://127.0.0.1:9090` | None | Metrics storage |
 | PostgreSQL | `db:5432` (compose network only — port not published; host access via `docker compose exec db psql`) | — | LiteLLM database |

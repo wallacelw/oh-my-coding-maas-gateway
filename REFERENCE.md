@@ -17,7 +17,7 @@ are exported in `~/.bashrc`, and
 
 | Env var | Set by | Read by | Format | Rotate risk |
 |---------|--------|---------|--------|------------|
-| `HUAWEI_MAAS_API_KEY` | User (env var or prompt) | `01_env.sh`, `03a_opencode.sh` | Non-empty, no placeholders | Low — update `.env` + restart LiteLLM |
+| `HUAWEI_MAAS_API_KEY` | User (env var or prompt) | `01_env.sh`, `03a_opencode.sh` | Non-empty, no placeholders | Low — update `.env` (main AND `_0..N`, or re-run `01_env.sh`) + restart LiteLLM |
 | `HUAWEI_MAAS_API_KEY_COUNT` | `01_env.sh` (from env vars or prompt) | `01_env.sh`, `02_litellm.sh` | Integer ≥ 1 | Low — update `.env` + regenerate config |
 | `HUAWEI_MAAS_API_KEY_0` | `01_env.sh` (auto, = main key) | `01_env.sh`, `02_litellm.sh` | Non-empty | Low — auto-set from main key |
 | `HUAWEI_MAAS_API_KEY_1..N` | User (env var or prompt) | `01_env.sh`, `02_litellm.sh` | Non-empty | Low — update `.env` + regenerate config |
@@ -68,7 +68,7 @@ are exported in `~/.bashrc`, and
   Pi agent: OpenAI Chat Completions API, all models from models.sh
 
   Each tool: separate virtual key (sk-...) · unlimited budget · all models
-  LiteLLM: load-balances across N MaaS API keys · PostgreSQL (:5432)
+  LiteLLM: load-balances across N MaaS API keys · PostgreSQL (internal :5432, not published)
   Models: glm-5.3 · deepseek-v4.1-flash-1017
 
   Observability: LiteLLM ──/metrics──→ Prometheus (:9090) ──→ Grafana (:3000)
@@ -290,6 +290,7 @@ general_settings:
   database_connection_pool_limit: 10
   database_connection_timeout: 60
   allow_client_side_credentials: true
+  disable_env_credential_login: true      # env-credential login disabled; master key cannot sign in to the Admin UI
   background_health_checks: true           # periodically health-check all deployments
   health_check_interval: 300               # seconds between background health checks
 ```
@@ -398,6 +399,7 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `general_settings.database_connection_pool_limit` | 10 | Max PostgreSQL connection pool size |
 | `general_settings.database_connection_timeout` | 60 | DB connection acquisition timeout (seconds) |
 | `general_settings.allow_client_side_credentials` | true | Allow client-side credential pass-through |
+| `general_settings.disable_env_credential_login` | true | Env-credential login disabled — the master key cannot sign in to the Admin UI; use the DB-backed admin account |
 | `general_settings.background_health_checks` | true | Periodically health-check all deployments |
 | `general_settings.health_check_interval` | 300 | Seconds between background health checks |
 
@@ -875,12 +877,15 @@ re-configuration after rotation.
 | pi config | `~/.pi/agent/models.json` | `--tool=pi` |
 | agent skill dirs | `~/.config/opencode/skills/`, `~/.codex/skills/`, `~/.pi/agent/skills/`, `~/.claude/skills/` | `--tool=<t>` (companion + drawio; REA skill via global cleanup) |
 | REA/drawio MCP registrations | per-tool configs | `--tool=<t>` |
+| shared REA skill dir | `~/.agents/skills/reverse-engineer-anything` | `--tool=all` / `--all` (with global cleanup) |
 | pi MCP config | `~/.pi/agent/mcp.json` | `--tool=pi` (deleted when empty after unregistration) |
 | Docker containers + volumes + images | — | `--docker` |
 | Repository (`.env`, configs, scripts) | `$PROJECT_DIR` | `--repo` |
 
-Binaries (opencode, codex, claude, pi), runtimes (bun, pi-node), configs,
-and `.bashrc` entries are all removed. Backup files (`*.bak.*`) are also
+Binaries (opencode, codex, claude, pi), configs, and `.bashrc` entries are
+removed; runtimes (bun, pi-node) are removed after confirmation (kept by
+default — auto-accepted only under `AUTO_YES`/bootstrap `-y`; uninstall's
+own `--yes` skips just the main confirmation). Backup files (`*.bak.*`) are also
 removed. Use `--dry-run` to preview before running.
 
 To remove only the REA/drawio bundle artifacts (MCP registrations + skills)

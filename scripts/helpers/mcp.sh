@@ -294,16 +294,28 @@ mcp_register_codex() {
 }
 
 mcp_unregister_codex() {
-  local name="$1" file new
+  local name="$1" file new hdr
   file=$(_mcp_codex_file)
   [ -f "$file" ] || return 0
-  new=$(cat "$file" | awk -v s="# >>> mcp:$name" -v e="# <<< mcp:$name" '
-    BEGIN { skip=0 }
+  # REA registers as a plain [mcp_servers.<name>] table (not a sentinel block),
+  # so strip BOTH shapes: the sentinel block and the plain table. Escape dots in
+  # the name so "rea" does not match "[mcp_servers.rea_extra]". Pass the regex
+  # through ENVIRON (not -v) so awk does not apply escape processing to it.
+  hdr="^\\[mcp_servers\\.${name//./\\.}\\]\$"
+  new=$(H="$hdr" awk -v s="# >>> mcp:$name" -v e="# <<< mcp:$name" '
+    BEGIN { skip=0; plain=0; h=ENVIRON["H"] }
     $0 == s { skip=1; next }
     $0 == e { skip=0; next }
     skip { next }
+    plain {
+      # A header or a managed sentinel marker ends the plain block — fall
+      # through (a foreign sentinel opener must not be swallowed headless).
+      if ($0 ~ /^\[/ || $0 ~ /^# (>>>|<<<) mcp:/) { plain=0 }
+      else { next }
+    }
+    $0 ~ h { plain=1; next }
     { print }
-  ')
+  ' "$file")
   [ -n "$new" ] && _mcp_write_if_changed "$file" "$new" >/dev/null 2>&1 || true
   return 0
 }

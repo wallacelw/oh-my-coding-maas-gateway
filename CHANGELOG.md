@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.3] - 2026-11-10
+
+### Fixed — end-to-end council audit (second round)
+
+- **Dry-run contract:** `bootstrap.sh --dry-run` no longer runs a real
+  uninstall + `rm -rf` + re-clone when an existing install is found at a
+  custom install directory (the fresh-install menu choice is now guarded;
+  dry-run previews the existing install as-is).
+- `uninstall.sh`: the per-tool path now re-removes pi's `mcp.json.bak.*`
+  after the bundle-unregister pass (which creates a fresh backup during
+  the uninstall); codex `model_catalog.json.bak.*` backups are now
+  removed; the shared `~/.agents/skills/reverse-engineer-anything` dir is
+  explicitly removed in the all-agents branch (previously only via
+  `rea uninstall`, which orphans if the binary is gone).
+- `mcp_unregister_codex` now also removes plain `[mcp_servers.<name>]`
+  tables (REA's registration shape), not just sentinel blocks —
+  `--bundles --tool=codex` actually removes the REA registration.
+- `03b_codex.sh` merge-preserve no longer drops a second adjacent plain
+  `[mcp_servers.*]` table on re-run.
+- `02_litellm.sh --dry-run` no longer exits 1 on placeholder MaaS keys —
+  key presence checks are dry-run-gated (the API probe already was).
+- `update.sh` now exits 1 when any component update failed (previously
+  exit 0 with only a warning).
+- **Docs (v1.34.0 debt):** INSTALLATION's Services table no longer says
+  the Admin UI takes the master key (it uses the DB-backed admin
+  account); the `LITELLM_UI_USERNAME`/`LITELLM_UI_PASSWORD` flow is now
+  documented truthfully as manual (`/user/update`, optionally recorded
+  in `.env` — no script generates them; corrects the 1.34.0 phrasing);
+  REFERENCE's config structure + settings table now include
+  `disable_env_credential_login`; runtime-removal wording aligned with
+  the prompt-gated behavior; the key-rotation note now says to update
+  `_0..N` as well; README marks PostgreSQL's port as internal/not
+  published; two INSTALLATION claims qualified (prereq mapping prints in
+  interactive mode only; a full dry-run preview needs an existing clone).
+
 ## [1.35.2] - 2026-11-05
 
 ### Fixed — post-release council audit
