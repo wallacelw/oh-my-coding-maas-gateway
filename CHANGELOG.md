@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.5] - 2026-11-10
+
+### Fixed — LiteLLM UI credential record placement + stale username
+
+- **01_env.sh:** `LITELLM_UI_USERNAME`/`LITELLM_UI_PASSWORD` are now
+  first-class `.env` vars written into the Proxy Auth section instead of
+  falling through to the "preserved custom variables" tail on every
+  re-run (they were unknown to the generator, so each re-run shuffled
+  them back to the bottom). Existing values are preserved idempotently;
+  fresh installs get the template placeholders; `--force` does not
+  regenerate them (the DB-backed account is unaffected by secret
+  rotation — a regenerated record would desync from the DB hash).
+  Hardened: the pre-write newline guard now covers the UI vars, and
+  values containing a double quote are rejected at write time (the
+  .env format cannot store them; the sed read would have silently
+  truncated them). Upgrade-safe: pre-1.35.5 template comment lines
+  left in an existing tail are excluded from the preserved-variables
+  carry-through.
+- **.env.template:** UI credential slot moved into the Proxy Auth
+  section, next to the other LiteLLM auth vars.
+- **Live .env:** corrected the stale `LITELLM_UI_USERNAME` record
+  (`admin` → `admin@localhost.dev`). LiteLLM's `/v2/login` looks users
+  up by email, so the recorded `admin` could never sign in — the
+  password itself was correct all along (verified end-to-end: login
+  → 200 before and after the stack restart).
+- **Docs:** INSTALLATION/SKILL UI-login wording updated — the
+  `LITELLM_UI_PASSWORD` record slot is now always present in `.env`
+  (Proxy Auth section, placeholder until filled), no longer "optionally
+  recorded via the template slot".
+
 ## [1.35.4] - 2026-11-10
 
 ### Fixed — deferred cosmetic + behavioral residue

@@ -72,6 +72,8 @@ EXISTING_BIND_ADDRESS=""
 EXISTING_MAAS_KEY=""
 EXISTING_KEY_COUNT=""
 EXISTING_EXTRA_KEYS=()
+EXISTING_UI_USERNAME=""
+EXISTING_UI_PASSWORD=""
 if [ -f "$ENV_FILE" ]; then
   EXISTING_MASTER_KEY="$(sed -n 's/^LITELLM_MASTER_KEY="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_SALT_KEY="$(sed -n 's/^LITELLM_SALT_KEY="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
@@ -82,6 +84,8 @@ if [ -f "$ENV_FILE" ]; then
   EXISTING_MAAS_ANTHROPIC_BASE="$(sed -n 's/^HUAWEI_MAAS_ANTHROPIC_API_BASE="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_BIND_ADDRESS="$(sed -n 's/^BIND_ADDRESS="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_MAAS_KEY="$(sed -n 's/^HUAWEI_MAAS_API_KEY="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_UI_USERNAME="$(sed -n 's/^LITELLM_UI_USERNAME="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
+  EXISTING_UI_PASSWORD="$(sed -n 's/^LITELLM_UI_PASSWORD="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
   EXISTING_KEY_COUNT="$(sed -n 's/^HUAWEI_MAAS_API_KEY_COUNT="*\([^"]*\).*/\1/p' "$ENV_FILE" 2>/dev/null || true)"
   # Read existing extra keys (R2: validate numeric before comparison)
   if [ -n "$EXISTING_KEY_COUNT" ]; then
@@ -135,6 +139,32 @@ fi
 [ -n "$EXISTING_MAAS_BASE" ] && MAAS_API_BASE="$EXISTING_MAAS_BASE"
 [ -n "$EXISTING_MAAS_ANTHROPIC_BASE" ] && MAAS_ANTHROPIC_BASE="$EXISTING_MAAS_ANTHROPIC_BASE"
 [ -n "$EXISTING_BIND_ADDRESS" ] && BIND_ADDRESS="$EXISTING_BIND_ADDRESS"
+
+# LiteLLM Admin UI credentials: optional record of the DB-backed admin
+# account (created once via /user/update; the login username is the email).
+# Preserve from existing .env when present; otherwise write the template
+# placeholders. --force does NOT regenerate these — the DB account is
+# unaffected by secret rotation, and a regenerated value would desync the
+# record from the DB hash.
+UI_USERNAME="${EXISTING_UI_USERNAME:-admin@localhost.dev}"
+UI_PASSWORD="${EXISTING_UI_PASSWORD:-change-me-strong-password}"
+if [ -f "$ENV_FILE" ] && [ -z "$EXISTING_UI_USERNAME" ] && [ -z "$EXISTING_UI_PASSWORD" ]; then
+  log_dim "LITELLM_UI_USERNAME/LITELLM_UI_PASSWORD not found in existing .env — writing template placeholders"
+fi
+# .env double-quoted values cannot embed a double quote; the sed reads above
+# would silently truncate one, desyncing the record from the DB hash. Detect
+# it on the raw .env line (the sed capture has already lost the quote).
+if [ -f "$ENV_FILE" ]; then
+  for ui_var in LITELLM_UI_USERNAME LITELLM_UI_PASSWORD; do
+    ui_raw="$(grep -E "^${ui_var}=" "$ENV_FILE" 2>/dev/null | head -1 || true)"
+    ui_quotes=$(( $(printf '%s' "$ui_raw" | tr -cd '"' | wc -c) ))
+    if [ "$ui_quotes" -ne 0 ] && [ "$ui_quotes" -ne 2 ]; then
+      log_error "${ui_var} in .env contains an embedded double quote — .env cannot store it safely."
+      log_dim "  Change the account password via /user/update (avoid double quotes), then update the record in .env."
+      exit 1
+    fi
+  done
+fi
 
 if [ "$IS_FRESH" = true ]; then
   # Fresh install or --force — prompt for each secret
@@ -323,7 +353,7 @@ fi
 
 # ── Write .env ──
 # Validate secrets don't contain newlines (would corrupt heredoc)
-for secret_var in MASTER_KEY SALT_KEY DB_PASSWORD; do
+for secret_var in MASTER_KEY SALT_KEY DB_PASSWORD UI_USERNAME UI_PASSWORD; do
   if [[ "${!secret_var}" == *$'\n'* ]]; then
     log_error "$secret_var contains a newline character — cannot write to .env safely."
     exit 1
@@ -334,6 +364,9 @@ cat > "$ENV_FILE.tmp" <<EOF
 # ── Proxy Auth ───────────────────────────────────
 LITELLM_MASTER_KEY="${MASTER_KEY}"
 LITELLM_SALT_KEY="${SALT_KEY}"
+# LiteLLM Admin UI login (DB-backed account; set once via /user/update; username is the email)
+LITELLM_UI_USERNAME="${UI_USERNAME}"
+LITELLM_UI_PASSWORD="${UI_PASSWORD}"
 
 # ── Database ─────────────────────────────────────
 DB_PASSWORD="${DB_PASSWORD}"
@@ -368,9 +401,12 @@ EOF
 # Preserve unknown vars and user comments from existing .env (avoid silent
 # data loss on re-run). Script-generated section headers ("# ──") and the
 # BIND_ADDRESS hint are excluded — they are rewritten fresh above — so
-# carrying them through would duplicate them on every re-run.
+# carrying them through would duplicate them on every re-run. The LiteLLM
+# UI comment lines are excluded for the same reason (the heredoc rewrites
+# them); their prefixes must stay identical to the heredoc text and to the
+# pre-1.35.5 template wording, or rewording resurrects the shuffle-to-tail.
 if [ -f "$ENV_FILE" ]; then
-  unknown_vars=$(grep -vE '^(# ──|# 127\.0\.0\.1 = localhost only|$|LITELLM_MASTER_KEY=|LITELLM_SALT_KEY=|DB_PASSWORD=|GRAFANA_ADMIN_PASSWORD=|PROMETHEUS_RETENTION=|HUAWEI_MAAS_API_KEY=|HUAWEI_MAAS_API_KEY_COUNT=|HUAWEI_MAAS_API_KEY_[0-9]+=|HUAWEI_MAAS_API_BASE=|HUAWEI_MAAS_ANTHROPIC_API_BASE=|BIND_ADDRESS=)' "$ENV_FILE" 2>/dev/null || true)
+  unknown_vars=$(grep -vE '^(# ──|# 127\.0\.0\.1 = localhost only|$|LITELLM_MASTER_KEY=|LITELLM_SALT_KEY=|DB_PASSWORD=|GRAFANA_ADMIN_PASSWORD=|PROMETHEUS_RETENTION=|HUAWEI_MAAS_API_KEY=|HUAWEI_MAAS_API_KEY_COUNT=|HUAWEI_MAAS_API_KEY_[0-9]+=|HUAWEI_MAAS_API_BASE=|HUAWEI_MAAS_ANTHROPIC_API_BASE=|LITELLM_UI_USERNAME=|LITELLM_UI_PASSWORD=|# LiteLLM Admin UI login|# disabled; the master key|# authoritative; this records|BIND_ADDRESS=)' "$ENV_FILE" 2>/dev/null || true)
   if [ -n "$unknown_vars" ]; then
     echo "" >> "$ENV_FILE.tmp"
     echo "# ── Custom variables & comments (preserved from previous .env) ──" >> "$ENV_FILE.tmp"
@@ -412,3 +448,7 @@ echo ""
 log_dim "PROMETHEUS_RETENTION  = ${PROM_RETENTION}"
 echo ""
 log_dim "BIND_ADDRESS          = ${BIND_ADDRESS}"
+if [ "$UI_PASSWORD" = "change-me-strong-password" ]; then
+  echo ""
+  log_dim "LITELLM_UI_PASSWORD   = placeholder — create the admin via /user/update, then record it in .env"
+fi
