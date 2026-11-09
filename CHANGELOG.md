@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.4] - 2026-11-10
+
+### Fixed — deferred cosmetic + behavioral residue
+
+- **03d_pi:** `models.json` is now merge-preserved on re-run — only the
+  generated `providers.LiteLLM` block is replaced; user-added providers
+  and fields survive (mirrors 03a/03b/03c). Non-JSON files still fall
+  back to backup + full rewrite.
+- **04_skills_mcps:** declining the curl/jq install now soft-fails the
+  bundles instead of exiting before the companion skill (which needs
+  neither); `--refresh-only` also ensures curl/jq before refreshing
+  (previously degraded to a silent no-op with jq missing); explicit
+  `--no-skill`/`--no-rea`/`--no-drawio` flags now win over the
+  interactive bundle menu; skip messages state the real reason (flag vs
+  menu deselection — REA/drawio menu-deselects are no longer silent).
+- **03b_codex:** block extraction normalized to the same canonical
+  single-blank-line form `mcp_register_codex` emits — the first re-run
+  after an append no longer rewrites the file once for blank-line churn.
+- **update.sh:** trailing validation is scoped to installed tools
+  (auto `--skip-*` for missing binaries) — partial installs no longer
+  fail checks for tools that were never installed.
+- **bootstrap:** the "Switch to existing (pull updates)" menu choice now
+  actually pulls (`git pull --ff-only`, warn + continue on failure);
+  `--help` documents `--tool=`, `--virtual-key=`, and `--dry-run`.
+- **05_validate:** the missing-opencode-config `fail_n` count is now
+  computed (10, or 12 with the direct Huawei-MaaS provider) so the FAIL
+  tally is exact; the H4 fail message carries the install hint; the
+  duplicate `H1:` comment label renamed.
+- **Docs:** AGENTS.md list alignment; INSTALLATION UI-password wording
+  ("set once via /user/update"), helpers-table grafana_shots.py
+  exception, "installs (default-on; interactive runs confirm)"
+  qualifications; REFERENCE skill-dirs row clarifies REA skill scopes
+  (claude personal dir vs shared `~/.agents`); README wording qualified.
+
 ## [1.35.3] - 2026-11-10
 
 ### Fixed — end-to-end council audit (second round)

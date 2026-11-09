@@ -229,6 +229,16 @@ if [ -z "$NEW_CONFIG" ] || ! echo "$NEW_CONFIG" | jq -e . >/dev/null 2>&1; then
   exit 1
 fi
 
+# ── Merge-preserve: keep user-added providers/fields in an existing models.json ──
+# Only the generated LiteLLM provider block is replaced (mirrors 03a/03b/03c).
+# A non-JSON existing file falls back to the full rewrite below (backup+replace).
+if [ -f "$PI_CONFIG" ] && jq -e . "$PI_CONFIG" >/dev/null 2>&1; then
+  MERGED=$(jq --argjson new "$NEW_CONFIG" '.providers.LiteLLM = $new.providers.LiteLLM' "$PI_CONFIG" 2>/dev/null) || MERGED=""
+  if [ -n "$MERGED" ] && echo "$MERGED" | jq -e . >/dev/null 2>&1; then
+    NEW_CONFIG="$MERGED"
+  fi
+fi
+
 # ── 5. Write models.json ──
 if [ -f "$PI_CONFIG" ]; then
   if [ "$NEW_CONFIG" = "$(cat "$PI_CONFIG")" ]; then

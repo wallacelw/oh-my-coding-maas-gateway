@@ -153,6 +153,19 @@ setup_node_for_bundles() {
   return 1
 }
 
+# Ensure curl+jq for MCP bundle setup. Soft-fail: returns 1 when the user
+# declines (or the install fails) so the caller can skip the bundles while the
+# companion skill still installs. Never aborts the caller (the underlying
+# prereq_ensure_apt calls _prereq_fail → exit, so each runs in a subshell).
+ensure_bundle_prereqs() {
+  local rc=0
+  # One subshell for both ensures: it contains _prereq_fail's exit AND lets
+  # _PREREQ_APT_UPDATED propagate between them (apt-get update runs once).
+  ( prereq_ensure_apt "curl" curl curl "curl is needed for agent tool bundle setup"
+    prereq_ensure_apt "jq"   jq   jq   "jq is needed to register MCP servers" ) || rc=$?
+  [ "$rc" -eq 0 ]
+}
+
 # REA registration presence for a single tool (name "rea").
 mcp_verify_rea_present() {
   local tool="$1"
@@ -495,23 +508,27 @@ print_scope() {
 
 # ── Interactive bundle menu (no --yes) ──
 interactive_bundle_menu() {
-  local choice defs="" d1 d2 d3
+  local choice defs="" d1 d2 d3 l1="" l2="" l3=""
   d1=$([ "$NO_SKILL" = false ] && echo 1 || echo 0)
   d2=$([ "$NO_REA" = false ] && echo 1 || echo 0)
   d3=$([ "$NO_DRAWIO" = false ] && echo 1 || echo 0)
   [ "$d1" = 1 ] && defs+="1,"; [ "$d2" = 1 ] && defs+="2,"; [ "$d3" = 1 ] && defs+="3,"
   defs="${defs%,}"
+  # Flag-locked components cannot be enabled here — mark them unavailable.
+  [ "$NO_SKILL" = true ]  && l1=" ${C_DIM}(disabled by --no-skill)${C_RESET}"
+  [ "$NO_REA" = true ]    && l2=" ${C_DIM}(disabled by --no-rea)${C_RESET}"
+  [ "$NO_DRAWIO" = true ] && l3=" ${C_DIM}(disabled by --no-drawio)${C_RESET}"
   echo ""
-  echo -e "  ${C_BOLD}1)${C_RESET} Companion skill (gateway operations) ${C_DIM}[default]${C_RESET}"
-  echo -e "  ${C_BOLD}2)${C_RESET} REA bundle — reverse-engineering MCP + skill ${C_DIM}[default]${C_RESET}"
-  echo -e "  ${C_BOLD}3)${C_RESET} drawio bundle — diagramming MCP + skill ${C_DIM}[default]${C_RESET}"
+  echo -e "  ${C_BOLD}1)${C_RESET} Companion skill (gateway operations) ${C_DIM}[default]${C_RESET}${l1}"
+  echo -e "  ${C_BOLD}2)${C_RESET} REA bundle — reverse-engineering MCP + skill ${C_DIM}[default]${C_RESET}${l2}"
+  echo -e "  ${C_BOLD}3)${C_RESET} drawio bundle — diagramming MCP + skill ${C_DIM}[default]${C_RESET}${l3}"
   echo -e "  ${C_DIM}Or combine: 1,3${C_RESET}"
   echo -e "  ${C_DIM}Tools: $(echo "$TOOLS" | tr ' ' ',' | sed 's/,$//')${C_RESET}"
   echo -ne "  ${C_BOLD}Choice${C_RESET} ${C_DIM}[${defs:-none}]${C_RESET}: "
   read -r choice < /dev/tty || choice=""
   choice="${choice//[[:space:]]/}"
   [ -z "$choice" ] && choice="$defs"
-  [ -z "$choice" ] && return 0   # Enter at [none] = install nothing, silently
+  [ -z "$choice" ] && return 0   # Enter at [none] = decline all components (caller still shows scope + confirm)
   DO_SKILL=false; DO_REA=false; DO_DRAWIO=false
   local opt
   IFS=',' read -ra _opts <<< "$choice"
@@ -523,6 +540,13 @@ interactive_bundle_menu() {
       *) log_warn "Ignoring invalid bundle choice: $opt" ;;
     esac
   done
+  # CLI flags win — a flag-locked component stays off even if selected above.
+  [ "$NO_SKILL" = true ]  && DO_SKILL=false
+  [ "$NO_REA" = true ]    && DO_REA=false
+  [ "$NO_DRAWIO" = true ] && DO_DRAWIO=false
+  # Return 0 explicitly — a short-circuited trailing test would otherwise
+  # make the function return 1 and kill the script under `set -e`.
+  return 0
 }
 
 # ════════════════════════════════════════════════════════════════
@@ -531,29 +555,43 @@ interactive_bundle_menu() {
 if [ "$REFRESH_ONLY" = true ]; then
   # ── Refresh-only: touch only already-installed bundles, never add new ones ──
   log_info "Refresh-only mode: refreshing already-installed bundles (no new additions)"
+
+  # Ensure curl+jq before the refresh work, symmetric with the normal path.
+  # Soft-fail (declined/failed install) so the companion skill still runs.
+  BUNDLE_PREREQS_OK=true
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "Dry-run: would ensure curl/jq (no install)"
+  elif ! ensure_bundle_prereqs; then
+    log_warn "curl/jq unavailable — skipping bundle refresh"
+    BUNDLE_PREREQS_OK=false
+  fi
+
   companion_skill_run || COMP_FAILED=1
 
-  REA_TOOLS=$(rea_present_tools)
-  DRAW_TOOLS=$(bundle_present_tools drawio)
-  if [ -n "$REA_TOOLS" ] || [ -n "$DRAW_TOOLS" ]; then
-    if [ "$DRY_RUN" = true ] || setup_node_for_bundles; then
-      _saved_tools="$TOOLS"
-      if [ -n "$REA_TOOLS" ]; then
-        TOOLS="$REA_TOOLS"; bundle_rea_run || true
+  if [ "$BUNDLE_PREREQS_OK" = true ]; then
+    REA_TOOLS=$(rea_present_tools)
+    DRAW_TOOLS=$(bundle_present_tools drawio)
+    if [ -n "$REA_TOOLS" ] || [ -n "$DRAW_TOOLS" ]; then
+      if [ "$DRY_RUN" = true ] || setup_node_for_bundles; then
+        _saved_tools="$TOOLS"
+        if [ -n "$REA_TOOLS" ]; then
+          TOOLS="$REA_TOOLS"; bundle_rea_run || true
+        fi
+        if [ -n "$DRAW_TOOLS" ]; then
+          TOOLS="$DRAW_TOOLS"; bundle_drawio_run || true
+        fi
+        TOOLS="$_saved_tools"
+      else
+        log_warn "Node >= $NODE_MCP_MIN_VERSION unavailable — skipping bundle refresh"
       fi
-      if [ -n "$DRAW_TOOLS" ]; then
-        TOOLS="$DRAW_TOOLS"; bundle_drawio_run || true
-      fi
-      TOOLS="$_saved_tools"
     else
-      log_warn "Node >= $NODE_MCP_MIN_VERSION unavailable — skipping bundle refresh"
+      log_dim "No agent bundles installed yet — nothing to refresh"
     fi
-  else
-    log_dim "No agent bundles installed yet — nothing to refresh"
   fi
 else
   # ── Normal mode: menu (interactive) or defaults (--yes/non-interactive) ──
   DO_SKILL=true; DO_REA=true; DO_DRAWIO=true
+  BUNDLES_SOFT_FAILED=false
   [ "$NO_SKILL" = true ]  && DO_SKILL=false
   [ "$NO_REA" = true ]    && DO_REA=false
   [ "$NO_DRAWIO" = true ] && DO_DRAWIO=false
@@ -574,40 +612,53 @@ else
     print_scope
   fi
 
+  # CLI flags always win — re-apply after any interactive menu selection.
+  [ "$NO_SKILL" = true ]  && DO_SKILL=false
+  [ "$NO_REA" = true ]    && DO_REA=false
+  [ "$NO_DRAWIO" = true ] && DO_DRAWIO=false
+
   # Node handling: only when a bundle will run. Soft-fail skips both bundles.
   if [ "$DO_REA" = true ] || [ "$DO_DRAWIO" = true ]; then
     if [ "$DRY_RUN" = true ]; then
       log_dim "Dry-run: would ensure curl/jq + Node >= $NODE_MCP_MIN_VERSION (no install)"
-    else
-      # Standalone contract: jq registers every MCP server, curl fetches NodeSource.
-      prereq_ensure_apt "curl" curl curl "curl is needed for agent tool bundle setup"
-      prereq_ensure_apt "jq"   jq   jq   "jq is needed to register MCP servers"
-      if ! setup_node_for_bundles; then
-        log_warn "Node >= $NODE_MCP_MIN_VERSION unavailable — skipping REA + drawio bundles"
-        DO_REA=false
-        DO_DRAWIO=false
-      fi
+    elif ! ensure_bundle_prereqs; then
+      # Declined/failed curl+jq install — soft-fail the bundles (companion still installs).
+      log_warn "curl/jq unavailable — skipping REA + drawio bundles"
+      DO_REA=false
+      DO_DRAWIO=false
+      BUNDLES_SOFT_FAILED=true
+    elif ! setup_node_for_bundles; then
+      log_warn "Node >= $NODE_MCP_MIN_VERSION unavailable — skipping REA + drawio bundles"
+      DO_REA=false
+      DO_DRAWIO=false
+      BUNDLES_SOFT_FAILED=true
     fi
   fi
 
   # Companion skill failure = hard fail (status quo).
   if [ "$DO_SKILL" = true ]; then
     companion_skill_run || COMP_FAILED=1
-  else
+  elif [ "$NO_SKILL" = true ]; then
     log_info "Skipping companion skill (--no-skill)"
+  else
+    log_info "Skipping companion skill (deselected in menu)"
   fi
 
   # Bundle order invariant: REA first (writes shared configs like pi mcp.json),
   # then drawio (merges into the same files).
   if [ "$DO_REA" = true ]; then
     bundle_rea_run || true
-  else
-    [ "$NO_REA" = true ] && log_info "Skipping REA bundle (--no-rea)"
+  elif [ "$NO_REA" = true ]; then
+    log_info "Skipping REA bundle (--no-rea)"
+  elif [ "$BUNDLES_SOFT_FAILED" = false ]; then
+    log_info "Skipping REA bundle (deselected in menu)"
   fi
   if [ "$DO_DRAWIO" = true ]; then
     bundle_drawio_run || true
-  else
-    [ "$NO_DRAWIO" = true ] && log_info "Skipping drawio bundle (--no-drawio)"
+  elif [ "$NO_DRAWIO" = true ]; then
+    log_info "Skipping drawio bundle (--no-drawio)"
+  elif [ "$BUNDLES_SOFT_FAILED" = false ]; then
+    log_info "Skipping drawio bundle (deselected in menu)"
   fi
 fi
 

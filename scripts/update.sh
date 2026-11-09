@@ -595,7 +595,14 @@ if [ "$DRY_RUN" = false ] && [ ${#SELECTED[@]} -gt 0 ]; then
     fi
   fi
   if [ "$RUN_VALIDATION" = true ]; then
-    "$SCRIPT_DIR/05_validate.sh"
+    # Scope validation to the tools actually installed — a partial install would
+    # otherwise fail checks for tools that were never installed.
+    VALIDATE_ARGS=()
+    command -v opencode &>/dev/null || VALIDATE_ARGS+=(--skip-opencode)
+    command -v codex    &>/dev/null || VALIDATE_ARGS+=(--skip-codex)
+    command -v claude   &>/dev/null || VALIDATE_ARGS+=(--skip-claude-code)
+    command -v pi       &>/dev/null || VALIDATE_ARGS+=(--skip-pi)
+    "$SCRIPT_DIR/05_validate.sh" ${VALIDATE_ARGS[@]+"${VALIDATE_ARGS[@]}"}
   fi
 fi
 

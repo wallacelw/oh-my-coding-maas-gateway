@@ -43,8 +43,8 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 Bootstrap will prompt for your Huawei MaaS API key, show an interactive
 menu to select which coding tools to install, auto-install prerequisites,
 deploy the proxy + observability stack, configure each tool with its own
-virtual key, install the companion skill and agent tool bundles, then run
-validation.
+virtual key, install (default-on; interactive runs confirm) the companion skill
+and agent tool bundles, then run validation.
 
 ### Non-interactive
 
@@ -123,9 +123,9 @@ Docker images or slim plugin modifies `docker-compose.yml` and
 
 ## Companion Skill
 
-During installation (step 04), bootstrap installs
-[SKILL.md](./SKILL.md) (plus the REA/drawio bundles) into each detected coding
-agent. These include two agent tool bundles: **REA** (reverse-engineering MCP +
+During installation (step 04), bootstrap installs (default-on; interactive runs
+confirm) [SKILL.md](./SKILL.md) (plus the REA/drawio bundles) into each detected
+coding agent. These include two agent tool bundles: **REA** (reverse-engineering MCP +
 skill) and **drawio** (diagramming MCP + skill). The companion skill gives your agents
 operational guidance — health diagnosis, key/model management, debug
 routing, observability, and recovery. Bundles are default-on and can be

@@ -42,6 +42,9 @@ print_usage() {
   echo ""
   echo "  -y, --yes          Auto-accept all prompts (non-interactive mode)"
   echo "  --api-key=KEY      Huawei MaaS API key (alternative to HUAWEI_MAAS_API_KEY env var)"
+  echo "  --tool=VAL         Tool selection: all (default), litellm, opencode, codex, claude, pi, or comma combo"
+  echo "  --virtual-key=sk-… Reuse an existing opencode virtual key (skip minting)"
+  echo "  --dry-run          Preview without side effects (no installs, no writes, no key validation)"
   echo "  --no-skill         Skip the companion skill (agent bundles still offered)"
   echo "  --no-bundles       Skip the agent tool bundles (REA + drawio)"
   echo "  -h, --help         Show this help and exit"
@@ -408,6 +411,7 @@ if [ "$target_dir" != "$PROJECT_DIR" ]; then
         exec ./scripts/bootstrap.sh "$@"
         ;;
       *)
+        git -C "$target_dir" pull --ff-only 2>/dev/null || log_warn "git pull failed (local changes or offline) — continuing with existing code"
         cd "$target_dir"
         exec ./scripts/bootstrap.sh "$@"
         ;;

@@ -148,22 +148,38 @@ NEW_CONFIG=$(sed "s|<CODEX_HOME>|$CODEX_DIR|g" "$TEMPLATE")
 
 # Preserve any [mcp_servers.*] blocks already in the existing config (REA,
 # drawio, or user-added). 04_skills_mcps writes these; regenerating from the
-# template alone would otherwise wipe them. Blocks are captured verbatim
-# between line-anchored `[mcp_servers.` headers (consumed until the next `[`
-# table or EOF) and sentinel-wrapped `# >>> mcp:` blocks. Appending BEFORE the
+# template alone would otherwise wipe them. Blocks are captured between
+# line-anchored `[mcp_servers.` headers (consumed until the next `[` table or
+# EOF) and sentinel-wrapped `# >>> mcp:` blocks, normalized to exactly one
+# blank line between blocks (matches mcp_register_codex's append form, so
+# re-runs are byte-stable). Appending BEFORE the
 # unchanged comparison keeps a no-change re-run a true no-op.
 if [ -f "$CODEX_CONFIG" ]; then
   MCP_BLOCKS=$(awk '
-    {
-      if (in_sentinel) { print; if ($0 ~ /^# <<< mcp:/) in_sentinel=0; next }
-      if ($0 ~ /^# >>> mcp:/) { in_sentinel=1; print; next }
-      if (in_header) {
-        if ($0 ~ /^\[/) { in_header=0 }
-        else { print; next }
+    function flush(   i) {
+      while (nb > 0 && buf[nb] == "") nb--
+      if (nb > 0) {
+        if (printed) print ""
+        for (i = 1; i <= nb; i++) print buf[i]
+        printed = 1
       }
-      if ($0 ~ /^\[mcp_servers\./) { in_header=1; print; next }
+      nb = 0
+    }
+    {
+      if (in_sentinel) {
+        buf[++nb] = $0
+        if ($0 ~ /^# <<< mcp:/) { in_sentinel = 0; flush() }
+        next
+      }
+      if ($0 ~ /^# >>> mcp:/) { flush(); in_sentinel = 1; buf[++nb] = $0; next }
+      if (in_header) {
+        if ($0 ~ /^\[/) { flush(); in_header = 0 }
+        else { buf[++nb] = $0; next }
+      }
+      if ($0 ~ /^\[mcp_servers\./) { in_header = 1; buf[++nb] = $0; next }
       next
     }
+    END { flush() }
   ' "$CODEX_CONFIG")
   if [ -n "$MCP_BLOCKS" ]; then
     NEW_CONFIG="$NEW_CONFIG"$'\n\n'"$MCP_BLOCKS"

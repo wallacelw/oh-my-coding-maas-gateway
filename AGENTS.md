@@ -43,7 +43,7 @@ Before committing, validate the change from **all** relevant perspectives:
    - `--litellm-only` vs full mode (on 05_validate.sh)
    - `--dry-run` mode
    - Idempotent re-run (existing .env, running containers)
-    - Upgrade path (existing installation, missing vars)
+   - Upgrade path (existing installation, missing vars)
 
 ## Quality Pass
 

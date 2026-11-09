@@ -875,7 +875,7 @@ re-configuration after rotation.
 | claude settings | `~/.claude/settings.json` | `--tool=claude` |
 | claude global config | `~/.claude.json` | `--tool=claude` |
 | pi config | `~/.pi/agent/models.json` | `--tool=pi` |
-| agent skill dirs | `~/.config/opencode/skills/`, `~/.codex/skills/`, `~/.pi/agent/skills/`, `~/.claude/skills/` | `--tool=<t>` (companion + drawio; REA skill via global cleanup) |
+| agent skill dirs | `~/.config/opencode/skills/`, `~/.codex/skills/`, `~/.pi/agent/skills/`, `~/.claude/skills/` | `--tool=<t>` (companion + drawio skills; REA skill — claude's personal dir at `--tool=claude`, shared `~/.agents` dir only at `--tool=all`/`--all`) |
 | REA/drawio MCP registrations | per-tool configs | `--tool=<t>` |
 | shared REA skill dir | `~/.agents/skills/reverse-engineer-anything` | `--tool=all` / `--all` (with global cleanup) |
 | pi MCP config | `~/.pi/agent/mcp.json` | `--tool=pi` (deleted when empty after unregistration) |

@@ -245,7 +245,7 @@ if [ "$RUN_LITELLM" = true ]; then
       fail "Only $RUNNING services running (expected 4: litellm, db, prometheus, grafana)"
     fi
 
-    # H1: Container health status (not just running)
+    # Container health status (not just running)
     for container in litellm_proxy litellm_pg_db litellm_prometheus litellm_grafana; do
       HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "missing")
       case "$HEALTH" in
@@ -602,7 +602,14 @@ if [ "$RUN_OPENCODE" = true ]; then
       warn "Config file permissions $PERMS (expected 600)"
     fi
   else
-    fail_n 11 "No opencode config file — skipping 11 provider checks"
+    # Missing config → every B3 check is skipped. Base count is 10; the optional
+    # Huawei-MaaS direct provider adds 2 more when configured (mirrors the
+    # presence gate the checks above use — 03a omits it without a direct key).
+    SKIP_N=10
+    if [ -n "${HUAWEI_MAAS_API_KEY:-}" ] && [ "$HUAWEI_MAAS_API_KEY" != "<HUAWEI_MAAS_API_KEY>" ]; then
+      SKIP_N=12
+    fi
+    fail_n "$SKIP_N" "No opencode config file — skipping $SKIP_N config checks"
   fi
 
   echo ""
@@ -1393,7 +1400,7 @@ if [ "$RUN_BUNDLES" = true ]; then
       elif [ "$H_SKILL_PRESENT_COUNT" -eq 0 ]; then
         warn "Companion skill not installed (optional — install via 04_skills_mcps.sh)"
       else
-        fail "Companion skill missing ($tool)"
+        fail "Companion skill missing ($tool) — install via 04_skills_mcps.sh"
       fi
     done
 
