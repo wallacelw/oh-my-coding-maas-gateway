@@ -157,9 +157,9 @@ prereq_ensure_npm() {
   log_ok "Node.js + npm installed"
 }
 
-# Shared npm-global install with writable-prefix-or-sudo. Used by 03d (with
-# --ignore-scripts --min-release-age=0) and 04; 03b/03c adopt it in an upcoming
-# change. Extra args after <package-spec> are passed through to npm.
+# Shared npm-global install with writable-prefix-or-sudo. Used by 03b, 03c,
+# 03d (with --ignore-scripts --min-release-age=0), and 04. Extra args after
+# <package-spec> are passed through to npm.
 #   npm_install_global <package-spec> [npm-install-flags...]
 npm_install_global() {
   local spec="$1"; shift

@@ -22,6 +22,8 @@ umask 077  # written configs/skills may hold secrets — deny group/world access
 #                ~/.pi/agent/skills/<name>, ~/.claude/skills/<name>;
 #                MCP registrations in each agent's config.
 # Standalone:    yes — ./scripts/04_skills_mcps.sh
+# Exit codes:    0 = clean; 1 = companion skill failed (or --strict bundle
+#                failures); 3 = bundle issues without --strict.
 # ──────────────────────────────────────────────────────────────────────────────
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -667,12 +669,13 @@ fi
 [ "$DRAWIO_FAIL" -gt 0 ] && log_warn "drawio bundle issues: $DRAWIO_FAIL"
 
 # ── Exit policy ──
-# Companion skill failure → hard fail. Bundle failures → exit 0 unless --strict.
+# 0 = clean; 1 = companion skill failed (or --strict with bundle failures);
+# 3 = bundle issues without --strict (distinct rc so bootstrap can report
+#     "bundle issues" instead of "complete").
 EXIT_RC=0
 if [ "$COMP_FAILED" -ne 0 ]; then
   EXIT_RC=1
-fi
-if [ "$STRICT" = true ] && { [ "$REA_FAIL" -gt 0 ] || [ "$DRAWIO_FAIL" -gt 0 ]; }; then
-  EXIT_RC=1
+elif [ "$REA_FAIL" -gt 0 ] || [ "$DRAWIO_FAIL" -gt 0 ]; then
+  if [ "$STRICT" = true ]; then EXIT_RC=1; else EXIT_RC=3; fi
 fi
 exit "$EXIT_RC"

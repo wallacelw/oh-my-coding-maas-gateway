@@ -259,6 +259,7 @@ source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
 source "$SCRIPT_DIR/helpers/versions.sh"
+source "$SCRIPT_DIR/helpers/keys.sh"
 
 # ── Refresh PATH for binaries installed by 03x scripts ──
 # Installers add to .bashrc, but that only takes effect on shell restart.
@@ -298,6 +299,15 @@ refresh_path() {
   hash -r 2>/dev/null || true
 }
 refresh_path
+
+# Run a child step always non-interactive. Bootstrap's own menus above are the
+# single interactive surface; AUTO_YES=true makes prereq installs auto-accept,
+# 01_env auto-generate secrets, 03x skip optional prompts, and 04 install
+# default bundles without its menu (opt out via --no-skill/--no-bundles).
+# Standalone runs of the step scripts keep their prompts.
+run_step() {
+  AUTO_YES=true "$@"
+}
 
 # ── Prevent concurrent runs (flock) ──
 # Dry-run creates no lock file (side-effect-free preview).
@@ -558,13 +568,70 @@ if [ "$TOOL_SPECIFIED" = true ] || ! is_interactive; then
 fi
 echo ""
 
+# ── MaaS API key (bootstrap-level; collect before Step 01) ──
+# 01_env.sh hard-fails non-interactively when no key is available, so resolve
+# the key here — before any pipeline step runs — with the same precedence:
+# --api-key=/env (already exported) > existing .env > interactive prompt > fail.
+# A placeholder (--api-key=xxx / change-me / your-) fails fast instead of being
+# rejected mid-pipeline by 01_env — except in dry-run, which never fails.
+if [ -n "${HUAWEI_MAAS_API_KEY:-}" ] && { [[ "$HUAWEI_MAAS_API_KEY" == *"change-me"* ]] || [[ "$HUAWEI_MAAS_API_KEY" == *"your-"* ]] || [[ "$HUAWEI_MAAS_API_KEY" == *"xxx"* ]]; }; then
+  if [ "$DRY_RUN" = true ]; then
+    log_dim "Dry-run: HUAWEI_MAAS_API_KEY looks like a placeholder — would require a real key"
+  else
+    log_error "HUAWEI_MAAS_API_KEY has a placeholder value — refusing to use."
+    log_dim "  Provide the real Huawei MaaS API key via --api-key=KEY or the HUAWEI_MAAS_API_KEY env var."
+    exit 1
+  fi
+fi
+if [ -z "${HUAWEI_MAAS_API_KEY:-}" ]; then
+  _env_key=""
+  if [ -f "$PROJECT_DIR/.env" ]; then
+    _env_key=$(sed -n 's/^HUAWEI_MAAS_API_KEY="*\([^"]*\).*/\1/p' "$PROJECT_DIR/.env" 2>/dev/null | head -1 || true)
+  fi
+  if [ -n "$_env_key" ]; then
+    if [ "$DRY_RUN" != true ] && { [[ "$_env_key" == *"change-me"* ]] || [[ "$_env_key" == *"your-"* ]] || [[ "$_env_key" == *"xxx"* ]]; }; then
+      log_error "HUAWEI_MAAS_API_KEY in .env has a placeholder value — refusing to use."
+      log_dim "  Update HUAWEI_MAAS_API_KEY in $PROJECT_DIR/.env to the real key."
+      exit 1
+    fi
+    log_dim "MaaS API key: preserved from existing .env"
+  elif [ "$DRY_RUN" = true ]; then
+    log_dim "Dry-run: would require a Huawei MaaS API key (--api-key=, env var, or interactive prompt)"
+  elif is_interactive && [ "$AUTO_YES" = false ]; then
+    _maas_base="https://api-ap-southeast-1.modelarts-maas.com/openai/v1"
+    if [ -f "$PROJECT_DIR/.env" ]; then
+      _env_base=$(sed -n 's/^HUAWEI_MAAS_API_BASE="*\([^"]*\).*/\1/p' "$PROJECT_DIR/.env" 2>/dev/null | head -1 || true)
+      [ -n "$_env_base" ] && _maas_base="$_env_base"
+    fi
+    while true; do
+      echo ""
+      HUAWEI_MAAS_API_KEY=$(prompt_input "Enter Huawei MaaS API key ($_maas_base)" "")
+      if [ -z "$HUAWEI_MAAS_API_KEY" ]; then
+        log_warn "Key cannot be empty. Please try again."
+        continue
+      fi
+      log_info "Validating key..."
+      validate_maas_key "$HUAWEI_MAAS_API_KEY" "$_maas_base" && _krc=0 || _krc=$?
+      case "$_krc" in
+        0) log_ok "Key validated."; break ;;
+        1) log_warn "Key rejected by MaaS API (invalid). Please try again."; continue ;;
+        2) log_warn "Cannot reach MaaS endpoint (may be transient). Accepting key."; break ;;
+      esac
+    done
+    export HUAWEI_MAAS_API_KEY
+  else
+    log_error "HUAWEI_MAAS_API_KEY is required. Use --api-key=KEY, set the env var, or run interactively."
+    exit 1
+  fi
+fi
+
 # ── Step 01: Environment & secrets ──
 if [ "$DRY_RUN" = true ]; then
   log_step "Step 01: Environment & secrets"
   log_dim "Would run: scripts/01_env.sh"
 else
   log_desc "Setting up environment variables, secrets, and .env file"
-  "$SCRIPT_DIR/01_env.sh"
+  run_step "$SCRIPT_DIR/01_env.sh"
   log_done "Environment configured — .env written with MaaS key and secrets"
 fi
 
@@ -574,7 +641,7 @@ if [ "$DRY_RUN" = true ]; then
   log_dim "Would run: scripts/02_litellm.sh"
 else
   log_desc "Deploying LiteLLM proxy, Docker containers, and observability stack"
-  "$SCRIPT_DIR/02_litellm.sh"
+  run_step "$SCRIPT_DIR/02_litellm.sh"
   log_done "LiteLLM proxy running — ${#MODELS[@]} models, Grafana + Prometheus active"
 fi
 
@@ -591,7 +658,7 @@ if [ "$INSTALL_OPENCODE" = true ]; then
     fi
   else
     log_desc "Installing opencode + oh-my-opencode-slim plugin"
-    "$SCRIPT_DIR/03a_opencode.sh" "${OPENCODE_ARGS[@]}"
+    run_step "$SCRIPT_DIR/03a_opencode.sh" "${OPENCODE_ARGS[@]}"
     log_done "opencode configured — LiteLLM provider, 2 presets, 8 agents"
     refresh_path
   fi
@@ -606,7 +673,7 @@ if [ "$INSTALL_CODEX" = true ]; then
     log_dim "Would run: scripts/03b_codex.sh"
   else
     log_desc "Installing Codex CLI and configuring LiteLLM virtual key"
-    "$SCRIPT_DIR/03b_codex.sh"
+    run_step "$SCRIPT_DIR/03b_codex.sh"
     log_done "Codex CLI configured — LiteLLM virtual key minted"
   fi
 else
@@ -620,7 +687,7 @@ if [ "$INSTALL_CLAUDE_CODE" = true ]; then
     log_dim "Would run: scripts/03c_claude_code.sh"
   else
     log_desc "Installing Claude Code CLI and configuring LiteLLM virtual key"
-    "$SCRIPT_DIR/03c_claude_code.sh"
+    run_step "$SCRIPT_DIR/03c_claude_code.sh"
     log_done "Claude Code CLI configured — LiteLLM virtual key minted"
   fi
 else
@@ -634,7 +701,7 @@ if [ "$INSTALL_PI" = true ]; then
     log_dim "Would run: scripts/03d_pi.sh"
   else
     log_desc "Installing Pi coding agent and configuring LiteLLM virtual key"
-    "$SCRIPT_DIR/03d_pi.sh"
+    run_step "$SCRIPT_DIR/03d_pi.sh"
     log_done "Pi agent configured — LiteLLM virtual key minted"
     refresh_path
   fi
@@ -664,14 +731,14 @@ if [ "$DRY_RUN" = true ]; then
 else
   log_desc "Installing agent skills and tool bundles (companion skill + REA + drawio)"
   set +e
-  "$SCRIPT_DIR/04_skills_mcps.sh" "${SKILL_ARGS[@]}"
+  run_step "$SCRIPT_DIR/04_skills_mcps.sh" "${SKILL_ARGS[@]}"
   SKILL_RC=$?
   set -e
-  if [ "$SKILL_RC" -eq 0 ]; then
-    log_done "Agent skills & bundles installed"
-  else
-    log_warn "Agent skills & bundles completed with issues (see above)"
-  fi
+  case "$SKILL_RC" in
+    0) log_done "Agent skills & bundles installed" ;;
+    3) log_warn "Agent skills step done — bundles completed with issues (see above)" ;;
+    *) log_warn "Agent skills & bundles completed with issues (see above)" ;;
+  esac
 fi
 
 # ── Step 05: Validate ──
@@ -692,7 +759,7 @@ if [ "$DRY_RUN" = true ]; then
 else
   log_desc "Running end-to-end validation of all components"
   set +e
-  "$SCRIPT_DIR/05_validate.sh" "${VALIDATE_ARGS[@]}"
+  run_step "$SCRIPT_DIR/05_validate.sh" "${VALIDATE_ARGS[@]}"
   VALIDATE_RC=$?
   set -e
   if [ "$VALIDATE_RC" -eq 0 ]; then
@@ -708,6 +775,8 @@ if [ "$VALIDATE_RC" -eq 0 ] && [ "$SKILL_RC" -eq 0 ]; then
   echo -e "${C_BOLD}${C_GREEN}  ✓ Bootstrap complete${C_RESET}"
 elif [ "$VALIDATE_RC" -ne 0 ]; then
   echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with validation failures${C_RESET}"
+elif [ "$SKILL_RC" -eq 3 ]; then
+  echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with agent-bundle issues (REA/drawio — see step 04 output)${C_RESET}"
 else
   echo -e "${C_BOLD}${C_YELLOW}  ⚠ Bootstrap completed with skill/bundle-install failures${C_RESET}"
 fi
