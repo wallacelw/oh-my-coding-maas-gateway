@@ -103,7 +103,8 @@ To check and update individual components without re-running the full
 pipeline. Components are grouped into two categories:
 
 - **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
-  Code, Pi agent
+  Code, Pi agent, plus display-only bundle-pin drift rows (`rea-agents`,
+  `@drawio/mcp` — never auto-updated; pins move via repo releases)
 - **Infrastructure** — LiteLLM, Grafana, Prometheus (active docker-method
   updates); PostgreSQL (pinned, display-only — never auto-updated)
 

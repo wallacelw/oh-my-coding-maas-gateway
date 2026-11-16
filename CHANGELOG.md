@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.0] - 2026-11-16
+
+### Changed — non-interactive pipeline, safe pi install, version refresh
+
+- **bootstrap.sh:** the pipeline is now non-interactive end to end — a new
+  `run_step` helper dispatches every step (01–05) with `AUTO_YES=true`, so
+  bootstrap's own menus (install dir, tool selection, scope confirm) are the
+  single interactive surface. Prerequisite installs auto-accept, secrets
+  auto-generate, 03x skip optional prompts, and 04 installs the default
+  bundles without its menu (opt out via `--no-skill`/`--no-bundles`).
+  Standalone runs of the step scripts keep their prompts.
+- **bootstrap.sh:** the Huawei MaaS API key is collected before any pipeline
+  step runs — precedence `--api-key=`/env var > existing `.env` > validated
+  interactive prompt (placeholder values like `change-me`/`your-`/`xxx` are
+  rejected up front; the prompt re-prompts on API rejection). Headless runs
+  without a key fail fast instead of dying mid-pipeline at step 01.
+- **bootstrap.sh:** exit codes are now 0 (complete) / 1 (validation or
+  skill-install failure) / 3 (agent-bundle issues without `--strict`) —
+  bundle failures are never masked by "✓ Bootstrap complete" anymore.
+- **03d_pi.sh:** the pi install is non-interactive-safe in every mode. Node
+  ≥ 22.23.4 is ensured first (single repo-wide floor, NodeSource when
+  missing), then `npm install -g @earendil-works/pi-coding-agent` is the
+  primary path everywhere. The pi.dev installer is only a fallback, run so
+  pi can never auto-start: the upstream installer grew a "Start pi now?
+  [Y/n]" default-yes prompt that `exec`s the pi TUI, which previously
+  hijacked interactive runs mid-bootstrap and — via the old `printf 'y…' |
+  script` byte-feed — launched pi inside the pty even in `-y`/CI mode.
+  Interactive fallback pipes installer stdout through `tee /dev/tty` (the
+  start-pi prompt self-disables when stdout is not a tty); headless fallback
+  uses `setsid -w` with no controlling terminal. The byte-feed is gone.
+- **helpers/prereqs.sh:** `prereq_ensure_node_mcp` excludes pi-managed Node
+  trees (`~/.local/share/pi-node`, absolute `XDG_DATA_HOME/pi-node`, `~/.pi`)
+  from resolution — REA/drawio previously installed into pi's versioned Node
+  dirs when pi's Node was the only one ≥ the floor, and every registration
+  pinned absolute paths that pi updates destroy. New shared
+  `npm_install_global` (writable-prefix-or-sudo) replaces the copies in
+  03b/03c/04 and is now used by 03d.
+- **helpers/keys.sh:** `validate_maas_key` moved here from 01_env.sh (shared
+  by bootstrap's key prompt and 01_env).
+- **04_skills_mcps.sh:** exit-code contract 0/1/3 (see bootstrap above), and
+  a rea version change now forces re-registration for every tool —
+  registrations pin the previous binary's absolute path, so skipping setup
+  on "already registered" left every agent launching the old version
+  (rea 6.9.0's doctor reports these as stale).
+- **05_validate.sh:** H7 runs `rea doctor` with the registered node's dir
+  prepended to PATH — rea 6.9.0's doctor compares registrations against the
+  current shell's node/rea resolution and reported false "stale" verdicts
+  from a different PATH.
+- **Versions:** LiteLLM v1.109.1, Prometheus v3.16.0, Grafana 13.3.1
+  (docker-compose.yml; postgres stays pinned at 16-alpine),
+  oh-my-opencode-slim 3.0.7 (03a + both opencode config templates),
+  rea-agents 6.9.0 and @drawio/mcp 1.12.0 (`helpers/versions.sh`; the
+  vendored drawio skill verified byte-identical to the 1.12.0-era upstream
+  tree). Node floor stays 22.23.4.
+- **update.sh:** `rea-agents` and `@drawio/mcp` appear as display-only
+  "bundle-pin" drift rows (installed vs repo pin; never auto-updatable —
+  pins move via repo releases; drift is restored via
+  `04_skills_mcps.sh --refresh-only`). `@drawio/mcp` detection falls back to
+  the registered entry path (JSONC-tolerant) and system prefixes when
+  `npm ls -g` cannot see the install.
+- **Docs:** INSTALLATION/REFERENCE/README synced — non-interactive pipeline
+  contract, bootstrap exit codes, rewritten 03d section, 04 exit codes,
+  pi-managed-Node exclusion wording, slim 3.0.7, update.sh drift rows.
+
 ## [1.35.5] - 2026-11-10
 
 ### Fixed — LiteLLM UI credential record placement + stale username

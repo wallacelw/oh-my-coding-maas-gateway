@@ -18,9 +18,12 @@ curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway
 
 That's it. Bootstrap clones itself into `/home/oh-my-coding-maas-gateway`
 (or a directory you choose), shows a colored menu to select what to install,
-and prompts for your Huawei MaaS API key. For each secret, it offers an
-auto-generated value or custom entry. Prerequisites are installed
-automatically as needed.
+and collects your Huawei MaaS API key (validated against the MaaS endpoint;
+or pass `--api-key=` / the `HUAWEI_MAAS_API_KEY` env var). Bootstrap's own
+menus are the only interactive part — every step it dispatches then runs
+non-interactive: prerequisites install automatically, secrets
+auto-generate, and default agent bundles install without further prompts
+(opt out with `--no-skill` / `--no-bundles`).
 
 **Prefer to clone first?** Equivalent:
 
@@ -75,13 +78,13 @@ Shared libraries sourced by the pipeline steps. Not run directly — except `gra
 
 | File | Used by | Provides |
 |------|---------|----------|
-| `prereqs.sh` | bootstrap, 01–05 | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`, `prereq_ensure_node_mcp` (soft-fail Node ≥22.23.4 via NodeSource for MCP bundles). Each install runs under a spinner (`  Installing curl... done`). |
-| `keys.sh` | 03a-03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint). |
+| `prereqs.sh` | bootstrap, 01–05 | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`, `prereq_ensure_node_mcp` (soft-fail Node ≥22.23.4 via NodeSource for MCP bundles — pi-managed Node trees are excluded so bundles never install into pi's versioned dirs), `npm_install_global` (writable-prefix-or-sudo npm install, shared by 03b/03c/03d/04). Each install runs under a spinner (`  Installing curl... done`). |
+| `keys.sh` | bootstrap, 01–03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint), `validate_maas_key` (0=valid / 1=rejected / 2=endpoint unreachable; used by bootstrap's key prompt and 01_env). |
 | `common.sh` | all scripts | `is_interactive`, `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, `backup_with_prune`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
 | `models.sh` | 02, 03d, 05, bootstrap | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, and 05_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
 | `skills.sh` | 04, 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude) + directory-based bundle install with per-file drift detection. |
 | `mcp.sh` | 04, 05, uninstall | Merge-safe MCP server registration per tool (opencode `.mcp`, codex `[mcp_servers.*]` sentinel blocks, claude/pi `.mcpServers`); register/unregister/verify; backup-before-write, compare-before-write. |
-| `versions.sh` | bootstrap, 04, 05 | `show_installed_versions` — component version table for the install summary; bundle pins (`REA_AGENTS_VERSION`, `DRAWIO_MCP_VERSION`, `NODE_MCP_MIN_VERSION`). |
+| `versions.sh` | bootstrap, 04, 05, update | `show_installed_versions` — component version table for the install summary; bundle pins (`REA_AGENTS_VERSION`, `DRAWIO_MCP_VERSION`, `NODE_MCP_MIN_VERSION`). |
 | `grafana_shots.py` | 07 | Headless Playwright dashboard screenshot capture. |
 
 ---
@@ -100,15 +103,35 @@ given. In interactive menu mode, prints a prerequisite→tools mapping for custo
 steps 01–05. Prints a colored summary with service URLs, config file paths,
 masked virtual keys, a dim key-rotation tip, and advice to restart the shell.
 
+**Non-interactive pipeline:** every dispatched step runs with
+`AUTO_YES=true` (via bootstrap's `run_step` helper) — bootstrap's own menus
+above are the single interactive surface. Prerequisite installs
+auto-accept, secrets auto-generate, 03x skip optional prompts, and 04
+installs the default bundles without its menu. Standalone runs of the step
+scripts keep their interactive prompts.
+
+**MaaS API key:** collected before any pipeline step runs — precedence
+`--api-key=` / env var > existing `.env` value > validated interactive
+prompt (rejects placeholders; re-prompts on API rejection). Headless runs
+without any key fail fast with an actionable error.
+
+**Exit codes:** 0 = complete; 1 = validation or skill-install failure
+(validation rc wins); 3 = agent-bundle issues (REA/drawio) without
+`--strict` — the summary line says which.
+
 ### `01_env.sh`
 
 Owns `.env`. For each secret (`LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`,
 `DB_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, `PROMETHEUS_RETENTION`), prompts to
-use an auto-generated value or enter a custom one (non-interactive defaults to
-auto-generated). On re-run, preserves existing secrets (idempotent).
-Collects the Huawei MaaS API key from the `HUAWEI_MAAS_API_KEY` environment
-variable or an interactive prompt. Collects extra keys for load balancing from
-`HUAWEI_MAAS_API_KEY_1..N` / `HUAWEI_MAAS_API_KEY_COUNT` env vars or a prompt.
+use an auto-generated value or enter a custom one (non-interactive —
+including every bootstrap-dispatched run — defaults to auto-generated; the
+custom-value prompts appear only in standalone interactive runs). On re-run,
+preserves existing secrets (idempotent). Collects the Huawei MaaS API key
+from the `HUAWEI_MAAS_API_KEY` environment variable, an existing `.env`
+value, or an interactive prompt (bootstrap collects it earlier — see the
+`bootstrap.sh` section). Collects extra keys for load balancing from
+`HUAWEI_MAAS_API_KEY_1..N` / `HUAWEI_MAAS_API_KEY_COUNT` env vars, or a
+prompt in standalone interactive runs.
 Configures git hooks to block committing secrets. `--force` regenerates all
 secrets (for key rotation).
 
@@ -126,7 +149,7 @@ nothing, and skips prereq installs and MaaS key validation).
 ### `03a_opencode.sh`
 
 Installs the opencode binary (via curl, output filtered with `run_filtered`),
-the oh-my-opencode-slim plugin (v3.0.6, via bunx — 2 presets, 8 agents, output
+the oh-my-opencode-slim plugin (v3.0.7, via bunx — 2 presets, 8 agents, output
 filtered to suppress GitHub star prompts), mints a virtual key (alias
 "opencode"), and writes `~/.config/opencode/opencode.json` +
 `oh-my-opencode-slim.json`. Supports `--virtual-key=` and `--dry-run`.
@@ -151,9 +174,13 @@ extension auto-install. Supports `--virtual-key=` and `--dry-run`.
 ### `03d_pi.sh`
 
 Installs the Pi coding agent — via `npm install -g
-@earendil-works/pi-coding-agent` when running non-interactive with
-Node ≥ 22, otherwise by downloading the installer from pi.dev to a temp
-file and executing it — mints a virtual
+@earendil-works/pi-coding-agent` (the primary path in every mode, with
+Node ≥ 22.23.4 ensured first via NodeSource when missing), falling back to
+the pi.dev installer only when npm-direct fails (or npm is missing) or
+Node was declined interactively. The fallback is run so pi can never auto-start: the upstream
+installer's "Start pi now? [Y/n]" prompt self-disables when its stdout is
+not a tty (interactive runs pipe through `tee /dev/tty`; headless runs use
+`setsid` with no controlling terminal). Never launches pi. Mints a virtual
 key (alias "pi"), and writes `~/.pi/agent/models.json` (LiteLLM provider
 pointing to the proxy via OpenAI Chat Completions API). Supports
 `--virtual-key=` and `--dry-run`.
@@ -161,29 +188,37 @@ pointing to the proxy via OpenAI Chat Completions API). Supports
 ### `04_skills_mcps.sh`
 
 Installs the **companion skill** plus two optional **agent tool bundles**
-into each detected coding agent (opencode, codex, claude, pi). Interactive
-runs show a numbered menu (all bundles default-on, comma combos allowed,
-scope summary + confirm); `--yes`/non-interactive runs install with defaults.
+into each detected coding agent (opencode, codex, claude, pi). Standalone
+interactive runs show a numbered menu (all bundles default-on, comma combos
+allowed, scope summary + confirm); `--yes`/non-interactive runs — including
+every bootstrap-dispatched run — install with defaults (opt out via
+bootstrap's `--no-skill` / `--no-bundles`).
 
 - **Companion skill** — this repo's SKILL.md (gateway operations guidance).
   Failure is a hard error (status quo).
 - **REA bundle** — reverse-engineering MCP server + skill
   (`rea-agents`, pinned in `helpers/versions.sh`). Registers via
   `rea setup --yes --client <id>` per installed tool (REA writes its own
-  registration with a pinned absolute Node path and installs its skill).
-  Missing analysis engines (Ghidra/IDA/JADX/Kuna) are warnings only —
-  static JS/Electron/.NET analysis works without them.
+  registration with pinned absolute Node + binary paths and installs its
+  skill). A rea version change forces re-registration for every tool —
+  existing registrations pin the previous binary's path. Missing analysis
+  engines (Ghidra/IDA/JADX/Kuna) are warnings only — static
+  JS/Electron/.NET analysis works without them.
 - **drawio bundle** — diagramming MCP server (`@drawio/mcp`, pinned) +
   vendored skill (`skills/drawio/`). Registered with absolute Node +
   entry-script paths so agent-runtime PATH cannot break it.
 
 Bundles are **soft-fail**: a declined Node or curl/jq install, npm outage, or
 per-tool
-setup failure logs a warning and continues — the step exits 0 unless the
-companion skill fails (use `--strict` to make bundle failures non-zero).
+setup failure logs a warning and continues — the step exits 0 when clean,
+1 when the companion skill fails (or any bundle failure under `--strict`),
+and **3** for bundle issues without `--strict` (bootstrap surfaces this as
+"Bootstrap completed with agent-bundle issues" instead of "complete").
 Node ≥22.23.4 is ensured automatically when either bundle runs (NodeSource
-22.x; pi's bundled Node is never touched). `--refresh-only` refreshes only
-already-registered bundles — never adds new ones (used by `update.sh`).
+22.x; pi's bundled Node is never used — pi-managed Node trees are excluded
+from resolution so bundles never install into pi's versioned dirs).
+`--refresh-only` refreshes only already-registered bundles — never adds new
+ones (used by `update.sh`).
 
 Flags: `--dry-run`, `--no-skill`, `--no-rea`, `--no-drawio`, `--yes`,
 `--refresh-only`, `--strict`, `--skip-opencode`, `--skip-codex`,
@@ -279,7 +314,7 @@ section above).
 | `--no-rea` | Skip the REA bundle. |
 | `--no-drawio` | Skip the drawio bundle. |
 | `--refresh-only` | Refresh only already-registered bundles/skills; never add new ones. |
-| `--strict` | Bundle failures exit non-zero (default: warn and exit 0). |
+| `--strict` | Bundle failures exit 1 instead of 3 (default: bundle issues exit 3 — a warning, not a hard failure; see exit codes above). |
 | `--skip-<tool>` | Exclude a tool (`--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`). |
 
 ### `05_validate.sh`
@@ -355,8 +390,9 @@ lines with a dim `[tag]` prefix.
 - `prompt_input "question" [default]` — colored input with default hint
 - `prompt_password "label" "auto_value" [prefix]` — shows masked auto-generated preview, offers custom entry; when `prefix` is given, custom input is validated and re-prompted on mismatch (e.g. `LITELLM_MASTER_KEY` requires `sk-`)
 
-In `01_env.sh`, each secret prompts: "Use auto-generated value? [Y/n]" or
-enter custom. Non-interactive defaults to auto-generated.
+In standalone interactive runs of `01_env.sh`, each secret prompts: "Use
+auto-generated value? [Y/n]" or enter custom. Non-interactive — including
+every bootstrap-dispatched run — defaults to auto-generated.
 
 **Prompt conventions:**
 
@@ -384,12 +420,14 @@ ensures only its own prerequisites; skipped steps install nothing. A
 | `03a_opencode.sh` | curl, jq, bun |
 | `03b_codex.sh` | curl, npm/node, jq, bubblewrap |
 | `03c_claude_code.sh` | curl, npm/node, jq |
-| `03d_pi.sh` | curl, jq |
+| `03d_pi.sh` | curl, jq, node ≥22.23.4 + npm (NodeSource when missing; pi-managed Node never satisfies the Node ensure) |
 | `04_skills_mcps.sh` | curl, jq, node ≥22.23.4 + npm (auto-installed via NodeSource when bundles run) |
 | `05_validate.sh` | curl, jq |
 
-Interactive mode prompts before each installation. Non-interactive shells
-(piped stdin, CI) auto-confirm. Each install runs under a spinner showing
+Standalone interactive runs prompt before each installation; non-interactive
+shells (piped stdin, CI) auto-confirm — and every bootstrap-dispatched step
+runs with prompts auto-accepted (bootstrap's own scope confirmation is the
+single consent point). Each install runs under a spinner showing
 what is being installed; the calling script's step header identifies which
 script triggered it. Bootstrap prints a **prereq→tools mapping**
 at the start for customer validation (e.g. `curl — bootstrap, litellm,
@@ -488,7 +526,11 @@ update individual components, use the standalone update script. Components
 are grouped into two categories:
 
 - **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
-  Code, Pi agent
+  Code, Pi agent, plus two **bundle-pin drift rows** (`rea-agents`,
+  `@drawio/mcp`): display-only, showing the installed version against the
+  repo pin (`helpers/versions.sh`) — never auto-updatable; pins move via
+  repo releases, and drift is restored with
+  `./scripts/04_skills_mcps.sh --refresh-only`
 - **Infrastructure** — LiteLLM, Grafana, Prometheus (active docker-method
   updates); PostgreSQL (pinned, display-only — never auto-updated)
 - **Version display** — shows the project version and a per-component
@@ -672,8 +714,10 @@ Interactive menu appears when you run bootstrap. Or use `--tool=` flag:
 
 ### Companion Skill
 
-During installation (step 04), bootstrap installs (default-on; interactive runs
-confirm) SKILL.md (plus the REA/drawio bundles) into each detected coding agent.
+During installation (step 04), bootstrap installs (default-on) SKILL.md (plus
+the REA/drawio bundles) into each detected coding agent — bootstrap installs
+the defaults without a menu (opt out via `--no-skill`/`--no-bundles`); only
+standalone interactive runs of 04 show the bundle menu.
 This gives your agents operational guidance for the gateway.
 
 | Tool | Skill location | How to invoke |

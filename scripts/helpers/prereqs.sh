@@ -229,8 +229,9 @@ prereq_ensure_docker() {
 # own versioned Node under ~/.local/share/pi-node (swapped wholesale on pi
 # install/update) and owns ~/.pi. Registering MCP bundles with absolute paths
 # inside those dirs breaks the moment pi swaps them; INSTALLATION.md documents
-# that pi's bundled Node is never touched. The default ~/.local/share/pi-node is
-# always checked; XDG_DATA_HOME/pi-node is also checked but only when it is an
+# that pi-managed Node never satisfies the Node ensure. The default
+# ~/.local/share/pi-node is always checked; XDG_DATA_HOME/pi-node is also
+# checked but only when it is an
 # absolute path (a relative value can never match an absolute realpath). Empty/
 # nonexistent candidates and readlink failures are treated as NOT pi-managed (the
 # caller's _node_mcp_ver guard then rejects them cleanly).

@@ -17,7 +17,7 @@ are exported in `~/.bashrc`, and
 
 | Env var | Set by | Read by | Format | Rotate risk |
 |---------|--------|---------|--------|------------|
-| `HUAWEI_MAAS_API_KEY` | User (env var or prompt) | `01_env.sh`, `03a_opencode.sh` | Non-empty, no placeholders | Low — update `.env` (main AND `_0..N`, or re-run `01_env.sh`) + restart LiteLLM |
+| `HUAWEI_MAAS_API_KEY` | User (env var or prompt) | `bootstrap.sh`, `01_env.sh`, `03a_opencode.sh` | Non-empty, no placeholders | Low — update `.env` (main AND `_0..N`, or re-run `01_env.sh`) + restart LiteLLM |
 | `HUAWEI_MAAS_API_KEY_COUNT` | `01_env.sh` (from env vars or prompt) | `01_env.sh`, `02_litellm.sh` | Integer ≥ 1 | Low — update `.env` + regenerate config |
 | `HUAWEI_MAAS_API_KEY_0` | `01_env.sh` (auto, = main key) | `01_env.sh`, `02_litellm.sh` | Non-empty | Low — auto-set from main key |
 | `HUAWEI_MAAS_API_KEY_1..N` | User (env var or prompt) | `01_env.sh`, `02_litellm.sh` | Non-empty | Low — update `.env` + regenerate config |
@@ -124,14 +124,14 @@ are exported in `~/.bashrc`, and
 | 03b | `03b_codex.sh` | Install Codex CLI + mint key + write config + model catalog |
 | 03c | `03c_claude_code.sh` | Install Claude Code CLI + mint key + write settings + disable VSCode ext |
 | 03d | `03d_pi.sh` | Install Pi agent + mint key + write models.json |
-| 04 | `04_skills_mcps.sh` | Install companion skill + agent tool bundles (REA, drawio) into detected coding agents (--dry-run, --no-skill, --no-rea, --no-drawio, --yes, --refresh-only, --strict, --skip-<tool>); stale copies refreshed on re-run; bundles soft-fail |
+| 04 | `04_skills_mcps.sh` | Install companion skill + agent tool bundles (REA, drawio) into detected coding agents (--dry-run, --no-skill, --no-rea, --no-drawio, --yes, --refresh-only, --strict, --skip-<tool>); stale copies refreshed on re-run; exit 0 clean / 1 companion-or-strict / 3 bundle issues without --strict |
 | 05 | `05_validate.sh` | Validate all components incl. bundle registrations, section H (--litellm-only, --opencode-only, --codex-only, --claude-code-only, --pi-only for scoped checks; --skip-opencode, --skip-codex, --skip-claude-code, --skip-pi, --skip-bundles for partial runs) |
 | 06 | `06_backup.sh` | Dump LiteLLM PostgreSQL DB to `backups/` (chmod 600, pruned to newest 10) or restore a dump (--restore FILE stops LiteLLM, pipes into psql, restarts; --keep N, --dry-run, --yes). Maintenance — not run by bootstrap |
 | 07 | `07_dashboard_shots.sh` | Capture the rendered Grafana dashboard as PNG screenshots (full.png + band-NN.png) for vision-model review (--out=DIR, --dry-run). Requires python3 + playwright + chromium. Maintenance — not run by bootstrap |
-| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi) and Infrastructure (LiteLLM, Grafana, Prometheus — active docker-method updates that bump the compose pin, pull, restart, and commit; PostgreSQL — pinned, display-only, never auto-updated). Does not touch keys or passwords; the slim and docker methods also bump pinned versions in tracked files (including the version references in these docs) and commit those changes |
+| — | `update.sh` | Check and update installed components (--check, --all, --dry-run). Shows the project version and a per-component current-vs-latest table. Groups into Coding Tools (opencode, slim, Codex, Claude Code, Pi, plus display-only bundle-pin drift rows for `rea-agents` and `@drawio/mcp` — never auto-updated, pins move via repo releases) and Infrastructure (LiteLLM, Grafana, Prometheus — active docker-method updates that bump the compose pin, pull, restart, and commit; PostgreSQL — pinned, display-only, never auto-updated). Does not touch keys or passwords; the slim and docker methods also bump pinned versions in tracked files (including the version references in these docs) and commit those changes |
 | — | `install-skill.sh` | Install any skill into all detected coding agents (--name=<name>, --source=<path-or-url>, --dry-run). Standalone utility, single SKILL.md only — not called by 04_skills_mcps.sh (which uses helpers/skills.sh directly, including directory bundles) |
-| — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker/node_mcp), sourced by bootstrap.sh and steps 01–05 |
-| — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key) |
+| — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker/node_mcp — pi-managed Node trees excluded; npm_install_global writable-prefix-or-sudo shared by 03b/03c/03d/04), sourced by bootstrap.sh and steps 01–05 |
+| — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key), MaaS key validation (validate_maas_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
 | — | `helpers/models.sh` | Model catalog (MODELS array, sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, 05_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool + directory-based bundle install (per-file drift detection) |
@@ -181,14 +181,16 @@ pinned in `helpers/versions.sh` (`REA_AGENTS_VERSION`, `DRAWIO_MCP_VERSION`,
 
 | Bundle | MCP server | Skill | What it does |
 |--------|-----------|-------|--------------|
-| **REA** (`rea-agents`) | `rea setup` writes its own registration (pinned absolute Node path) per tool | `reverse-engineer-anything` (installed by REA) | Reverse-engineering: native binaries, JS/Electron apps, .NET, APKs, captures. Analysis runs locally. |
+| **REA** (`rea-agents`) | `rea setup` writes its own registration (pinned absolute Node + binary paths) per tool; a rea version change forces re-registration for every tool | `reverse-engineer-anything` (installed by REA) | Reverse-engineering: native binaries, JS/Electron apps, .NET, APKs, captures. Analysis runs locally. |
 | **drawio** (`@drawio/mcp`) | Registered by `helpers/mcp.sh` with absolute Node + entry-script paths | `drawio` (vendored in `skills/drawio/`) | Diagramming: `.drawio` files, Mermaid/CSV import, editor links. |
 
 Per-tool registration targets: opencode `~/.config/opencode/opencode.json`
 (`.mcp`), codex `~/.codex/config.toml` (`[mcp_servers.*]`, sentinel-managed),
 claude `~/.claude.json` (`.mcpServers`), pi `~/.pi/agent/mcp.json`
 (`.mcpServers`). Node ≥22.23.4 is ensured via NodeSource when either bundle
-runs; registrations pin absolute Node paths so agent-runtime PATH (e.g.
+runs (pi-managed Node trees are excluded from resolution — bundles never
+install into pi's versioned dirs); registrations pin absolute Node paths so
+agent-runtime PATH (e.g.
 pi's bundled Node) cannot break them. Analysis engines (Ghidra, IDA, JADX,
 Kuna) are deliberately **not** installed — bring your own; static
 JS/Electron/.NET analysis works without them.
@@ -493,7 +495,7 @@ determines routing.
 
 ### Plugin: oh-my-opencode-slim
 
-`oh-my-opencode-slim` (v3.0.6) installed via `bunx`. Provides:
+`oh-my-opencode-slim` (v3.0.7) installed via `bunx`. Provides:
 
 - **2 presets** — control routing (proxy vs direct) and model selection
 - **8 agents** — orchestrator, oracle, council, librarian, explorer, designer, fixer, observer
@@ -760,7 +762,9 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 
 ### Prerequisites
 
-- `curl` — for downloading the pi installer
+- `node` ≥22.23.4 + `npm` — the primary install path (`npm install -g
+  @earendil-works/pi-coding-agent`; NodeSource-installed when missing)
+- `curl` — LiteLLM health check and the fallback pi.dev installer download
 - `jq` — for generating models.json from the model catalog
 
 ---

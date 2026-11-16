@@ -40,11 +40,14 @@ companion skill + agent tool bundles (default-on), then validation.
 curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
 ```
 
-Bootstrap will prompt for your Huawei MaaS API key, show an interactive
+Bootstrap will collect your Huawei MaaS API key (validated prompt, or
+`--api-key=` / env var), show an interactive
 menu to select which coding tools to install, auto-install prerequisites,
 deploy the proxy + observability stack, configure each tool with its own
-virtual key, install (default-on; interactive runs confirm) the companion skill
-and agent tool bundles, then run validation.
+virtual key, install (default-on; opt out with `--no-skill`/`--no-bundles`)
+the companion skill
+and agent tool bundles, then run validation. Bootstrap's menus are the only
+interactive part — the pipeline itself runs non-interactive.
 
 ### Non-interactive
 
@@ -105,8 +108,10 @@ are not hot-reloaded.
 ### Update coding tools only
 
 To check and update individual components (opencode, Codex, Claude Code,
-Pi, LiteLLM, Grafana, Prometheus; PostgreSQL is listed as pinned and
-display-only, never auto-updated) without re-running the full pipeline:
+Pi, LiteLLM, Grafana, Prometheus; `rea-agents`/`@drawio/mcp` show as
+bundle-pin drift rows and PostgreSQL is listed as pinned and
+display-only — none of the three ever auto-updated) without re-running the
+full pipeline:
 
 ```bash
 ./scripts/update.sh              # interactive: show versions, select which to update
@@ -123,9 +128,10 @@ Docker images or slim plugin modifies `docker-compose.yml` and
 
 ## Companion Skill
 
-During installation (step 04), bootstrap installs (default-on; interactive runs
-confirm) [SKILL.md](./SKILL.md) (plus the REA/drawio bundles) into each detected
-coding agent. These include two agent tool bundles: **REA** (reverse-engineering MCP +
+During installation (step 04), bootstrap installs (default-on) [SKILL.md](./SKILL.md)
+(plus the REA/drawio bundles) into each detected coding agent — without a menu
+(opt out via `--no-skill`/`--no-bundles`); only standalone interactive runs of
+step 04 show the bundle menu. These include two agent tool bundles: **REA** (reverse-engineering MCP +
 skill) and **drawio** (diagramming MCP + skill). The companion skill gives your agents
 operational guidance — health diagnosis, key/model management, debug
 routing, observability, and recovery. Bundles are default-on and can be
