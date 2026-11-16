@@ -125,18 +125,6 @@ rea_client_id() {
   esac
 }
 
-# npm global install under the system prefix (reuse 03b's writable-or-sudo).
-npm_install_global() {
-  local spec="$1" prefix
-  prefix=$(npm config get prefix 2>/dev/null || echo "")
-  if [ -n "$prefix" ] && [ -w "$prefix/lib/node_modules" ] 2>/dev/null; then
-    run_filtered "npm" npm install -g "$spec"
-  else
-    log_info "  npm global prefix not writable — using sudo"
-    run_filtered "npm" sudo npm install -g "$spec"
-  fi
-}
-
 # Ensure Node >= NODE_MCP_MIN_VERSION for the bundles. Returns 1 (soft) when
 # unavailable so the caller can warn + skip both bundles.
 setup_node_for_bundles() {

@@ -157,6 +157,20 @@ prereq_ensure_npm() {
   log_ok "Node.js + npm installed"
 }
 
+# Shared npm-global install with writable-prefix-or-sudo. Used by
+# 04_skills_mcps.sh; 03b/03c/03d adopt it in an upcoming change.
+#   npm_install_global <package-spec>
+npm_install_global() {
+  local spec="$1" prefix
+  prefix=$(npm config get prefix 2>/dev/null || echo "")
+  if [ -n "$prefix" ] && [ -w "$prefix/lib/node_modules" ] 2>/dev/null; then
+    run_filtered "npm" npm install -g "$spec"
+  else
+    log_info "  npm global prefix not writable — using sudo"
+    run_filtered "npm" sudo npm install -g "$spec"
+  fi
+}
+
 # Ensure docker + compose plugin + daemon are running
 #   prereq_ensure_docker <reason>
 prereq_ensure_docker() {
@@ -209,6 +223,39 @@ prereq_ensure_docker() {
   log_ok "Docker ready"
 }
 
+# Returns 0 when $1's realpath resolves inside a pi-managed tree. Pi bundles its
+# own versioned Node under ~/.local/share/pi-node (swapped wholesale on pi
+# install/update) and owns ~/.pi. Registering MCP bundles with absolute paths
+# inside those dirs breaks the moment pi swaps them; INSTALLATION.md documents
+# that pi's bundled Node is never touched. The default ~/.local/share/pi-node is
+# always checked; XDG_DATA_HOME/pi-node is also checked but only when it is an
+# absolute path (a relative value can never match an absolute realpath). Empty/
+# nonexistent candidates and readlink failures are treated as NOT pi-managed (the
+# caller's _node_mcp_ver guard then rejects them cleanly).
+#   _node_mcp_is_pi_managed <candidate>
+_node_mcp_is_pi_managed() {
+  local cand="$1" real pi_node_default pi_node_xdg="" pi_agent pat
+  [ -n "$cand" ] || return 1
+  real=$(readlink -f "$cand" 2>/dev/null) || return 1
+  [ -n "$real" ] || return 1
+  pi_node_default=$(readlink -f "$HOME/.local/share/pi-node" 2>/dev/null || echo "$HOME/.local/share/pi-node")
+  # pi's installer honors XDG_DATA_HOME; honor it here only when absolute so a
+  # relative value cannot silently disable the exclusion.
+  if [ -n "${XDG_DATA_HOME:-}" ]; then
+    case "${XDG_DATA_HOME}" in
+      /*) pi_node_xdg=$(readlink -f "${XDG_DATA_HOME}/pi-node" 2>/dev/null || echo "${XDG_DATA_HOME}/pi-node") ;;
+    esac
+  fi
+  pi_agent=$(readlink -f "$HOME/.pi" 2>/dev/null || echo "$HOME/.pi")
+  for pat in "$pi_node_default" "$pi_node_xdg" "$pi_agent"; do
+    [ -n "$pat" ] || continue
+    case "$real" in
+      "$pat"/*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
 # ---------------------------------------------------------------------------
 # Node for the agent tool bundles — SOFT-FAIL contract
 # ---------------------------------------------------------------------------
@@ -245,6 +292,7 @@ prereq_ensure_node_mcp() {
   }
 
   for cand in /usr/bin/node /usr/local/bin/node "$(command -v node 2>/dev/null || true)"; do
+    if _node_mcp_is_pi_managed "$cand"; then continue; fi
     if ver=$(_node_mcp_ver "$cand"); then
       NODE_MCP_BIN_DIR="$(cd "$(dirname "$cand")" && pwd)"
       export NODE_MCP_BIN_DIR
@@ -285,6 +333,7 @@ prereq_ensure_node_mcp() {
 
   # Re-verify (once) — never loop.
   for cand in /usr/bin/node /usr/local/bin/node "$(command -v node 2>/dev/null || true)"; do
+    if _node_mcp_is_pi_managed "$cand"; then continue; fi
     if ver=$(_node_mcp_ver "$cand"); then
       NODE_MCP_BIN_DIR="$(cd "$(dirname "$cand")" && pwd)"
       export NODE_MCP_BIN_DIR

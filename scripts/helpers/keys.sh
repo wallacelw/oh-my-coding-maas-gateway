@@ -4,7 +4,11 @@
 # Source from any script:
 #   source "$(dirname "${BASH_SOURCE[0]}")/helpers/keys.sh"
 #
-# Requires helpers/common.sh to be sourced first (for retry_curl).
+# Requires the log_* helpers; auto-sources helpers/common.sh when log_error is
+# undefined (see the guard below).
+#
+# Sourced by:
+#   01_env.sh, 03a_opencode.sh, 03b_codex.sh, 03c_claude_code.sh, 03d_pi.sh
 #
 # Provides:
 #   resolve_master_key <project_dir>
@@ -60,6 +64,23 @@ resolve_master_key() {
 
   log_error "LITELLM_MASTER_KEY not found. Set it in .env or environment."
   return 1
+}
+
+# Validate a MaaS key against the /models endpoint.
+# Returns: 0=valid, 1=invalid (401/403), 2=unreachable.
+validate_maas_key() {
+  local key="$1" base="$2"
+  local http_code
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
+    "$base/models" --config - 2>/dev/null <<CURLCFG || echo "000"
+header = "Authorization: Bearer $key"
+CURLCFG
+)
+  case "$http_code" in
+    200) return 0 ;;
+    401|403) return 1 ;;
+    *) return 2 ;;
+  esac
 }
 
 # Mint a scoped virtual key from LiteLLM (rotates: deletes any previous key

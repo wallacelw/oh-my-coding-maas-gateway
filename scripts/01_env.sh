@@ -35,6 +35,7 @@ trap 'exit 143' TERM
 # ── Helpers ──
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
+source "$SCRIPT_DIR/helpers/keys.sh"
 
 generate_secret() { python3 -c 'import secrets; print(secrets.token_urlsafe(32))'; }
 generate_master_key() { echo "sk-$(generate_secret)"; }
@@ -207,23 +208,6 @@ fi
 
 # ── Collect MaaS API key (env var or prompt) ──
 log_step "Huawei MaaS API key"
-
-# Validate a MaaS key against the /models endpoint.
-# Returns: 0=valid, 1=invalid (401/403), 2=unreachable.
-validate_maas_key() {
-  local key="$1" base="$2"
-  local http_code
-  http_code=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
-    "$base/models" --config - 2>/dev/null <<CURLCFG || echo "000"
-header = "Authorization: Bearer $key"
-CURLCFG
-)
-  case "$http_code" in
-    200) return 0 ;;
-    401|403) return 1 ;;
-    *) return 2 ;;
-  esac
-}
 
 MAAS_API_KEY="${HUAWEI_MAAS_API_KEY:-}"
 if [ -n "$MAAS_API_KEY" ]; then
