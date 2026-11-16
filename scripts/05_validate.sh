@@ -1449,7 +1449,17 @@ if [ "$RUN_BUNDLES" = true ]; then
     if [ "$DRY_RUN" = true ]; then
       skip "REA doctor (dry-run)"
     elif command -v rea &>/dev/null; then
-      H_DOC=$(timeout 120 rea doctor --json 2>/dev/null) && H_DOC_RC=0 || H_DOC_RC=$?
+      # rea doctor compares each registered command against the CURRENT
+      # shell's node/rea resolution, so a doctor run from a different PATH
+      # (e.g. a user-local node shadowing the system node 04 registered
+      # with) reports false "stale" verdicts. Judge in the environment the
+      # registrations were written for: prepend the registered node's dir
+      # (resolved in H1) for the doctor call.
+      if [ -n "${H_NODE:-}" ] && [ -x "$H_NODE" ]; then
+        H_DOC=$(timeout 120 env PATH="$(dirname "$H_NODE"):$PATH" rea doctor --json 2>/dev/null) && H_DOC_RC=0 || H_DOC_RC=$?
+      else
+        H_DOC=$(timeout 120 rea doctor --json 2>/dev/null) && H_DOC_RC=0 || H_DOC_RC=$?
+      fi
       if [ -z "$H_DOC" ] || ! printf '%s' "$H_DOC" | jq -e . >/dev/null 2>&1; then
         warn "rea doctor did not return parseable diagnostics (rc=$H_DOC_RC)"
       else

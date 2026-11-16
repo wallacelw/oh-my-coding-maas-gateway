@@ -324,6 +324,7 @@ rea_doctor_check() {
 bundle_rea_run() {
   local expected="$REA_AGENTS_VERSION"
   local rea_ver=""
+  local rea_just_installed=false
   rea_ver=$(rea --version 2>/dev/null | sed 's/^v//' | tr -d '[:space:]' || true)
 
   if [ "$rea_ver" != "$expected" ]; then
@@ -334,6 +335,12 @@ bundle_rea_run() {
       if npm_install_global "rea-agents@$expected"; then
         hash -r 2>/dev/null || true
         rea_ver=$(rea --version 2>/dev/null | sed 's/^v//' | tr -d '[:space:]' || true)
+        # A version change must force re-registration for every tool: the
+        # existing registrations pin the OLD binary's absolute path (rea
+        # setup registers `command: <path-to-rea>, mcp`), so skipping setup
+        # on "already registered" would leave every agent launching the
+        # previous version (rea doctor reports these as stale).
+        rea_just_installed=true
       else
         log_warn "  rea-agents install failed — skipping REA bundle"
         REA_FAIL=$((REA_FAIL + 1))
@@ -348,10 +355,11 @@ bundle_rea_run() {
   local tool cid
   for tool in $TOOLS; do
     cid=$(rea_client_id "$tool")
-    # Gate the setup call: already registered + version pin matches → skip.
-    # (Also in dry-run, so the printed plan matches what a real run would do.)
-    if [ "$rea_ver" = "$expected" ] && mcp_verify_rea_present "$tool"; then
-      log_dim "  REA: $tool already registered (current)"
+    # Gate the setup call: already registered + version pin matches + the
+    # binary did not just change → skip. (Also in dry-run, so the printed
+    # plan matches what a real run would do.)
+    if [ "$rea_ver" = "$expected" ] && [ "$rea_just_installed" = false ] && mcp_verify_rea_present "$tool"; then
+      log_dim "  REA: $tool already registered (version pin matches)"
       REA_RESULTS+="$tool=current "
       continue
     fi

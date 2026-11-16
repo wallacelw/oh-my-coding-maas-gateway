@@ -24,6 +24,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/helpers/common.sh"
+source "$SCRIPT_DIR/helpers/versions.sh"  # REA_AGENTS_VERSION / DRAWIO_MCP_VERSION pins
 
 
 # Project version (display only)
@@ -145,6 +146,50 @@ check_components() {
   fi
   _store_component "$name" "$cur" "$new" "$method" "tool"
 
+  # 5b. rea-agents (bundle pin — drift display only, never auto-updated;
+  # pins move via repo releases, restore via 04_skills_mcps.sh --refresh-only)
+  name="rea-agents"
+  cur=$(rea --version 2>/dev/null | sed 's/^v//' | tr -d '[:space:]' || echo "")
+  new="$REA_AGENTS_VERSION"
+  method="bundle-pin"
+  _store_component "$name" "$cur" "$new" "$method" "tool"
+
+  # 5c. @drawio/mcp (bundle pin — drift display only, never auto-updated)
+  name="@drawio/mcp"
+  cur=$(npm ls -g --depth=0 @drawio/mcp 2>/dev/null | sed -n 's/.*@drawio\/mcp@\([0-9.]*\).*/\1/p' | head -1 || true)
+  if [ -z "$cur" ]; then
+    # npm ls -g only sees the invoking shell's npm prefix — fall back to
+    # the registered entry path (agent configs; opencode.json is JSONC-tolerant
+    # via strip_jsonc — the slim installer can rewrite it with comments; the
+    # codex TOML registration is not probed here) and the common system
+    # prefixes, reading the version from the installed package.json.
+    _entry=$(strip_jsonc "$HOME/.config/opencode/opencode.json" 2>/dev/null | jq -r '.mcp.drawio.command[1] // empty' 2>/dev/null || true)
+    if [ -z "$_entry" ]; then
+      _entry=$(jq -r '.mcpServers.drawio.args[0] // empty' "$HOME/.claude.json" 2>/dev/null || true)
+    fi
+    if [ -z "$_entry" ]; then
+      _entry=$(jq -r '.mcpServers.drawio.args[0] // empty' "$HOME/.pi/agent/mcp.json" 2>/dev/null || true)
+    fi
+    # NOTE: the trailing space below is load-bearing — the unquoted
+    # ${_pkgdirs} expansion turns the derived dir into its own loop
+    # candidate. Only absolute entry paths yield a usable candidate.
+    _pkgdirs=""
+    if [[ "$_entry" == /* ]]; then
+      _pkgdirs="$(dirname "$(dirname "$_entry")") "
+    fi
+    for _pkgdir in ${_pkgdirs}/usr/local/lib/node_modules/@drawio/mcp /usr/lib/node_modules/@drawio/mcp; do
+      if [ -f "$_pkgdir/package.json" ]; then
+        cur=$(jq -r '.version // empty' "$_pkgdir/package.json" 2>/dev/null || true)
+        if [ -n "$cur" ]; then
+          break
+        fi
+      fi
+    done
+  fi
+  new="$DRAWIO_MCP_VERSION"
+  method="bundle-pin"
+  _store_component "$name" "$cur" "$new" "$method" "tool"
+
   # ── Infrastructure (LiteLLM + Observability) ──
 
   # 6. LiteLLM (Docker)
@@ -189,6 +234,13 @@ _store_component() {
   else
     UPDATE_AVAILABLE+=("no")
   fi
+  # Bundle pins are display/drift rows: never selectable for update and
+  # never counted as "updates available" (pins move via repo releases).
+  # (Plain `if`, not `[ ] &&` — a failing test as the function's last
+  # command would return 1 and trip set -e at the call site.)
+  if [ "$method" = "bundle-pin" ]; then
+    UPDATE_AVAILABLE[${#UPDATE_AVAILABLE[@]}-1]="no"
+  fi
 }
 
 # ── Print a single component row ──
@@ -206,6 +258,15 @@ _print_row() {
   if [ "${UPDATE_METHODS[$i]}" = "pinned" ]; then
     new="—"
     status="${C_DIM}pinned — major upgrades are manual (data dir format changes; use 06_backup.sh restore procedure)${C_RESET}"
+  elif [ "${UPDATE_METHODS[$i]}" = "bundle-pin" ]; then
+    # Drift row: installed version vs the repo pin (helpers/versions.sh).
+    if [ -z "${CUR_VERSIONS[$i]}" ]; then
+      status="${C_DIM}not installed${C_RESET}"
+    elif [ "$cur" = "$new" ]; then
+      status="${C_GREEN}up to date (pinned)${C_RESET}"
+    else
+      status="${C_YELLOW}pin drift — restore via scripts/04_skills_mcps.sh --refresh-only${C_RESET}"
+    fi
   elif [ "$avail" = "yes" ]; then
     status="${C_YELLOW}update available${C_RESET}"
   elif [ -z "${CUR_VERSIONS[$i]}" ]; then
@@ -249,7 +310,7 @@ show_table() {
   if [ $updates_found -gt 0 ]; then
     log_info "$updates_found component(s) with updates available"
   else
-    log_ok "All components up to date"
+    log_ok "No components with updates available (pinned rows can still show drift)"
   fi
 
   UPDATES_FOUND=$updates_found
@@ -362,6 +423,13 @@ update_component() {
   fi
 
   case "$method" in
+    bundle-pin)
+      # Defensive: bundle pins are display-only (UPDATE_AVAILABLE is forced
+      # "no" in _store_component) and can never be selected — but if that
+      # ever regresses, fail loudly instead of silently no-op'ing.
+      log_warn "$name is a bundle pin — never auto-updated (pins move via repo releases)"
+      return 0
+      ;;
     pi-self)
       # Managed install — pi's self-updater is the only working method.
       run_filtered "pi" pi update --self || { log_error "pi update --self failed"; return 1; }

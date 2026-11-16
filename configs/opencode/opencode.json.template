@@ -43,7 +43,7 @@
     }
   },
   "plugin": [
-    "oh-my-opencode-slim@3.0.6"
+    "oh-my-opencode-slim@3.0.7"
   ],
   "agent": {
     "explore": { "disable": true },

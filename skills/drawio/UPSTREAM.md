@@ -8,9 +8,10 @@ install time.
 ## Provenance
 
 - **Source repository:** `jgraph/drawio-mcp` (https://github.com/jgraph/drawio-mcp)
-- **Vendored date:** 2026-11-03
+- **Vendored date:** 2026-11-16
 - **drawio-mcp era:** the `@drawio/mcp` npm package pinned by this repo is
-  `1.10.1`; these files were taken from the matching upstream tree.
+  `1.12.0`; these files were taken from the matching upstream tree
+  (verified byte-identical against upstream `main` at the 1.12.0 era).
 - **License:** Apache-2.0 (the `@drawio/mcp` npm package declares
   `"license": "Apache-2.0"`; the upstream `jgraph/drawio-mcp` repo is
   Apache-2.0). The vendored skill files themselves carry no separate license

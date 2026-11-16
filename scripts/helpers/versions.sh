@@ -9,7 +9,8 @@
 #       project, opencode, oh-my-opencode-slim, codex, claude-code, pi,
 #       litellm, postgresql, prometheus, grafana
 #
-# Sourced by: bootstrap.sh, 04_skills_mcps.sh, 05_validate.sh (helpers/common.sh must be sourced first —
+# Sourced by: bootstrap.sh, 04_skills_mcps.sh, 05_validate.sh, update.sh
+# (helpers/common.sh must be sourced first —
 # C_BOLD/C_DIM/C_RESET colors come from there).
 #
 # Every version fetch is failure-safe (2>/dev/null + || fallbacks):
@@ -19,8 +20,8 @@
 # ── Agent tool bundle pins ───────────────────────────────────
 # Pinned versions for the optional-but-default-on agent tool bundles
 # installed by scripts/04_skills_mcps.sh and checked by scripts/05_validate.sh.
-REA_AGENTS_VERSION="6.8.0"
-DRAWIO_MCP_VERSION="1.10.1"
+REA_AGENTS_VERSION="6.9.0"
+DRAWIO_MCP_VERSION="1.12.0"
 # REA (rea-agents) requires Node >= 22.23.4; the drawio stdio server runs on
 # the same resolved node. Both bundles share this floor.
 NODE_MCP_MIN_VERSION="22.23.4"
