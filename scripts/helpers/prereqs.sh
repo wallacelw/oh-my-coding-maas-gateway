@@ -157,17 +157,19 @@ prereq_ensure_npm() {
   log_ok "Node.js + npm installed"
 }
 
-# Shared npm-global install with writable-prefix-or-sudo. Used by
-# 04_skills_mcps.sh; 03b/03c/03d adopt it in an upcoming change.
-#   npm_install_global <package-spec>
+# Shared npm-global install with writable-prefix-or-sudo. Used by 03d (with
+# --ignore-scripts --min-release-age=0) and 04; 03b/03c adopt it in an upcoming
+# change. Extra args after <package-spec> are passed through to npm.
+#   npm_install_global <package-spec> [npm-install-flags...]
 npm_install_global() {
-  local spec="$1" prefix
+  local spec="$1"; shift
+  local prefix
   prefix=$(npm config get prefix 2>/dev/null || echo "")
   if [ -n "$prefix" ] && [ -w "$prefix/lib/node_modules" ] 2>/dev/null; then
-    run_filtered "npm" npm install -g "$spec"
+    run_filtered "npm" npm install -g "$spec" "$@"
   else
     log_info "  npm global prefix not writable — using sudo"
-    run_filtered "npm" sudo npm install -g "$spec"
+    run_filtered "npm" sudo npm install -g "$spec" "$@"
   fi
 }
 
@@ -305,7 +307,7 @@ prereq_ensure_node_mcp() {
   # Not satisfied — offer to install NodeSource Node 22.x.
   log_info "$reason (need Node >= $min)"
   if ! _prereq_prompt "  Install Node.js 22.x from NodeSource?"; then
-    log_warn "Node.js >= $min not available — skipping agent tool bundles"
+    log_warn "Node.js >= $min not available"
     return 1
   fi
 
@@ -343,7 +345,7 @@ prereq_ensure_node_mcp() {
     fi
   done
 
-  log_warn "Node.js installation did not reach >= $min — skipping agent tool bundles"
+  log_warn "Node.js >= $min not available"
   return 1
 }
 

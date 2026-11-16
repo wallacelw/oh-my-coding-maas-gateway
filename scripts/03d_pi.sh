@@ -7,10 +7,13 @@ umask 077  # written configs hold API keys — deny group/world access
 # Domain:        @earendil-works/pi-coding-agent
 # Order:         03d (after LiteLLM proxy is live)
 # Optional:      yes (runs only if pi is in the selection)
-# Description:   Install the pi binary (via npm on Node 22+, else the pi.dev
-#                installer run from a temp file), mint a LiteLLM virtual key
-#                (alias "pi"), and write models.json pointing to the LiteLLM
-#                proxy with all available models.
+# Description:   Install the pi binary via npm (Node >= NODE_MCP_MIN_VERSION
+#                ensured first; NodeSource if missing), falling back to the
+#                pi.dev installer (run so it can never auto-start pi) only when
+#                npm-direct fails or Node was declined interactively. Never
+#                launches pi. Mints a LiteLLM virtual key (alias "pi") and writes
+#                models.json pointing to the LiteLLM proxy with all available
+#                models.
 # Inputs:        .env (LITELLM_MASTER_KEY, HUAWEI_MAAS_API_KEY), --virtual-key, --dry-run
 # Outputs:       ~/.pi/agent/models.json
 # Standalone:    yes — ./scripts/03d_pi.sh
@@ -28,6 +31,7 @@ source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/keys.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
+source "$SCRIPT_DIR/helpers/versions.sh"
 source_env "$PROJECT_DIR"
 
 # ── Parse args ──
@@ -66,36 +70,78 @@ fi
 log_info "Installing pi..."
 if ! command -v pi &>/dev/null; then
   if [ "$DRY_RUN" = true ]; then
-    log_info "Would run: curl -fsSL $PI_INSTALL_URL | sh"
+    log_info "Would ensure Node >= $NODE_MCP_MIN_VERSION (NodeSource 22.x if missing)"
+    log_info "Would run: npm install -g --ignore-scripts --min-release-age=0 @earendil-works/pi-coding-agent"
   else
-    # Check if we can install directly via npm (avoids installer prompts entirely)
-    _node_major=$(node --version 2>/dev/null | sed 's/^v//;s/\..*//' || echo 0)
-    if [ "${AUTO_YES:-false}" = true ] && [ "$_node_major" -ge 22 ] 2>/dev/null; then
-      # Node.js 22+ available — install Pi directly via npm, skip installer
-      log_dim "Node.js $_node_major detected — installing Pi via npm directly"
-      # Capture rc without set -e termination so the PATH refresh and
-      # recovery guidance below still run on failure.
-      npm install -g --ignore-scripts --min-release-age=0 @earendil-works/pi-coding-agent && _pi_rc=0 || _pi_rc=$?
+    # 2a. Ensure Node — single repo-wide floor (approved decision)
+    if prereq_ensure_node_mcp "Node.js >= $NODE_MCP_MIN_VERSION is required to install the Pi agent"; then
+      export PATH="${NODE_MCP_BIN_DIR}:$PATH"
+      hash -r 2>/dev/null || true
+      NODE_OK=true
     else
-      # Use installer script (handles Node.js installation if needed)
-      PI_INSTALLER_TMP=$(mktemp)
-      if ! curl -fsSL --max-time 60 "$PI_INSTALL_URL" -o "$PI_INSTALLER_TMP"; then
-        log_error "Failed to download Pi installer."
-        rm -f "$PI_INSTALLER_TMP"
+      NODE_OK=false
+      if [ "${AUTO_YES:-false}" = true ]; then
+        log_error "Node.js >= $NODE_MCP_MIN_VERSION is required and could not be ensured."
+        log_dim "  Install Node 22.x (e.g. https://deb.nodesource.com/setup_22.x) and re-run, or run this script interactively."
         exit 1
       fi
-      log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
-      if [ "${AUTO_YES:-false}" = true ]; then
-        # Pi installer reads from /dev/tty (not stdin). Use 'script' to
-        # create a pseudo-terminal so the installer can detect a tty.
-        # Feed finite 'y' answers (not 'yes' which causes broken pipe
-        # when installer exits, killing it mid-install under set -e).
-        printf 'y\ny\ny\ny\ny\n' | script -q -c "sh $PI_INSTALLER_TMP" /dev/null && _pi_rc=0 || _pi_rc=$?
-      else
-        sh "$PI_INSTALLER_TMP" && _pi_rc=0 || _pi_rc=$?
-      fi
-      rm -f "$PI_INSTALLER_TMP"
+      # interactive + node ensure declined → the pi.dev installer can install
+      # its own standalone Node without sudo; fall through to it below.
     fi
+
+    # 2b. npm-direct (primary path, all modes)
+    PI_INSTALLED=false
+    if [ "$NODE_OK" = true ]; then
+      if ! command -v npm &>/dev/null; then
+        log_dim "npm not found — using the pi.dev installer"
+      else
+        log_dim "Node.js $(node --version 2>/dev/null || echo '?') — installing Pi via npm"
+        if npm_install_global "@earendil-works/pi-coding-agent" --ignore-scripts --min-release-age=0; then
+          PI_INSTALLED=true
+        else
+          log_warn "npm install of Pi failed — falling back to the pi.dev installer"
+        fi
+      fi
+    fi
+
+    # 2c. pi.dev installer fallback (npm-direct failed, or node ensure declined interactively)
+    if [ "$PI_INSTALLED" = false ]; then
+      log_info "Using the pi.dev installer (fallback)..."
+      PI_INSTALLER_TMP=$(mktemp)
+      if ! curl -fsSL --max-time 60 "$PI_INSTALL_URL" -o "$PI_INSTALLER_TMP"; then
+        log_error "Failed to download Pi installer."; rm -f "$PI_INSTALLER_TMP"; exit 1
+      fi
+      log_dim "Pi installer downloaded ($(wc -c < "$PI_INSTALLER_TMP") bytes)"
+      # Clean up temp files on Ctrl-C / SIGTERM. The detached installer is NOT
+      # killed — it completes headless and cannot launch pi without a tty (benign).
+      trap 'rm -f "$PI_INSTALLER_TMP" "${PI_LOG:-}" 2>/dev/null; exit 130' INT TERM
+      if [ "${AUTO_YES:-false}" = true ] || ! is_interactive; then
+        # Non-interactive / no controlling terminal (AUTO_YES, CI, ssh without
+        # -t): the installer auto-defaults its menu and its start-pi prompt
+        # self-disables. setsid detaches the session's tty; -w waits for
+        # completion. (flock already requires util-linux.)
+        if ! command -v setsid &>/dev/null; then
+          log_error "setsid (util-linux) is required for the non-interactive Pi installer fallback."
+          rm -f "$PI_INSTALLER_TMP"; exit 1
+        fi
+        PI_LOG=$(mktemp)
+        setsid -w sh "$PI_INSTALLER_TMP" </dev/null >"$PI_LOG" 2>&1 && _pi_rc=0 || _pi_rc=$?
+        while IFS= read -r line; do log_dim "$line"; done < "$PI_LOG"
+        rm -f "$PI_LOG"
+      else
+        # Interactive (controlling terminal): pipe stdout through tee so the
+        # installer's stdout is NOT a tty — its "Start pi now? [Y/n]" prompt
+        # self-disables (the action menu still shows via /dev/tty). Pi must
+        # never auto-start mid-pipeline.
+        sh "$PI_INSTALLER_TMP" 2>&1 | tee /dev/tty && _pi_rc=0 || _pi_rc=$?
+      fi
+      trap - INT TERM
+      rm -f "$PI_INSTALLER_TMP"
+    else
+      _pi_rc=0
+    fi
+
+    # 2d. PATH refresh + verification
     # Refresh PATH — installer may have added ~/.local/bin or updated nvm
     hash -r 2>/dev/null || true
     # Also check common install locations
