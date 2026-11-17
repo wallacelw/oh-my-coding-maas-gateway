@@ -677,7 +677,7 @@ forwards directly to Huawei MaaS's Anthropic-compatible endpoint using the
 
 | File | Purpose |
 |------|---------|
-| `~/.claude/settings.json` | Runtime config: env vars, model selection (chmod 600) |
+| `~/.claude/settings.json` | Runtime config: env vars, modelOverrides/modelPicker (chmod 600) |
 | `~/.claude.json` | IDE integration settings (`autoInstallIdeExtension: false`), MCP servers (`.mcpServers` — REA, drawio) |
 
 Claude Code reads `settings.json` automatically on startup — no `source` or
@@ -699,7 +699,26 @@ Set in the `env` block of `~/.claude/settings.json`:
 | `ANTHROPIC_API_KEY` | `sk-...` (virtual key) | LiteLLM auth (alias: claude-code) |
 | `ANTHROPIC_MODEL` | `claude-glm-5.3` | Primary model |
 | `ANTHROPIC_SMALL_FAST_MODEL` | `claude-deepseek-v4.1-flash-1017` | Fast model for background tasks |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | `claude-glm-5.3` | `/model opus` → gateway flagship |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | `claude-glm-5.3` | `/model sonnet` → gateway flagship |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | `claude-deepseek-v4.1-flash-1017` | `/model haiku` + fast mode → gateway fast model |
+| `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY` | `1` | `/model` picker lists every `claude-*` model from the proxy's `/v1/models` |
 | `CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL` | `1` | Prevent VSCode extension auto-install |
+
+### Model Recognition (modelOverrides + modelPicker)
+
+Claude Code only recognizes model IDs it knows, or IDs that appear as values
+in `modelOverrides` — unknown `claude-*` IDs hit the unrecognized-model path
+(per-session warnings, version-dependent refusals). `03c` writes:
+
+- `modelOverrides`: `claude-sonnet-4-5[1m]` → `claude-glm-5.3`,
+  `claude-haiku-4-5[1m]` → `claude-deepseek-v4.1-flash-1017`. The `[1m]`
+  anchors match the models' real 1M-token context windows; requests always
+  carry the gateway's IDs (the anchors only feed Claude Code's client-side
+  metadata). Requires Claude Code v2.1.200+.
+- `modelPicker`: labeled rows ("GLM 5.3 (LiteLLM)", "DeepSeek Flash
+  (LiteLLM)") with `behavesAs` anchors, so `/model` offers the gateway models
+  under their own names. Re-runs preserve user-added rows.
 
 ### VSCode Extension Disabled
 

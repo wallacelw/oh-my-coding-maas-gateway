@@ -166,7 +166,8 @@ if [ -f "$CLAUDE_SETTINGS" ]; then
     # REPLACES arrays — so rebuild modelPicker.options as our rows first, then
     # any pre-existing user rows whose model isn't one of ours (dedupe by .model).
     # replaceBuiltInOptions survives the deep merge untouched. Read the existing
-    # file via --slurpfile (not --argjson) so a >128KB file can't hit ARG_MAX/E2BIG.
+    # file via --slurpfile (an --argjson approach would hit the execve
+    # argument limit on >128KB files).
     MERGED_SETTINGS=$(jq -n \
       --slurpfile old "$CLAUDE_SETTINGS" \
       --argjson new "$NEW_SETTINGS_BLOCK" '
@@ -195,7 +196,7 @@ if [ -f "$CLAUDE_SETTINGS" ]; then
       log_ok "Updated: $CLAUDE_SETTINGS (backup saved, merged settings block)"
     fi
   else
-    log_warn "Existing settings.json is invalid JSON — creating backup and overwriting"
+    log_warn "Existing settings.json is invalid or non-object JSON — creating backup and overwriting"
     backup_with_prune "$CLAUDE_SETTINGS" >/dev/null
     echo "$NEW_SETTINGS_BLOCK" > "$CLAUDE_SETTINGS"
     chmod 600 "$CLAUDE_SETTINGS"

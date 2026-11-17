@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.1] - 2026-11-18
+
+### Fixed — Claude Code recognizes the gateway's claude-* model IDs
+
+- **03c_claude_code.sh:** the settings block now makes Claude Code
+  *recognize* the proxy's Anthropic-format models instead of treating them as
+  unknown `claude-*` IDs (per-session "doesn't recognize the model" warnings,
+  `[claude-code:unrecognized_model]` diagnostics, and — on some
+  versions/surfaces — hard refusals, the reported bug). Claude Code only
+  recognizes IDs it knows or that appear as `modelOverrides` values, so 03c
+  anchors each gateway ID to a `[1m]`-suffixed known Anthropic ID
+  (`claude-sonnet-4-5[1m]` → `claude-glm-5.3`, `claude-haiku-4-5[1m]` →
+  `claude-deepseek-v4.1-flash-1017`); requests always carry the gateway's
+  model IDs — the anchors only feed Claude Code's client-side metadata
+  (context window, capability defaults), matching the models' real 1M-token
+  windows. Also adds `modelPicker` rows so `/model` lists the gateway models
+  under their own labels, `ANTHROPIC_DEFAULT_OPUS/SONNET/HAIKU_MODEL` alias
+  vars so `/model opus|sonnet|haiku` and fast mode route to the gateway
+  models, and `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1` so the picker
+  lists every `claude-*` model from the proxy. Verified end-to-end on
+  Claude Code 2.1.326: zero warnings on `claude -p`, `--model`, and the
+  alias paths. Requires Claude Code v2.1.200+ for override resolution;
+  older versions keep working with the unrecognized-model warnings.
+- **03c_claude_code.sh:** merge hardening — the existing settings file is
+  read via `jq --slurpfile` (an `--argjson` approach would hit the execve
+  argument limit on >128KB files; the pre-merge `$(cat)` round-trip is kept
+  only for the compare-before-write), non-object
+  JSON falls back to backup+overwrite instead of crashing the merge, 600
+  perms are enforced even on the unchanged-skip path, and user-added
+  `modelPicker` rows / env vars / `modelOverrides` entries survive re-runs
+  (our rows first, user rows deduped after).
+- **05_validate.sh:** section E3 gains four recognition checks
+  (`modelOverrides` values, `modelPicker` rows, alias env vars, discovery
+  flag) with the no-config skip tally corrected 4 → 8.
+- **Docs:** 03c section (INSTALLATION), Claude Code env table + new Model
+  Recognition section (REFERENCE), and the `.env.template` comment block
+  updated to the full settings shape.
+
 ## [1.36.0] - 2026-11-16
 
 ### Changed — non-interactive pipeline, safe pi install, version refresh

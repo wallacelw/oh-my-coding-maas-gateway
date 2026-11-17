@@ -171,6 +171,23 @@ Installs the Claude Code CLI (via npm), mints a virtual key (alias
 LiteLLM proxy via the Anthropic Messages API), and disables the VSCode
 extension auto-install. Supports `--virtual-key=` and `--dry-run`.
 
+The settings block also makes Claude Code **recognize** the gateway's
+`claude-*` model IDs: Claude Code only recognizes IDs it knows or that appear
+as `modelOverrides` values — unknown `claude-*` IDs hit the
+unrecognized-model path (per-session warnings, version-dependent refusals).
+`03c` anchors each gateway ID to a `[1m]`-suffixed known Anthropic ID
+(`claude-sonnet-4-5[1m]` → `claude-glm-5.3`,
+`claude-haiku-4-5[1m]` → `claude-deepseek-v4.1-flash-1017`), adds
+`modelPicker` rows so `/model` lists the gateway models under their own
+labels, repoints the `opus`/`sonnet`/`haiku` aliases at the gateway models
+via `ANTHROPIC_DEFAULT_*_MODEL`, and enables gateway model discovery.
+Requests always carry the gateway's model IDs; the Anthropic anchors only
+feed Claude Code's client-side metadata (context window, capability
+defaults). Re-runs merge-preserve user-added env vars, `modelOverrides`
+entries, and `modelPicker` rows. Requires Claude Code v2.1.200+ for the
+override resolution; older versions still work but keep the unrecognized-model
+warnings.
+
 ### `03d_pi.sh`
 
 Installs the Pi coding agent — via `npm install -g
