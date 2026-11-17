@@ -1041,6 +1041,30 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
     else
       fail "default model not set"
     fi
+    if jq -e '([.modelOverrides[]?] | index("claude-glm-5.3") != null) and ([.modelOverrides[]?] | index("claude-deepseek-v4.1-flash-1017") != null)' "$CLAUDE_SETTINGS" >/dev/null 2>&1; then
+      pass "modelOverrides recognizes both gateway model IDs"
+    else
+      fail "modelOverrides missing gateway model IDs (re-run scripts/03c_claude_code.sh)"
+    fi
+    if jq -e '([.modelPicker.options[]?.model] | index("claude-glm-5.3") != null) and ([.modelPicker.options[]?.model] | index("claude-deepseek-v4.1-flash-1017") != null)' "$CLAUDE_SETTINGS" >/dev/null 2>&1; then
+      pass "modelPicker lists both gateway models"
+    else
+      fail "modelPicker missing gateway model rows (re-run scripts/03c_claude_code.sh)"
+    fi
+    CLAUDE_ALIAS_OPUS=$(jq -r '.env.ANTHROPIC_DEFAULT_OPUS_MODEL // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
+    CLAUDE_ALIAS_SONNET=$(jq -r '.env.ANTHROPIC_DEFAULT_SONNET_MODEL // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
+    CLAUDE_ALIAS_HAIKU=$(jq -r '.env.ANTHROPIC_DEFAULT_HAIKU_MODEL // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
+    if [ "$CLAUDE_ALIAS_OPUS" = "claude-glm-5.3" ] && [ "$CLAUDE_ALIAS_SONNET" = "claude-glm-5.3" ] && [ "$CLAUDE_ALIAS_HAIKU" = "claude-deepseek-v4.1-flash-1017" ]; then
+      pass "alias env vars route opus/sonnet/haiku to gateway models"
+    else
+      fail "alias env vars (OPUS/SONNET/HAIKU) not set to gateway models (re-run scripts/03c_claude_code.sh)"
+    fi
+    CLAUDE_DISCOVERY=$(jq -r '.env.CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY // empty' "$CLAUDE_SETTINGS" 2>/dev/null || true)
+    if [ "$CLAUDE_DISCOVERY" = "1" ]; then
+      pass "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1 (picker lists gateway models)"
+    else
+      fail "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY not enabled (re-run scripts/03c_claude_code.sh)"
+    fi
     PERMS=$(file_perms "$CLAUDE_SETTINGS")
     if [ "$PERMS" = "600" ]; then
       pass "Config file permissions 600"
@@ -1048,7 +1072,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
       warn "Config file permissions $PERMS (expected 600)"
     fi
   else
-    fail_n 4 "No Claude Code config — skipping 4 provider checks"
+    fail_n 8 "No Claude Code config — skipping 8 provider checks"
     CLAUDE_VK=""
   fi
 
