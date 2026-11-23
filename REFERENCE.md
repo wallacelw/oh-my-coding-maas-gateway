@@ -794,7 +794,7 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 |---------|-----|
 | LiteLLM won't start | `docker compose logs litellm --tail 50` |
 | `litellm` keeps restarting | Check `docker compose logs db`, verify `DB_PASSWORD` |
-| `password authentication failed for user "llmproxy"` | `DB_PASSWORD` in `.env` no longer matches the postgres volume (it keeps its first-init password). Restore `DB_PASSWORD` from the `.env` used when the volume was created, or re-initialize: `docker compose down && docker volume rm litellm_postgres_data` (loses virtual keys and usage history). `02_litellm.sh` detects this and prints these steps |
+| `password authentication failed for user "llmproxy"` | `DB_PASSWORD` in `.env` no longer matches the postgres volume (it keeps its first-init password). No-data-loss fix — align the database with the current `.env` value: `docker exec litellm_pg_db psql -U llmproxy -d litellm -c "ALTER USER llmproxy WITH PASSWORD '<DB_PASSWORD from .env>';"` (works without the old password — the container's unix-socket auth is trusted). Alternatives: restore `DB_PASSWORD` from the `.env` used when the volume was created, or re-initialize: `docker compose down && docker volume rm litellm_postgres_data` (loses virtual keys and usage history). `02_litellm.sh` detects this and prints these steps |
 | 401 Unauthorized | Key must start with `sk-` |
 | 404 model not found | Model name case-sensitive |
 | MaaS 403 | Verify key at https://console.huaweicloud.com/modelarts/ — region must be `ap-southeast-1` |

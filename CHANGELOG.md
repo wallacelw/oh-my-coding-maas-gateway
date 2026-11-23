@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.3] - 2026-11-23
+
+### Added — no-data-loss recovery for the DB-auth desync
+
+- **02_litellm.sh / REFERENCE.md:** the `password authentication failed`
+  recovery output now leads with the in-place fix — `docker exec
+  litellm_pg_db psql -U llmproxy -d litellm -c "ALTER USER llmproxy WITH
+  PASSWORD '<DB_PASSWORD from .env>';"` — verified against the official
+  postgres:16-alpine image (unix-socket auth inside the container is
+  trusted, so no old password is needed). Aligns the database with the
+  current `.env` value without losing virtual keys or usage history;
+  restore-old-value and volume-reinitialize remain as alternatives.
+
 ## [1.36.2] - 2026-11-23
 
 ### Fixed — update-path bugs (old stack → one-liner update → container never healthy)

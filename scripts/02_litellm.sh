@@ -473,7 +473,9 @@ else
       log_error "LiteLLM cannot authenticate to PostgreSQL: 'password authentication failed'."
       log_dim "  DB_PASSWORD in .env does not match the postgres volume litellm_postgres_data"
       log_dim "  (the volume keeps the password it was FIRST initialized with)."
-      log_dim "  Recovery: restore DB_PASSWORD from the .env used when the volume was created,"
+      log_dim "  Recovery (no data loss) — align the database with the current .env value:"
+      log_dim "    docker exec litellm_pg_db psql -U llmproxy -d litellm -c \"ALTER USER llmproxy WITH PASSWORD '<DB_PASSWORD from .env>';\""
+      log_dim "  Or restore DB_PASSWORD from the .env used when the volume was created,"
       log_dim "  or re-initialize the volume (loses virtual keys and usage history):"
       log_dim "    docker compose down && docker volume rm litellm_postgres_data"
       print_litellm_logs
