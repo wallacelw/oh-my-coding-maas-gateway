@@ -133,7 +133,9 @@ value, or an interactive prompt (bootstrap collects it earlier — see the
 `HUAWEI_MAAS_API_KEY_1..N` / `HUAWEI_MAAS_API_KEY_COUNT` env vars, or a
 prompt in standalone interactive runs.
 Configures git hooks to block committing secrets. `--force` regenerates all
-secrets (for key rotation).
+secrets (for key rotation) — except `DB_PASSWORD`, which is kept when the
+postgres volume `litellm_postgres_data` exists (the volume keeps its
+first-init password; a rotated one could never authenticate).
 
 ### `02_litellm.sh`
 
@@ -141,7 +143,12 @@ Generates `configs/litellm/config.yaml` from `.env` — N deployments per model
 per format (dual OpenAI + Anthropic), 4N total. Checks ports 4000/5432/9090/
 3000 are free. Logs the image versions being deployed, then runs
 `docker compose up -d` (LiteLLM + PostgreSQL + Prometheus + Grafana).
-Waits up to 90s for LiteLLM to become healthy. Supports
+Waits up to 180s for LiteLLM to become healthy (big-version upgrades run
+prisma migrations on the existing volume). Fails fast with the container's
+log tail and recovery steps when it detects a DB auth failure
+(`DB_PASSWORD` no longer matches the volume's first-init password) or a
+crash-looping container — instead of burning the whole budget. Skips the
+config-reload restart when `up -d` already recreated the container. Supports
 `--routing-strategy=` and `--dry-run` (renders the would-be config to a
 temp file, prints a diff summary against the current config, writes
 nothing, and skips prereq installs and MaaS key validation).
@@ -319,7 +326,7 @@ section above).
 
 | Flag | Effect |
 |------|--------|
-| `--force` | Regenerate all immutable secrets (for key rotation). Invalidates existing virtual keys. |
+| `--force` | Regenerate all immutable secrets (for key rotation). Invalidates existing virtual keys. Keeps `DB_PASSWORD` when the postgres volume exists. |
 
 ### `04_skills_mcps.sh`
 
@@ -474,10 +481,13 @@ systemd.
   postcondition.
 - Safe to re-run from any step. Never destroys data or regenerates immutable
   secrets (`LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, `DB_PASSWORD`).
-- `01_env.sh --force` regenerates all secrets (for key rotation).
-- Fail-safe: if any preserved secret is empty or missing in an existing
-  `.env`, `01_env.sh` regenerates ALL secrets on the next run (with a
-  warning) — a partially-populated `.env` never survives silently.
+- `01_env.sh --force` regenerates all secrets (for key rotation), except
+  `DB_PASSWORD` when the postgres volume exists (kept — see above).
+- Missing secrets are regenerated individually (with a warning naming each
+  one) — the other secrets are preserved. `DB_PASSWORD` is the exception:
+  if it is missing while the postgres volume `litellm_postgres_data` exists,
+  `01_env.sh` fails with the recovery steps instead of generating a
+  password the volume would reject.
 
 ---
 

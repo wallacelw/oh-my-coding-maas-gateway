@@ -400,39 +400,97 @@ if [ "$DRY_RUN" = true ]; then
 fi
 
 was_running=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | grep -c litellm || true)
+old_litellm_cid="$(docker inspect litellm_proxy --format '{{.Id}}' 2>/dev/null || echo "")"
 log_info "Starting Docker Compose (idempotent — no-op if already running)..."
 log_info "Images: LiteLLM $(grep 'image:.*litellm:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*litellm://') · PostgreSQL $(grep 'image:.*postgres:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*postgres://') · Prometheus $(grep 'image:.*prom/prometheus:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*prom\/prometheus://') · Grafana $(grep 'image:.*grafana/grafana:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's|.*grafana/grafana:||')"
 if ! run_with_spinner "Starting containers" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d; then
   log_error "Docker Compose failed to start."
   exit 1
 fi
+new_litellm_cid="$(docker inspect litellm_proxy --format '{{.Id}}' 2>/dev/null || echo "")"
 
-# Restart LiteLLM if config changed (bind mount — compose won't auto-restart)
-# Only restart if LiteLLM was already running (skip on fresh install)
+# Restart LiteLLM if config changed (bind mount — compose won't auto-restart).
+# Skip the restart when `up -d` just recreated the container (image or compose
+# change): the recreated container already reads the new config, and an extra
+# restart only adds downtime (and can interrupt startup migrations).
 if [ "${was_running:-0}" -gt 0 ] && [ -n "${BACKUP:-}" ] && [ -f "$BACKUP" ] && ! diff -q "$BACKUP" "$CONFIG_FILE" &>/dev/null; then
-  log_info "Config changed — restarting LiteLLM to load new config..."
-  run_with_spinner "Restarting LiteLLM" docker compose -f "$PROJECT_DIR/docker-compose.yml" restart litellm || log_warn "LiteLLM restart failed — health check will verify"
+  if [ -n "$old_litellm_cid" ] && [ "$old_litellm_cid" != "$new_litellm_cid" ]; then
+    log_info "Config changed — LiteLLM was recreated by compose; new config already loaded"
+  else
+    log_info "Config changed — restarting LiteLLM to load new config..."
+    run_with_spinner "Restarting LiteLLM" docker compose -f "$PROJECT_DIR/docker-compose.yml" restart litellm || log_warn "LiteLLM restart failed — health check will verify"
+  fi
 fi
 
-# Wait for LiteLLM to become healthy
+# Wait for LiteLLM to become healthy. The 180s budget covers big-version
+# upgrades (prisma migrations on an existing volume can outpace a short wait
+# on slow disks). Crash-looping and DB-auth failures are detected from the
+# container state/logs and fail fast with actionable output instead of
+# burning the whole budget.
 LITELLM_URL="http://127.0.0.1:4000"
+COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
+print_litellm_logs() {
+  log_dim "  Last LiteLLM log lines:"
+  docker logs --tail 12 litellm_proxy 2>&1 | while IFS= read -r line; do log_dim "    $line"; done || true
+}
 if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
   log_ok "LiteLLM already healthy."
 else
-  log_info "Waiting for LiteLLM to become healthy (up to 90s)..."
+  log_info "Waiting for LiteLLM to become healthy (up to 180s)..."
   waited=0
-  while [ $waited -lt 90 ]; do
+  health_rc=1
+  while [ $waited -lt 180 ]; do
     if curl -sf -m 15 "$LITELLM_URL/health/liveliness" &>/dev/null; then
       log_ok "LiteLLM healthy after ~${waited}s."
+      log_dim "  (docker ps health badge may lag up to ~70s — start_period 40s + interval 30s; the HTTP check above is authoritative)"
+      health_rc=0
+      break
+    fi
+    # DB auth failure: the classic update-path desync (DB_PASSWORD no longer
+    # matches the volume's first-init password) — waiting longer cannot help.
+    # NOTE: no grep -q here — -q exits on first match, docker logs takes
+    # SIGPIPE (141), and pipefail turns a MATCHED pattern into rc!=0.
+    if docker logs --since 2m litellm_proxy 2>&1 | grep 'password authentication failed' &>/dev/null; then
+      health_rc=3
+      break
+    fi
+    # Crash-loop: a container that keeps restarting will never become healthy.
+    _st="$(docker inspect litellm_proxy --format '{{.State.Status}}' 2>/dev/null || echo "")"
+    _rc="$(docker inspect litellm_proxy --format '{{.RestartCount}}' 2>/dev/null || echo 0)"
+    if [ "$_st" = "restarting" ] || [ "${_rc:-0}" -ge 2 ]; then
+      health_rc=2
       break
     fi
     printf "  ."
     sleep 5
     waited=$((waited + 5))
   done
-  if [ $waited -ge 90 ]; then
-    echo ""
-    log_error "LiteLLM did not become healthy within 90s. Check: docker compose logs"
-    exit 1
-  fi
+  echo ""
+  case "$health_rc" in
+    0)
+      ;;
+    3)
+      log_error "LiteLLM cannot authenticate to PostgreSQL: 'password authentication failed'."
+      log_dim "  DB_PASSWORD in .env does not match the postgres volume litellm_postgres_data"
+      log_dim "  (the volume keeps the password it was FIRST initialized with)."
+      log_dim "  Recovery: restore DB_PASSWORD from the .env used when the volume was created,"
+      log_dim "  or re-initialize the volume (loses virtual keys and usage history):"
+      log_dim "    docker compose down && docker volume rm litellm_postgres_data"
+      print_litellm_logs
+      exit 1
+      ;;
+    2)
+      log_error "LiteLLM container is crash-looping (restarting repeatedly)."
+      print_litellm_logs
+      log_dim "  Full logs: docker compose -f $COMPOSE_FILE logs litellm"
+      exit 1
+      ;;
+    *)
+      log_error "LiteLLM did not become healthy within 180s."
+      log_dim "  A big-version upgrade can run long migrations — check whether it is still progressing:"
+      log_dim "    docker compose -f $COMPOSE_FILE logs -f litellm"
+      print_litellm_logs
+      exit 1
+      ;;
+  esac
 fi

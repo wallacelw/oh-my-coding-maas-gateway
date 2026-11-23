@@ -106,7 +106,8 @@ fi
 
 # ── Generate / preserve secrets ──
 # Immutable secrets are preserved on re-run (changing them breaks existing
-# deployments). --force regenerates all (for key rotation).
+# deployments). --force regenerates all (for key rotation) — except
+# DB_PASSWORD when the postgres volume exists (kept; see the volume guard).
 # For fresh installs or --force, prompt for each: auto-generated or custom.
 
 IS_FRESH=true
@@ -122,17 +123,48 @@ MAAS_API_BASE="https://api-ap-southeast-1.modelarts-maas.com/openai/v1"
 MAAS_ANTHROPIC_BASE="https://api-ap-southeast-1.modelarts-maas.com/anthropic"
 BIND_ADDRESS="127.0.0.1"
 
+# The postgres volume keeps its first-init password: never generate a new
+# DB_PASSWORD while one exists (the fresh value could never authenticate —
+# the update-path failure where LiteLLM stays permanently unhealthy). This
+# covers every road: missing from an existing .env, --force, and a fresh
+# install over a stale volume from a previous install.
+if [ -z "$EXISTING_DB_PASSWORD" ]; then
+  if command -v docker >/dev/null 2>&1 && ! docker volume ls -q >/dev/null 2>&1; then
+    log_warn "Docker daemon unreachable — could not check for an existing postgres volume."
+  fi
+  if docker volume ls -q 2>/dev/null | grep -qx litellm_postgres_data; then
+    log_error "DB_PASSWORD is not set, but the postgres volume litellm_postgres_data exists."
+    log_dim "  The volume keeps the password it was first initialized with — a newly generated one can never authenticate."
+    log_dim "  Restore DB_PASSWORD from your previous .env (check .env backups), or re-initialize the volume (loses virtual keys and usage history):"
+    log_dim "    docker compose down && docker volume rm litellm_postgres_data"
+    exit 1
+  fi
+fi
+
 if [ "$IS_FRESH" = false ]; then
-  # Validate existing secrets are non-empty before preserving
-  [ -n "$EXISTING_MASTER_KEY" ]       && MASTER_KEY="$EXISTING_MASTER_KEY"       || IS_FRESH=true
-  [ -n "$EXISTING_SALT_KEY" ]         && SALT_KEY="$EXISTING_SALT_KEY"           || IS_FRESH=true
-  [ -n "$EXISTING_DB_PASSWORD" ]      && DB_PASSWORD="$EXISTING_DB_PASSWORD"     || IS_FRESH=true
-  [ -n "$EXISTING_GRAFANA_PASSWORD" ] && GRAFANA_PASSWORD="$EXISTING_GRAFANA_PASSWORD" || IS_FRESH=true
-  [ -n "$EXISTING_PROM_RETENTION" ]   && PROM_RETENTION="$EXISTING_PROM_RETENTION" || IS_FRESH=true
-  if [ "$IS_FRESH" = false ]; then
-    log_ok "Preserving existing secrets (idempotent). Use --force to regenerate."
+  # Per-secret preserve-or-regenerate. The previous all-or-nothing logic
+  # (any missing secret flipped IS_FRESH and regenerated ALL of them)
+  # silently rotated DB_PASSWORD against an existing postgres volume —
+  # the volume keeps its first-init password, so the proxy could never
+  # authenticate again and the stack stayed permanently unhealthy.
+  REGENERATED=()
+  if [ -n "$EXISTING_MASTER_KEY" ]; then MASTER_KEY="$EXISTING_MASTER_KEY"; else MASTER_KEY="$AUTO_MASTER_KEY"; REGENERATED+=(LITELLM_MASTER_KEY); fi
+  if [ -n "$EXISTING_SALT_KEY" ]; then SALT_KEY="$EXISTING_SALT_KEY"; else SALT_KEY="$AUTO_SALT_KEY"; REGENERATED+=(LITELLM_SALT_KEY); fi
+  if [ -n "$EXISTING_GRAFANA_PASSWORD" ]; then GRAFANA_PASSWORD="$EXISTING_GRAFANA_PASSWORD"; else GRAFANA_PASSWORD="$AUTO_GRAFANA_PASSWORD"; REGENERATED+=(GRAFANA_ADMIN_PASSWORD); fi
+  if [ -n "$EXISTING_PROM_RETENTION" ]; then PROM_RETENTION="$EXISTING_PROM_RETENTION"; else PROM_RETENTION="$AUTO_PROM_RETENTION"; REGENERATED+=(PROMETHEUS_RETENTION); fi
+  if [ -n "$EXISTING_DB_PASSWORD" ]; then
+    DB_PASSWORD="$EXISTING_DB_PASSWORD"
   else
-    log_warn "Some existing secrets are empty or missing — regenerating."
+    DB_PASSWORD="$AUTO_DB_PASSWORD"
+    REGENERATED+=(DB_PASSWORD)
+  fi
+  if [ ${#REGENERATED[@]} -gt 0 ]; then
+    log_warn "Missing secret(s) auto-regenerated: ${REGENERATED[*]}"
+    if printf '%s\n' "${REGENERATED[@]}" | grep -qx LITELLM_SALT_KEY; then
+      log_dim "  LITELLM_SALT_KEY rotation may invalidate existing virtual keys — re-run tool installs to re-mint if auth fails."
+    fi
+  else
+    log_ok "Preserving existing secrets (idempotent). Use --force to regenerate."
   fi
 fi
 
@@ -153,15 +185,20 @@ if [ -f "$ENV_FILE" ] && [ -z "$EXISTING_UI_USERNAME" ] && [ -z "$EXISTING_UI_PA
   log_dim "LITELLM_UI_USERNAME/LITELLM_UI_PASSWORD not found in existing .env — writing template placeholders"
 fi
 # .env double-quoted values cannot embed a double quote; the sed reads above
-# would silently truncate one, desyncing the record from the DB hash. Detect
-# it on the raw .env line (the sed capture has already lost the quote).
+# would silently truncate one (desyncing the UI record from the DB hash, or
+# rotating DB_PASSWORD into a value the postgres volume would reject).
+# Detect it on the raw .env line (the sed capture has already lost the quote).
 if [ -f "$ENV_FILE" ]; then
-  for ui_var in LITELLM_UI_USERNAME LITELLM_UI_PASSWORD; do
+  for ui_var in LITELLM_UI_USERNAME LITELLM_UI_PASSWORD DB_PASSWORD; do
     ui_raw="$(grep -E "^${ui_var}=" "$ENV_FILE" 2>/dev/null | head -1 || true)"
     ui_quotes=$(( $(printf '%s' "$ui_raw" | tr -cd '"' | wc -c) ))
     if [ "$ui_quotes" -ne 0 ] && [ "$ui_quotes" -ne 2 ]; then
       log_error "${ui_var} in .env contains an embedded double quote — .env cannot store it safely."
-      log_dim "  Change the account password via /user/update (avoid double quotes), then update the record in .env."
+      if [ "$ui_var" = "DB_PASSWORD" ]; then
+        log_dim "  Change DB_PASSWORD to a value without double quotes (alphanumeric, - and _)."
+      else
+        log_dim "  Change the account password via /user/update (avoid double quotes), then update the record in .env."
+      fi
       exit 1
     fi
   done
@@ -204,6 +241,16 @@ if [ "$IS_FRESH" = true ]; then
     echo ""
     PROM_RETENTION=$(prompt_password "PROMETHEUS_RETENTION (e.g. 30d, 14d, 7d)" "$AUTO_PROM_RETENTION")
   fi
+fi
+
+# --force regenerates secrets on request, but rotating DB_PASSWORD against an
+# existing postgres volume can never work (the volume keeps its first-init
+# password) — keep the existing value instead of bricking the stack. Runs
+# after the fresh/--force prompt block so it has the final say.
+if [ "$IS_FRESH" = true ] && [ "$FORCE" = true ] && [ -n "$EXISTING_DB_PASSWORD" ] \
+  && docker volume ls -q 2>/dev/null | grep -qx litellm_postgres_data; then
+  DB_PASSWORD="$EXISTING_DB_PASSWORD"
+  log_warn "--force: keeping existing DB_PASSWORD (postgres volume litellm_postgres_data keeps its first-init password; a new one could never authenticate)"
 fi
 
 # ── Collect MaaS API key (env var or prompt) ──
@@ -414,7 +461,7 @@ fi
 # ── Warn if --force was used ──
 if [ "$FORCE" = true ]; then
   echo ""
-  log_warn "All secrets were regenerated (--force). Restart Docker to apply:"
+  log_warn "Secrets were regenerated (--force; DB_PASSWORD kept if the postgres volume exists). Restart Docker to apply:"
   log_dim "docker compose up -d"
   log_dim "Existing virtual keys are invalidated — re-run tool installs to mint new ones."
 fi

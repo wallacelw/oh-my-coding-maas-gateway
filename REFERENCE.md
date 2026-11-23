@@ -23,7 +23,7 @@ are exported in `~/.bashrc`, and
 | `HUAWEI_MAAS_API_KEY_1..N` | User (env var or prompt) | `01_env.sh`, `02_litellm.sh` | Non-empty | Low — update `.env` + regenerate config |
 | `LITELLM_MASTER_KEY` | `01_env.sh` (auto or custom) | `03a-03d` via `helpers/keys.sh` | Must start with `sk-` | **High** — invalidates all virtual keys (`--force` to regenerate) |
 | `LITELLM_SALT_KEY` | `01_env.sh` (auto or custom) | LiteLLM container | Random string | **High** — invalidates all virtual keys (`--force` to regenerate) |
-| `DB_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, postgres | Random string | **High** — breaks DB auth (`--force` to regenerate) |
+| `DB_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, postgres | Random string | **High** — breaks DB auth if changed while the postgres volume exists (the volume keeps its first-init password; restore the old value or remove the volume — see Repair table. `--force` keeps it when the volume exists) |
 | `GRAFANA_ADMIN_PASSWORD` | `01_env.sh` (auto or custom) | docker-compose, `05_validate.sh`, `07_dashboard_shots.sh` | Random string | Low — changes dashboard login only |
 | `PROMETHEUS_RETENTION` | `01_env.sh` (default `30d`) | docker-compose, 05_validate.sh | Prometheus duration (`Nd`/`Nh`/`Nw`) | None — config value |
 | `HUAWEI_MAAS_ANTHROPIC_API_BASE` | `01_env.sh` (default `https://api-ap-southeast-1.modelarts-maas.com/anthropic`) | `02_litellm.sh` | URL | None — config value |
@@ -794,6 +794,7 @@ Pi reads `models.json` on startup. The `providers.LiteLLM` block defines:
 |---------|-----|
 | LiteLLM won't start | `docker compose logs litellm --tail 50` |
 | `litellm` keeps restarting | Check `docker compose logs db`, verify `DB_PASSWORD` |
+| `password authentication failed for user "llmproxy"` | `DB_PASSWORD` in `.env` no longer matches the postgres volume (it keeps its first-init password). Restore `DB_PASSWORD` from the `.env` used when the volume was created, or re-initialize: `docker compose down && docker volume rm litellm_postgres_data` (loses virtual keys and usage history). `02_litellm.sh` detects this and prints these steps |
 | 401 Unauthorized | Key must start with `sk-` |
 | 404 model not found | Model name case-sensitive |
 | MaaS 403 | Verify key at https://console.huaweicloud.com/modelarts/ — region must be `ap-southeast-1` |
@@ -855,7 +856,8 @@ Rotating immutable secrets invalidates all virtual keys — the tools will need
 re-configuration after rotation.
 
 ```bash
-# 1. Regenerate all secrets (master key, salt, DB password, Grafana password)
+# 1. Regenerate all secrets (master key, salt, Grafana password;
+#    DB_PASSWORD is kept when the postgres volume exists — see below)
 ./scripts/01_env.sh --force
 
 # 2. Regenerate LiteLLM config with new master key
@@ -874,7 +876,10 @@ re-configuration after rotation.
 **What changes:**
 - `LITELLM_MASTER_KEY` — new value, all old virtual keys stop working
 - `LITELLM_SALT_KEY` — new value, LiteLLM internal encryption rotated
-- `DB_PASSWORD` — new value, PostgreSQL re-authenticated
+- `DB_PASSWORD` — kept when the postgres volume `litellm_postgres_data`
+  exists (a rotated value could never authenticate against it; to rotate
+  it, remove the volume first — `docker compose down && docker volume rm
+  litellm_postgres_data` — which loses virtual keys and usage history)
 - `GRAFANA_ADMIN_PASSWORD` — new value, Grafana login changes
 
 **What's preserved:**

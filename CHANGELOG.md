@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.2] - 2026-11-23
+
+### Fixed — update-path bugs (old stack → one-liner update → container never healthy)
+
+Reproduced end-to-end (v1.35.0 stack on a fresh volume → one-liner update):
+the plain path upgrades cleanly; the failure below is the DB-auth desync
+path, confirmed by reproduction (`password authentication failed for user
+"llmproxy"` crash-retry loop, never healthy).
+
+- **01_env.sh:** an existing `.env` with any missing secret silently
+  regenerated ALL of them — including `DB_PASSWORD`. Against an existing
+  postgres volume (which keeps its first-init password) the rotated
+  `DB_PASSWORD` can never authenticate, leaving LiteLLM permanently
+  unhealthy after an update, with only a one-line "regenerating" warning.
+  Now each secret is preserved-or-regenerated individually (the warning
+  names what was regenerated), and a missing `DB_PASSWORD` with an existing
+  `litellm_postgres_data` volume is a hard error with recovery steps
+  instead of a silent rotation.
+- **01_env.sh:** `--force` no longer rotates `DB_PASSWORD` when the
+  postgres volume exists (kept with a warning — a rotated password could
+  never authenticate against the volume).
+- **02_litellm.sh:** the health gate now waits up to 180s (was 90s —
+  big-version upgrades run prisma migrations that can outpace a short wait
+  on slow disks) and fails fast with the container's log tail plus recovery
+  steps when it detects a DB auth failure or a crash-looping container,
+  instead of burning the whole budget and printing only "Check: docker
+  compose logs". On success it notes the `docker ps` health badge may lag
+  up to ~70s (start_period 40s + interval 30s) — the HTTP check is
+  authoritative.
+- **02_litellm.sh:** skips the config-reload `docker compose restart` when
+  `up -d` just recreated the LiteLLM container (image or compose change) —
+  the recreated container already reads the new config; the extra restart
+  only added downtime and could interrupt startup migrations. The restart
+  still fires when only the bind-mounted config changed.
+- **Docs:** INSTALLATION 01_env/02_litellm sections and the idempotency
+  notes updated to the new behavior; REFERENCE Repair table gains the
+  `password authentication failed` row with the recovery steps.
+
 ## [1.36.1] - 2026-11-18
 
 ### Fixed — Claude Code recognizes the gateway's claude-* model IDs
