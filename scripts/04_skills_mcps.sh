@@ -130,7 +130,7 @@ rea_client_id() {
 # Ensure Node >= NODE_MCP_MIN_VERSION for the bundles. Returns 1 (soft) when
 # unavailable so the caller can warn + skip both bundles.
 setup_node_for_bundles() {
-  if prereq_ensure_node_mcp "Node.js >= $NODE_MCP_MIN_VERSION is required for the REA + drawio bundles"; then
+  if prereq_ensure_node_mcp "Node.js is required for the REA + drawio bundles"; then
     export PATH="${NODE_MCP_BIN_DIR}:$PATH"
     hash -r 2>/dev/null || true
     local prefix
@@ -495,9 +495,11 @@ bundle_drawio_run() {
 print_scope() {
   local yes="${C_GREEN}yes${C_RESET}" no="${C_DIM}no${C_RESET}"
   log_info "Bundle scope:"
-  printf "    ${C_DIM}%-28s${C_RESET} %s\n" "Companion skill:" "$([ "$DO_SKILL" = true ] && echo "$yes" || echo "$no")"
-  printf "    ${C_DIM}%-28s${C_RESET} %s\n" "REA bundle (MCP + skill):" "$([ "$DO_REA" = true ] && echo "$yes" || echo "$no")"
-  printf "    ${C_DIM}%-28s${C_RESET} %s\n" "drawio bundle (MCP + skill):" "$([ "$DO_DRAWIO" = true ] && echo "$yes" || echo "$no")"
+  # %b (not %s): printf only interprets escapes in the FORMAT string — the
+  # C_* sequences in the value argument would print literally as \033[...m.
+  printf "    ${C_DIM}%-28s${C_RESET} %b\n" "Companion skill:" "$([ "$DO_SKILL" = true ] && echo "$yes" || echo "$no")"
+  printf "    ${C_DIM}%-28s${C_RESET} %b\n" "REA bundle (MCP + skill):" "$([ "$DO_REA" = true ] && echo "$yes" || echo "$no")"
+  printf "    ${C_DIM}%-28s${C_RESET} %b\n" "drawio bundle (MCP + skill):" "$([ "$DO_DRAWIO" = true ] && echo "$yes" || echo "$no")"
   log_dim "  Tools: $(echo "$TOOLS" | tr ' ' ',' | sed 's/,$//')"
   if [ "$DO_REA" = true ] || [ "$DO_DRAWIO" = true ]; then
     log_dim "  Node >= $NODE_MCP_MIN_VERSION will be ensured (installs Node 22 if missing)"

@@ -74,7 +74,7 @@ if ! command -v pi &>/dev/null; then
     log_info "Would run: npm install -g --ignore-scripts --min-release-age=0 @earendil-works/pi-coding-agent"
   else
     # 2a. Ensure Node — single repo-wide floor (approved decision)
-    if prereq_ensure_node_mcp "Node.js >= $NODE_MCP_MIN_VERSION is required to install the Pi agent"; then
+    if prereq_ensure_node_mcp "Node.js is required to install the Pi agent"; then
       export PATH="${NODE_MCP_BIN_DIR}:$PATH"
       hash -r 2>/dev/null || true
       NODE_OK=true

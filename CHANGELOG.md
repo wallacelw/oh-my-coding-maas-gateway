@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.4] - 2026-11-23
+
+### Fixed — install-pipeline output cosmetics
+
+- **04_skills_mcps.sh:** the bundle-scope lines printed literal `\033[32m`
+  escape text instead of colors — `printf %s` does not interpret escapes in
+  arguments (only in the format string), so the `C_*`-wrapped yes/no values
+  rendered raw. Now uses `%b`. Verified under a pseudo-tty: zero literal
+  escapes, real ANSI colors.
+- **bootstrap.sh:** same escape bug on the two `Agent bundles:`
+  scope lines (`--no-bundles` path) — same `%b` fix.
+- **04_skills_mcps.sh / 03d_pi.sh:** the Node requirement line stated the
+  version twice ("Node.js >= 22.23.4 is required … (need Node >= 22.23.4)")
+  — `prereq_ensure_node_mcp` appends the version itself, so the caller
+  reasons no longer repeat it.
+
 ## [1.36.3] - 2026-11-23
 
 ### Added — no-data-loss recovery for the DB-auth desync

@@ -508,9 +508,9 @@ if [ "$TOOL_SPECIFIED" = false ] && is_interactive && [ "$AUTO_YES" = false ]; t
     printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Pi:"           "$([ "$INSTALL_PI" = true ] && _yes || _no)"
     # Bundles are default-on and confirmed inside step 04 (no toggle here).
     if [ "$NO_BUNDLES" = true ]; then
-      printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Agent bundles:" "${C_DIM}no (--no-bundles)${C_RESET}"
+      printf "    ${C_DIM}%-14s${C_RESET} %b\n" "Agent bundles:" "${C_DIM}no (--no-bundles)${C_RESET}"
     else
-      printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Agent bundles:" "REA + drawio (default on — confirmed in step 04; installs Node 22 if missing)"
+      printf "    ${C_DIM}%-14s${C_RESET} %b\n" "Agent bundles:" "REA + drawio (default on — confirmed in step 04; installs Node 22 if missing)"
     fi
 
     # ── Selection-driven prerequisite summary (prereq → needed by) ──
@@ -561,9 +561,9 @@ if [ "$TOOL_SPECIFIED" = true ] || ! is_interactive; then
   printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Claude Code:"  "$([ "$INSTALL_CLAUDE_CODE" = true ] && _yes || _no)"
   printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Pi:"           "$([ "$INSTALL_PI" = true ] && _yes || _no)"
   if [ "$NO_BUNDLES" = true ]; then
-    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Agent bundles:" "${C_DIM}no (--no-bundles)${C_RESET}"
+    printf "    ${C_DIM}%-14s${C_RESET} %b\n" "Agent bundles:" "${C_DIM}no (--no-bundles)${C_RESET}"
   else
-    printf "    ${C_DIM}%-14s${C_RESET} %s\n" "Agent bundles:" "REA + drawio (default on — confirmed in step 04; installs Node 22 if missing)"
+    printf "    ${C_DIM}%-14s${C_RESET} %b\n" "Agent bundles:" "REA + drawio (default on — confirmed in step 04; installs Node 22 if missing)"
   fi
 fi
 echo ""
