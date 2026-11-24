@@ -13,3 +13,6 @@ backups/
 
 # ── Python bytecode ──
 __pycache__/
+
+# deepwork orchestrator state
+.slim/deepwork/
