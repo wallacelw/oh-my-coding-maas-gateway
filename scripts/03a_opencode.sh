@@ -23,11 +23,10 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 OPENCODE_DIR="$HOME/.config/opencode"
 OPENCODE_CONFIG="$OPENCODE_DIR/opencode.json"
 
-# Single source of truth for slim version — also substituted into the
-# $schema URL of oh-my-opencode-slim.json.template at install time.
-# NOTE: configs/opencode/opencode.json.template carries an independent
-# plugin pin that is NOT substituted here — keep both in sync (update.sh
-# does; 05_validate.sh fails on drift).
+# Single source of truth for the slim plugin version. Substituted at install
+# time into the $schema URL of oh-my-opencode-slim.json.template and the
+# plugin pin of opencode.json.template — the templates' hardcoded pins are
+# overwritten, so SLIM_VERSION is the only value that matters.
 SLIM_VERSION="3.0.7"
 OPENCODE_INSTALL_URL="https://opencode.ai/install"
 CURL_TIMEOUT=15
@@ -192,17 +191,18 @@ if [ -z "$HUAWEI_MAAS_API_KEY" ] && is_interactive && [ "${AUTO_YES:-false}" != 
 fi
 
 TEMPLATE="$PROJECT_DIR/configs/opencode/opencode.json.template"
+# SLIM_VERSION is the single writer for the plugin pin: overwrite the
+# template's hardcoded oh-my-opencode-slim@<x.y.z> before the jq transform.
+RENDERED_TEMPLATE=$(sed "s|oh-my-opencode-slim@[0-9.]*|oh-my-opencode-slim@${SLIM_VERSION}|g" "$TEMPLATE")
 
 if [ -z "$HUAWEI_MAAS_API_KEY" ] || [ "$HUAWEI_MAAS_API_KEY" = "<HUAWEI_MAAS_API_KEY>" ]; then
   log_warn "No Huawei MaaS API key provided — omitting Huawei-MaaS direct provider"
-  NEW_CONFIG=$(jq --arg vk "$VIRTUAL_KEY" \
-    '.provider.LiteLLM.options.apiKey = $vk | del(.provider["Huawei-MaaS"])' \
-    "$TEMPLATE")
+  NEW_CONFIG=$(printf '%s' "$RENDERED_TEMPLATE" | jq --arg vk "$VIRTUAL_KEY" \
+    '.provider.LiteLLM.options.apiKey = $vk | del(.provider["Huawei-MaaS"])')
 else
-  NEW_CONFIG=$(jq --arg vk "$VIRTUAL_KEY" --arg mk "$HUAWEI_MAAS_API_KEY" \
+  NEW_CONFIG=$(printf '%s' "$RENDERED_TEMPLATE" | jq --arg vk "$VIRTUAL_KEY" --arg mk "$HUAWEI_MAAS_API_KEY" \
     '.provider.LiteLLM.options.apiKey = $vk |
-     .provider["Huawei-MaaS"].options.apiKey = $mk' \
-    "$TEMPLATE")
+     .provider["Huawei-MaaS"].options.apiKey = $mk')
 fi
 
 if [ -z "$NEW_CONFIG" ] || ! echo "$NEW_CONFIG" | jq -e . >/dev/null 2>&1; then

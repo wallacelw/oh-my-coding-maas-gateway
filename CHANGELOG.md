@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.37.0] - 2026-11-27
+
+### Changed — debloat pass: single-source docs, configs, and version pins
+
+First pass of the `opencode-v2` line (OpenCode v2 migration follows in the
+next passes; this pass is v2-independent cleanup + component updates).
+
+- **Docs consolidated to one canonical location per topic** (−126 lines):
+  upgrade/update-tools/uninstall/backup procedures → INSTALLATION.md;
+  scripts/endpoints/env-vars/remote-access tables → REFERENCE.md; README.md
+  and SKILL.md now carry short summaries + precise cross-links. Removed a
+  stale v1.35.0 renumbering note.
+- **Duplicate config templates deleted:** `configs/litellm/config.yaml.template`
+  (02_litellm.sh emits the real config inline from models.sh; the template's
+  only consumer was a warn-only drift check, also removed from 05_validate)
+  and `configs/claude-code/.env.template` (reference-only; no script reads
+  it — 03c builds settings.json inline).
+- **02_litellm.sh:** config.yaml is now compare-before-write (no more
+  identical `.bak.*` churn on no-op re-runs; mirrors 03a's pattern) and no
+  longer emits the deprecated no-op `set_verbose: False`.
+- **05_validate.sh:** extracted `check_perms_600` / `check_binary_installed`
+  helpers (behavior-preserving 1:1 replacement of 5 perms blocks and 4
+  binary checks); adopted the shared version getters.
+- **versions.sh:** new `slim_version()` and `compose_image_tag()` getters —
+  SLIM_VERSION is now parsed in one place (was 4) and compose image tags in
+  one place (was 3); adopted by 02_litellm.sh, 05_validate.sh, update.sh.
+  `@drawio/mcp` pin 1.12.0 → 1.13.1 (description-only upstream delta).
+  rea-agents intentionally held at 6.9.0 until the OpenCode v2 migration
+  (6.10.x writes the v2 `mcp.servers` registration shape).
+- **03a_opencode.sh:** the plugin pin inside `opencode.json.template` is now
+  substituted from `SLIM_VERSION` at write time — one writer, no drift
+  (previously the template carried an independent hardcoded pin).
+- **configs/.env.template:** removed the dead
+  `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` block (idempotency verified:
+  generated `.env` byte-identical before/after).
+- **docker-compose.yml:** LiteLLM v1.109.1 → v1.109.4 (same-minor security
+  patch: `/key/info` userless-key authz fix + MCP-gateway DCR opt-in
+  hardening; no breaking changes).
+- **Grafana:** the cache-hit-ratio panel migrated off the deprecated
+  `litellm_requests_metric_total` to `litellm_proxy_total_requests_metric_total`
+  (label `model` → `requested_model`, with a `label_replace` bridge for the
+  cache-misses numerator and internal-health-check traffic excluded from
+  both sides; verified against live Prometheus).
+
 ## [1.36.4] - 2026-11-23
 
 ### Fixed — install-pipeline output cosmetics

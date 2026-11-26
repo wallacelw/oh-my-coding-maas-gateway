@@ -84,45 +84,13 @@ Monitor at `http://localhost:3000` (Grafana) or `http://localhost:4000/ui`
 
 ## Upgrade
 
-Same command — bootstrap detects existing install, compares versions, and
-pulls updates. All secrets and data preserved.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
-```
-
-Or non-interactive:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash -s -- -y
-```
-
-In non-interactive mode, if `git pull` fails, bootstrap warns about the
-local commits and uncommitted changes it is discarding, then resets to
-`origin/main` — `.env`, the generated LiteLLM config, and Docker volumes
-are preserved; tracked repo files, including config templates, are reset.
-
-After upgrade, restart any running coding tools — plugin/preset changes
-are not hot-reloaded.
-
-### Update coding tools only
-
-To check and update individual components (opencode, Codex, Claude Code,
-Pi, LiteLLM, Grafana, Prometheus; `rea-agents`/`@drawio/mcp` show as
-bundle-pin drift rows and PostgreSQL is listed as pinned and
-display-only — none of the three ever auto-updated) without re-running the
-full pipeline:
-
-```bash
-./scripts/update.sh              # interactive: show versions, select which to update
-./scripts/update.sh --check      # show version table only
-./scripts/update.sh --all        # update all with updates available
-./scripts/update.sh --dry-run    # show what would be updated, no changes
-```
-
-Does not touch passwords, API keys, or virtual keys. Note: updating
-Docker images or slim plugin modifies `docker-compose.yml` and
-`scripts/03a_opencode.sh` in-place — changes are auto-committed.
+Same command as install — bootstrap detects the existing install, pulls
+updates, then re-runs idempotently; all secrets and data are preserved.
+Restart any running coding tools afterward (plugin/preset changes are not
+hot-reloaded). See [INSTALLATION.md § Upgrade](./INSTALLATION.md#upgrade)
+for the full procedure, including non-interactive reset behavior, and
+[§ Updating coding tools](./INSTALLATION.md#updating-coding-tools) for
+`./scripts/update.sh`.
 
 ---
 
@@ -146,23 +114,18 @@ audit in [REFERENCE.md](./REFERENCE.md)).
 
 ## Uninstall
 
-```bash
-./scripts/uninstall.sh --all --dry-run   # preview
-./scripts/uninstall.sh --tool=opencode   # remove one agent
-./scripts/uninstall.sh --all             # remove everything
-```
+`./scripts/uninstall.sh` removes all or part of the installation. See
+[INSTALLATION.md § Uninstall](./INSTALLATION.md#uninstall) for the full flag
+reference and examples.
 
 ---
 
 ## Backup
 
-```bash
-./scripts/06_backup.sh                  # dump LiteLLM DB (spend history, keys, budgets)
-./scripts/06_backup.sh --restore FILE   # restore from a dump
-./scripts/07_dashboard_shots.sh         # capture Grafana dashboard screenshots (visual verification)
-```
-
-Run before `docker compose down -v` — the DB volume is destroyed otherwise.
+`./scripts/06_backup.sh` dumps the LiteLLM database (spend history, keys,
+budgets); `--restore FILE` rebuilds it. Back up before `docker compose down -v`
+— the volume is destroyed otherwise. See [INSTALLATION.md § 06_backup](./INSTALLATION.md#06_backupsh)
+for the full procedure.
 
 ---
 

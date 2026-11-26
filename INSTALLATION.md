@@ -41,19 +41,22 @@ Bootstrap is a thin sequencer. It resolves the tool selection, ensures core
 prerequisites, then runs the numbered steps in order. Each step owns one
 domain and is independently runnable.
 
-| Order | Script | Domain | Optional | Description |
-|-------|--------|--------|----------|-------------|
-| — | `bootstrap.sh` | Orchestration | — | Entry point. Selection → core prereqs → dispatch steps → summary. |
-| 01 | `01_env.sh` | Environment & secrets | no | Generate/update `.env` (immutable secrets, MaaS keys, endpoints); configure git hooks. |
-| 02 | `02_litellm.sh` | LiteLLM proxy + observability | no | Generate `config.yaml`; port check; Docker Compose up (LiteLLM + PostgreSQL + Prometheus + Grafana); wait for health. |
-| 03a | `03a_opencode.sh` | opencode | yes | Install opencode + oh-my-opencode-slim plugin; mint virtual key; write config. |
-| 03b | `03b_codex.sh` | Codex CLI | yes | Install Codex CLI; mint virtual key; write config + model catalog. |
-| 03c | `03c_claude_code.sh` | Claude Code CLI | yes | Install Claude Code CLI; mint virtual key; write settings; disable VSCode extension. |
-| 03d | `03d_pi.sh` | Pi agent | yes | Install Pi agent; mint virtual key; write `~/.pi/agent/models.json`. |
-| 04 | `04_skills_mcps.sh` | Skills & MCP bundles | partial | Install the companion skill plus optional agent tool bundles (REA, drawio — MCP servers + skills) into detected coding agents; refreshes stale copies on re-run. Step always runs; bundles declinable via `--no-*`. |
-| 05 | `05_validate.sh` | Validation | no | End-to-end validation of all installed components, including bundle registrations (section H). |
-| 06 | `06_backup.sh` | PostgreSQL backup & restore | — | Dump the LiteLLM DB (spend history, virtual keys, budgets) to `backups/`; `--restore FILE` rebuilds it. Maintenance — not run by bootstrap. |
-| 07 | `07_dashboard_shots.sh` | Grafana visual verification | — | Capture the rendered dashboard as PNG screenshots for vision-model review. Maintenance — not run by bootstrap. |
+| Order | Script | Domain |
+|-------|--------|--------|
+| — | `bootstrap.sh` | Orchestration |
+| 01 | `01_env.sh` | Environment & secrets |
+| 02 | `02_litellm.sh` | LiteLLM proxy + observability |
+| 03a | `03a_opencode.sh` | opencode |
+| 03b | `03b_codex.sh` | Codex CLI |
+| 03c | `03c_claude_code.sh` | Claude Code CLI |
+| 03d | `03d_pi.sh` | Pi agent |
+| 04 | `04_skills_mcps.sh` | Skills & MCP bundles |
+| 05 | `05_validate.sh` | Validation |
+| 06 | `06_backup.sh` | PostgreSQL backup & restore |
+| 07 | `07_dashboard_shots.sh` | Grafana visual verification |
+
+Full per-script reference — purpose, optionality, and behavior — lives in
+[REFERENCE.md § Scripts](./REFERENCE.md#scripts).
 
 ### Ordering
 
@@ -61,11 +64,6 @@ domain and is independently runnable.
 → `03a/03b/03c/03d` tools (independent, optional, any relative order) →
 `04 skills & MCP bundles` (companion skill + optional REA/drawio bundles into
 installed agents) → `05 validate` (last, checks everything including bundles).
-
-> **Renumbered in v1.35.0:** the old `04_validate.sh` is now `05_validate.sh`,
-> and the old `05_skill.sh` became `04_skills_mcps.sh` (expanded with agent
-> tool bundles) and now runs **before** validation so bundles are validated
-> too. Update any muscle-memory commands accordingly.
 
 `06_backup.sh` and `07_dashboard_shots.sh` are maintenance scripts (like
 `update.sh`) — run manually whenever a database backup/restore or a
@@ -81,10 +79,10 @@ Shared libraries sourced by the pipeline steps. Not run directly — except `gra
 | `prereqs.sh` | bootstrap, 01–05 | `prereq_ensure_apt`, `prereq_ensure_bun`, `prereq_ensure_npm`, `prereq_ensure_docker`, `prereq_ensure_node_mcp` (soft-fail Node ≥22.23.4 via NodeSource for MCP bundles — pi-managed Node trees are excluded so bundles never install into pi's versioned dirs), `npm_install_global` (writable-prefix-or-sudo npm install, shared by 03b/03c/03d/04). Each install runs under a spinner (`  Installing curl... done`). |
 | `keys.sh` | bootstrap, 01–03d | `resolve_master_key` (env → `.env` → prompt), `mint_or_reuse_key` (alias lookup + mint), `validate_maas_key` (0=valid / 1=rejected / 2=endpoint unreachable; used by bootstrap's key prompt and 01_env). |
 | `common.sh` | all scripts | `is_interactive`, `source_env`, `retry_curl`, `strip_jsonc`, `mask_key`, `backup_with_prune`, logging (`log_step`, `log_desc`, `log_done`, `log_ok`, `log_info`, `log_warn`, `log_error`, `log_dim`), prompts (`prompt_yesno`, `prompt_input`, `prompt_password`), `run_filtered` (subprocess output filtering), `run_with_spinner` (long operations). |
-| `models.sh` | 02, 03d, 05, bootstrap | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, and 05_validate.sh. To add/remove a model: edit `models.sh` plus `config.yaml.template`, `opencode.json.template`, and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
+| `models.sh` | 02, 03d, 05, bootstrap | `MODELS` array + `MODEL_COUNT` + `OFF_PEAK_PRICING` array + `REASONING_MODELS` array + `VISION_MODELS` array — model catalog and time-based differential pricing sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, and 05_validate.sh. To add/remove a model: edit `models.sh` (the LiteLLM `config.yaml` is emitted inline from this catalog) plus `opencode.json.template` and `model_catalog.json`. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
 | `skills.sh` | 04, 05, uninstall | Companion skill install/uninstall helpers for each agent tool (opencode, codex, pi, claude) + directory-based bundle install with per-file drift detection. |
 | `mcp.sh` | 04, 05, uninstall | Merge-safe MCP server registration per tool (opencode `.mcp`, codex `[mcp_servers.*]` sentinel blocks, claude/pi `.mcpServers`); register/unregister/verify; backup-before-write, compare-before-write. |
-| `versions.sh` | bootstrap, 04, 05, update | `show_installed_versions` — component version table for the install summary; bundle pins (`REA_AGENTS_VERSION`, `DRAWIO_MCP_VERSION`, `NODE_MCP_MIN_VERSION`). |
+| `versions.sh` | bootstrap, 02, 03d, 04, 05, update | `show_installed_versions` — component version table for the install summary; bundle pins (`REA_AGENTS_VERSION`, `DRAWIO_MCP_VERSION`, `NODE_MCP_MIN_VERSION`); shared `slim_version()` / `compose_image_tag()` getters. |
 | `grafana_shots.py` | 07 | Headless Playwright dashboard screenshot capture. |
 
 ---
@@ -139,7 +137,7 @@ first-init password; a rotated one could never authenticate).
 
 ### `02_litellm.sh`
 
-Generates `configs/litellm/config.yaml` from `.env` — N deployments per model
+Generates `configs/litellm/config.yaml` from `.env` and the `models.sh` catalog (emitted inline) — N deployments per model
 per format (dual OpenAI + Anthropic), 4N total. Checks ports 4000/5432/9090/
 3000 are free. Logs the image versions being deployed, then runs
 `docker compose up -d` (LiteLLM + PostgreSQL + Prometheus + Grafana).
@@ -367,24 +365,12 @@ with anything.
 These control the install when set before running `bootstrap.sh`. When
 absent, the scripts prompt interactively (or error in non-interactive mode).
 
-| Variable | Purpose | Read by |
-|----------|---------|---------|
-| `HUAWEI_MAAS_API_KEY` | Main Huawei MaaS API key (region ap-southeast-1). | `01_env.sh`, `03a_opencode.sh` |
-| `HUAWEI_MAAS_API_KEY_COUNT` | Total number of MaaS keys (1 + extras). | `01_env.sh`, `02_litellm.sh` |
-| `HUAWEI_MAAS_API_KEY_1..N` | Extra MaaS keys for load balancing. | `01_env.sh`, `02_litellm.sh` |
-| `LITELLM_MASTER_KEY` | LiteLLM master key (resolved from env or `.env`). | `03a-03d` via `helpers/keys.sh` |
-| `BIND_ADDRESS` | Docker port bind address (`127.0.0.1` localhost, `0.0.0.0` all interfaces). | docker-compose |
-| `HUAWEI_MAAS_API_BASE` | MaaS OpenAI-compatible API base URL. Auto-set with default. | `02_litellm.sh` |
-| `HUAWEI_MAAS_ANTHROPIC_API_BASE` | MaaS Anthropic-compatible API base URL. Auto-set with default. | `02_litellm.sh` |
-| `OPENCODE_ENABLE_EXA` | Enable opencode built-in websearch (EXA) for custom providers. Set to `1`. | `03a_opencode.sh` |
-| `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` | Enable slim v3 background orchestration on the opencode v1 host line. Set to `true`. | `03a_opencode.sh` |
-| `LITELLM_UI_USERNAME` / `LITELLM_UI_PASSWORD` | LiteLLM Admin UI login (DB-backed admin account; env-credential login is disabled — the master key cannot sign in to the UI). Account set once via `/user/update` (first UI visit); `01_env.sh` writes the record slot into `.env` (Proxy Auth section, placeholder until filled) and preserves it on re-run. | LiteLLM Admin UI |
+The full environment-variable contract — every variable, who sets it, who
+reads it, format, and rotation risk — is in
+[REFERENCE.md § Key Contract](./REFERENCE.md#key-contract).
 
 All other secrets (`LITELLM_SALT_KEY`, `DB_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`,
 `PROMETHEUS_RETENTION`) are auto-generated by `01_env.sh` and stored in `.env`.
-
-`LITELLM_DISABLE_NO_REDIS_WARNING` is set to `true` in `docker-compose.yml` —
-suppresses the Admin UI "no Redis" banner for our deliberate single-worker setup.
 
 ---
 
@@ -625,11 +611,13 @@ opencode          # or:  codex  or:  claude --bare  or:  pi
 
 ```bash
 opencode
-# Available presets:
-#   LiteLLM-Default     (default — glm-5.3 orchestrator/oracle, deepseek-v4.1-flash-1017 all other agents)
-#   Huawei-MaaS-Default (direct — same agent-model mapping, direct to MaaS)
-# Paste a screenshot (Ctrl-V) — observer reads it and reports back structured observations
 ```
+
+Two presets ship — `LiteLLM-Default` (default, proxied) and
+`Huawei-MaaS-Default` (direct to MaaS). The preset and agent→model mapping is
+in [REFERENCE.md § Presets](./REFERENCE.md#presets) and
+[§ Agent → Model Mapping](./REFERENCE.md#agent--model-mapping). Paste a
+screenshot (Ctrl-V) to route it to the observer agent.
 
 If opencode was already running, exit it first (`/exit` or Ctrl+C).
 
@@ -676,54 +664,22 @@ pi
 
 ### Remote Access
 
-All ports bind to `127.0.0.1` by default (localhost only). Two ways to access
-from another machine (e.g. your laptop when the stack runs on a VM):
-
-**Option A — SSH port forwarding (recommended, no config change):**
-
-```bash
-ssh -L 4000:127.0.0.1:4000 -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 user@vm
-```
-
-Then open `http://localhost:4000/ui` and `http://localhost:3000` on your
-local machine. Traffic is encrypted via SSH. No ports exposed to the network.
-
-**Option B — Bind to all interfaces (direct access, less secure):**
-
-```bash
-# In .env:
-BIND_ADDRESS="0.0.0.0"
-
-# Restart:
-docker compose up -d
-```
-
-Then access via `http://<vm-ip>:4000/ui` and `http://<vm-ip>:3000` from any
-machine on the network. Ensure firewall rules limit access (e.g. security
-group, `ufw allow from <your-ip> to any port 4000`).
+All ports bind to `127.0.0.1` by default. For SSH port forwarding (recommended)
+and binding to all interfaces, see
+[REFERENCE.md § Remote Access](./REFERENCE.md#remote-access).
 
 ### Services
 
-| Service | URL | Auth | Purpose |
-|---------|-----|------|---------|
-| LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key | API gateway |
-| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | DB-backed admin account (created via /user/update) | View keys, spend, deployments |
-| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) | 44-panel observability dashboard |
-| Prometheus | `http://127.0.0.1:9090` | None | Metrics storage |
-| PostgreSQL | `db:5432` (compose network only — port not published; host access via `docker compose exec db psql`) | — | LiteLLM database |
+Service URLs, auth, and purposes are catalogued in
+[REFERENCE.md § Endpoints](./REFERENCE.md#endpoints); observability services
+are in [§ Observability](./REFERENCE.md#observability).
 
 ### Coding Tools
 
-| Tool | Activate | API Format | Config location |
-|------|----------|------------|-----------------|
-| opencode | `opencode` | OpenAI Chat Completions | `~/.config/opencode/opencode.json` |
-| Codex CLI | `codex` | OpenAI Responses (bridged) | `~/.codex/config.toml` |
-| Claude Code CLI | `claude --bare` | Anthropic Messages | `~/.claude/settings.json` |
-| Pi agent | `pi` | OpenAI Chat Completions | `~/.pi/agent/models.json` |
-
-Each tool gets its own virtual key with unlimited budget and access to all
-models. opencode also gets 2 presets and 8 agents via the
-oh-my-opencode-slim plugin.
+Per-tool activation commands, API formats, and config locations are in
+[REFERENCE.md § Endpoints](./REFERENCE.md#endpoints). Each tool gets its own
+virtual key with unlimited budget and access to all models; opencode also gets
+2 presets and 8 agents via the oh-my-opencode-slim plugin.
 
 ### Install Modes
 

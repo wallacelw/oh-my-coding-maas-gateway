@@ -2570,9 +2570,9 @@
       },
       "targets": [
         {
-          "expr": "1 - ((sum by (model) (rate(litellm_cache_misses_metric_total{model=~\"$model\"}[$window])) OR (0 * sum by (model) (rate(litellm_requests_metric_total{model=~\"$model\"}[$window])))) / sum by (model) (rate(litellm_requests_metric_total{model=~\"$model\"}[$window])))",
+          "expr": "1 - ((sum by (requested_model) (label_replace(rate(litellm_cache_misses_metric_total{model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$window]), \"requested_model\", \"$1\", \"model\", \"(.*)\")) OR (0 * sum by (requested_model) (rate(litellm_proxy_total_requests_metric_total{requested_model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$window])))) / sum by (requested_model) (rate(litellm_proxy_total_requests_metric_total{requested_model=~\"$model\",api_key_alias!=\"litellm-internal-health-check\"}[$window])))",
           "refId": "A",
-          "legendFormat": "{{model}}",
+          "legendFormat": "{{requested_model}}",
           "hide": false,
           "datasource": {
             "type": "prometheus",

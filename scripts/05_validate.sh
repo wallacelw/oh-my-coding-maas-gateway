@@ -137,6 +137,36 @@ check_jq() {
   done
 }
 
+# Verify a config file is mode 600 — pass on match, warn otherwise.
+# Usage: check_perms_600 <label> <file>
+check_perms_600() {
+  local label="$1" file="$2" perms
+  perms=$(file_perms "$file")
+  if [ "$perms" = "600" ]; then
+    pass "$label permissions 600"
+  else
+    warn "$label permissions $perms (expected 600)"
+  fi
+}
+
+# Check a coding-tool binary is on PATH — pass with its version, fail with a
+# per-tool install hint. Usage: check_binary_installed <tool>
+check_binary_installed() {
+  local tool="$1" hint
+  case "$tool" in
+    opencode) hint="curl -fsSL https://opencode.ai/install | bash" ;;
+    codex)    hint="npm install -g @openai/codex" ;;
+    claude)   hint="npm install -g @anthropic-ai/claude-code" ;;
+    pi)       hint="./scripts/03d_pi.sh or curl -fsSL https://pi.dev/install.sh | sh" ;;
+    *)        hint="install $tool" ;;
+  esac
+  if command -v "$tool" &>/dev/null; then
+    pass "$tool installed: $("$tool" --version 2>/dev/null || echo 'unknown')"
+  else
+    fail "$tool not found — run: $hint"
+  fi
+}
+
 # ── Load .env if present ──
 source_env "$PROJECT_DIR"
 KEY_COUNT="${HUAWEI_MAAS_API_KEY_COUNT:-1}"
@@ -168,6 +198,7 @@ if [ "$RUN_LITELLM" = true ]; then
   log_info "A1. .env completeness and permissions"
   if [ -f "$PROJECT_DIR/.env" ]; then
     pass ".env exists"
+    # Kept inline (not check_perms_600): wording differs ("are 0600" vs "permissions 600").
     PERMS=$(file_perms "$PROJECT_DIR/.env")
     if [ "$PERMS" = "600" ]; then
       pass ".env permissions are 0600"
@@ -342,7 +373,6 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
   echo ""
   log_info "A4. Config validation"
   CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
-  TEMPLATE_FILE="$PROJECT_DIR/configs/litellm/config.yaml.template"
   if [ -f "$CONFIG_FILE" ]; then
     pass "litellm_config.yaml exists (generated)"
     DEPLOYMENT_COUNT=$(grep -c '^[[:space:]]*- model_name:' "$CONFIG_FILE" 2>/dev/null || true); DEPLOYMENT_COUNT=${DEPLOYMENT_COUNT:-0}
@@ -351,19 +381,6 @@ print(f'{moderation_errors} {other_errors} {len(unhealthy)}')
       pass "Deployment count: $DEPLOYMENT_COUNT ($MODEL_COUNT models × $KEY_COUNT keys × 2 formats)"
     else
       warn "Deployment count: $DEPLOYMENT_COUNT (expected $EXPECTED_DEPLOYMENTS = $MODEL_COUNT models × $KEY_COUNT keys × 2 formats)"
-    fi
-    if [ -f "$TEMPLATE_FILE" ]; then
-      # Template-sync check: assumes template contains only OpenAI entries.
-      # The * 2 accounts for Anthropic entries added by 02_litellm.sh.
-      # If Anthropic entries are ever added to the template, this check breaks.
-      TEMPLATE_MODELS=$(grep -c '^[[:space:]]*- model_name:' "$TEMPLATE_FILE" 2>/dev/null || true); TEMPLATE_MODELS=${TEMPLATE_MODELS:-0}
-      GENERATED_MODELS=$(grep -c '^[[:space:]]*- model_name:' "$CONFIG_FILE" 2>/dev/null || true); GENERATED_MODELS=${GENERATED_MODELS:-0}
-      EXPECTED_FROM_TEMPLATE=$((TEMPLATE_MODELS * KEY_COUNT * 2))
-      if [ "$GENERATED_MODELS" = "$EXPECTED_FROM_TEMPLATE" ]; then
-        pass "Model catalog: template and generated config are in sync ($GENERATED_MODELS = $TEMPLATE_MODELS × $KEY_COUNT keys × 2 formats)"
-      else
-        warn "Model catalog drift: template has $TEMPLATE_MODELS entries, generated has $GENERATED_MODELS (expected $EXPECTED_FROM_TEMPLATE)"
-      fi
     fi
 
     # H5: Config freshness (.env vs config.yaml)
@@ -538,11 +555,7 @@ if [ "$RUN_OPENCODE" = true ]; then
 
   echo ""
   log_info "B1. opencode binary"
-  if command -v opencode &>/dev/null; then
-    pass "opencode installed: $(opencode --version 2>/dev/null || echo 'unknown')"
-  else
-    fail "opencode not found — run: curl -fsSL https://opencode.ai/install | bash"
-  fi
+  check_binary_installed opencode
 
   echo ""
   log_info "B2. Config files"
@@ -568,7 +581,7 @@ if [ "$RUN_OPENCODE" = true ]; then
   log_info "B3. Provider configuration"
   if [ -n "$CONFIG_FILE" ]; then
     CLEAN_CONFIG=$(strip_jsonc "$CONFIG_FILE")
-    SLIM_PIN="oh-my-opencode-slim@$(grep 'SLIM_VERSION=' "$PROJECT_DIR/scripts/03a_opencode.sh" 2>/dev/null | head -1 | sed 's/.*="\([^"]*\)".*/\1/' || true)"
+    SLIM_PIN="oh-my-opencode-slim@$(slim_version "$PROJECT_DIR")"
     check_jq "$CLEAN_CONFIG" \
       "LiteLLM provider defined" '.provider.LiteLLM' \
       "LiteLLM baseURL is 127.0.0.1:4000" '.provider.LiteLLM.options.baseURL == "http://127.0.0.1:4000"' \
@@ -595,12 +608,7 @@ if [ "$RUN_OPENCODE" = true ]; then
       "general agent disabled" '.agent.general.disable == true' \
       "LSP enabled" '.lsp == true'
 
-    PERMS=$(file_perms "$CONFIG_FILE")
-    if [ "$PERMS" = "600" ]; then
-      pass "Config file permissions 600"
-    else
-      warn "Config file permissions $PERMS (expected 600)"
-    fi
+    check_perms_600 "Config file" "$CONFIG_FILE"
   else
     # Missing config → every B3 check is skipped. Base count is 10; the optional
     # Huawei-MaaS direct provider adds 2 more when configured (mirrors the
@@ -674,16 +682,10 @@ if [ "$RUN_OPENCODE" = true ]; then
       fail "B4b: cannot read presets (corrupt slim config)"
     fi
 
-    PERMS=$(file_perms "$SLIM_CONFIG")
-    if [ "$PERMS" = "600" ]; then
-      pass "Slim config permissions 600"
-    else
-      warn "Slim config permissions $PERMS (expected 600)"
-    fi
+    check_perms_600 "Slim config" "$SLIM_CONFIG"
 
     # M1: Slim plugin version match
-    EXPECTED_SLIM=$(grep 'SLIM_VERSION=' "$PROJECT_DIR/scripts/03a_opencode.sh" 2>/dev/null \
-      | head -1 | sed 's/.*="\([^"]*\)".*/\1/' || true)
+    EXPECTED_SLIM=$(slim_version "$PROJECT_DIR")
     INSTALLED_SLIM=$(printf '%s' "$CLEAN_SLIM" | jq -r '."$schema"' 2>/dev/null \
       | sed 's|.*oh-my-opencode-slim@||;s|/.*||' 2>/dev/null || true)
     if [ -n "$EXPECTED_SLIM" ] && [ -n "$INSTALLED_SLIM" ]; then
@@ -912,11 +914,7 @@ if [ "$RUN_CODEX" = true ]; then
 
   echo ""
   log_info "D1. Codex CLI binary"
-  if command -v codex &>/dev/null; then
-    pass "codex installed: $(codex --version 2>/dev/null || echo 'unknown')"
-  else
-    fail "codex not found — run: npm install -g @openai/codex"
-  fi
+  check_binary_installed codex
 
   echo ""
   log_info "D2. Config file"
@@ -950,12 +948,7 @@ if [ "$RUN_CODEX" = true ]; then
     else
       fail "default model not set"
     fi
-    PERMS=$(file_perms "$CODEX_CONFIG")
-    if [ "$PERMS" = "600" ]; then
-      pass "Config file permissions 600"
-    else
-      warn "Config file permissions $PERMS (expected 600)"
-    fi
+    check_perms_600 "Config file" "$CODEX_CONFIG"
   else
     fail_n 5 "No Codex config file — skipping 5 provider checks"
   fi
@@ -1002,11 +995,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
 
   echo ""
   log_info "E1. Claude Code CLI binary"
-  if command -v claude &>/dev/null; then
-    pass "claude installed: $(claude --version 2>/dev/null || echo 'unknown')"
-  else
-    fail "claude not found — run: npm install -g @anthropic-ai/claude-code"
-  fi
+  check_binary_installed claude
 
   echo ""
   log_info "E2. Config file"
@@ -1065,12 +1054,7 @@ if [ "$RUN_CLAUDE_CODE" = true ]; then
     else
       fail "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY not enabled (re-run scripts/03c_claude_code.sh)"
     fi
-    PERMS=$(file_perms "$CLAUDE_SETTINGS")
-    if [ "$PERMS" = "600" ]; then
-      pass "Config file permissions 600"
-    else
-      warn "Config file permissions $PERMS (expected 600)"
-    fi
+    check_perms_600 "Config file" "$CLAUDE_SETTINGS"
   else
     fail_n 8 "No Claude Code config — skipping 8 provider checks"
     CLAUDE_VK=""
@@ -1112,11 +1096,7 @@ if [ "$RUN_PI" = true ]; then
 
   echo ""
   log_info "F1. Pi binary"
-  if command -v pi &>/dev/null; then
-    pass "pi installed: $(pi --version 2>/dev/null || echo 'unknown')"
-  else
-    fail "pi not found — run: ./scripts/03d_pi.sh or curl -fsSL https://pi.dev/install.sh | sh"
-  fi
+  check_binary_installed pi
 
   echo ""
   log_info "F2. Config file"
@@ -1127,12 +1107,7 @@ if [ "$RUN_PI" = true ]; then
     else
       fail "Config is not valid JSON"
     fi
-    PERMS=$(file_perms "$PI_CONFIG")
-    if [ "$PERMS" = "600" ]; then
-      pass "Config file permissions 600"
-    else
-      warn "Config file permissions $PERMS (expected 600)"
-    fi
+    check_perms_600 "Config file" "$PI_CONFIG"
   else
     fail "models.json not found in $PI_DIR"
   fi
@@ -1431,6 +1406,7 @@ if [ "$RUN_BUNDLES" = true ]; then
     # ── H5. Config permissions (600) for registration-bearing configs ──
     echo ""
     log_info "H5. MCP config permissions"
+    # Kept inline (not check_perms_600): output appends a ": ~/path" suffix per file.
     for f in "$HOME/.config/opencode/opencode.json" "$HOME/.codex/config.toml" "$HOME/.claude.json" "$HOME/.pi/agent/mcp.json"; do
       [ -f "$f" ] || continue
       PERMS=$(file_perms "$f")

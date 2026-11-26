@@ -25,6 +25,7 @@ CONFIG_FILE="$PROJECT_DIR/configs/litellm/config.yaml"
 source "$SCRIPT_DIR/helpers/prereqs.sh"
 source "$SCRIPT_DIR/helpers/common.sh"
 source "$SCRIPT_DIR/helpers/models.sh"
+source "$SCRIPT_DIR/helpers/versions.sh"
 
 # ── Parse args ──
 ROUTING_STRATEGY="usage-based-routing-v2"
@@ -145,14 +146,11 @@ fi
 MODEL_COUNT=${#MODELS[@]}
 TOTAL_DEPLOYMENTS=$((KEY_COUNT * MODEL_COUNT * 2))
 
-# ── Backup existing config (skipped in dry-run — no side effects) ──
+# ── Config generation target ──
+# BACKUP is set only when the generated config differs from the live one
+# (compare-before-write below) — an unchanged rerun creates no backup and
+# rewrites nothing, killing identical config.yaml.bak.* churn.
 BACKUP=""
-if [ "$DRY_RUN" != true ]; then
-  BACKUP=$(backup_with_prune "$CONFIG_FILE")
-  if [ -n "$BACKUP" ]; then
-    log_info "Backed up existing config to $(basename "$BACKUP")"
-  fi
-fi
 
 # Look up off-peak pricing for a model from OFF_PEAK_PRICING array
 get_off_peak_pricing() {
@@ -260,13 +258,12 @@ emit_deployment() {
   echo ""
 }
 
-# In dry-run, render to a temp file — the live config is bind-mounted into
-# the running LiteLLM container and must not be touched.
-if [ "$DRY_RUN" = true ]; then
-  CONFIG_OUT=$(mktemp)
-else
-  CONFIG_OUT="$CONFIG_FILE"
-fi
+# Render to a temp file first: dry-run diffs it against the live config and
+# discards it; a real run compares then either leaves the live config
+# byte-identical (no backup, no rewrite) or backs it up and replaces it. The
+# live config is bind-mounted into the running LiteLLM container.
+CONFIG_OUT=$(mktemp)
+trap 'rm -f "$CONFIG_OUT"' EXIT
 
 {
   echo "model_list:"
@@ -301,7 +298,6 @@ fi
   echo "  request_timeout: 600 # full request: 10 min"
   echo "  stream_timeout: 60 # TTFT only: 60s"
   echo "  drop_params: True"
-  echo "  set_verbose: False"
   echo "  callbacks: [\"prometheus\"]"
   echo "  prometheus_initialize_budget_metrics: true"
   echo "  require_auth_for_metrics_endpoint: false"
@@ -338,8 +334,27 @@ if [ "$DRY_RUN" = true ]; then
       log_dim "  $CHANGED_LINES line(s) differ from current configs/litellm/config.yaml"
     fi
   fi
-  rm -f "$CONFIG_OUT"
+elif [ -f "$CONFIG_FILE" ] && diff -q "$CONFIG_FILE" "$CONFIG_OUT" &>/dev/null; then
+  log_dim "Config unchanged — skipping write"
+  # Fix permissions even when content unchanged (a loose umask or external
+  # edit may have left config.yaml non-600).
+  if [ "$(stat -c '%a' "$CONFIG_FILE" 2>/dev/null)" != "600" ]; then
+    chmod 600 "$CONFIG_FILE"
+    log_ok "Fixed permissions: $CONFIG_FILE (600)"
+  fi
+  # Record freshness without rewriting content: 01_env rewrites .env on
+  # every run, so an untouched mtime would make 05's H5 warn ".env newer
+  # than config.yaml" with a remediation (re-run 02) that no longer clears it.
+  touch "$CONFIG_FILE"
 else
+  if [ -f "$CONFIG_FILE" ]; then
+    BACKUP=$(backup_with_prune "$CONFIG_FILE")
+    if [ -n "$BACKUP" ]; then
+      log_info "Backed up existing config to $(basename "$BACKUP")"
+    fi
+  fi
+  cat "$CONFIG_OUT" > "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE"
   log_ok "Generated: $CONFIG_FILE"
 fi
 log_info "Deployments: ${TOTAL_DEPLOYMENTS} total (${KEY_COUNT} per model × ${MODEL_COUNT} models × 2 formats)"
@@ -402,7 +417,7 @@ fi
 was_running=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" ps --services --filter "status=running" 2>/dev/null | grep -c litellm || true)
 old_litellm_cid="$(docker inspect litellm_proxy --format '{{.Id}}' 2>/dev/null || echo "")"
 log_info "Starting Docker Compose (idempotent — no-op if already running)..."
-log_info "Images: LiteLLM $(grep 'image:.*litellm:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*litellm://') · PostgreSQL $(grep 'image:.*postgres:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*postgres://') · Prometheus $(grep 'image:.*prom/prometheus:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's/.*prom\/prometheus://') · Grafana $(grep 'image:.*grafana/grafana:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | head -1 | sed 's|.*grafana/grafana:||')"
+log_info "Images: LiteLLM $(compose_image_tag litellm "$PROJECT_DIR/docker-compose.yml") · PostgreSQL $(compose_image_tag postgres "$PROJECT_DIR/docker-compose.yml") · Prometheus $(compose_image_tag prometheus "$PROJECT_DIR/docker-compose.yml") · Grafana $(compose_image_tag grafana "$PROJECT_DIR/docker-compose.yml")"
 if ! run_with_spinner "Starting containers" docker compose -f "$PROJECT_DIR/docker-compose.yml" up -d; then
   log_error "Docker Compose failed to start."
   exit 1

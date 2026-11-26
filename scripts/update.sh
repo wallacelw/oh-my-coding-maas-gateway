@@ -113,7 +113,7 @@ check_components() {
 
   # 2. oh-my-opencode-slim
   name="oh-my-opencode-slim"
-  cur=$(grep 'SLIM_VERSION=' "$SCRIPT_DIR/03a_opencode.sh" 2>/dev/null | head -1 | sed 's/.*="\([^"]*\)".*/\1/')
+  cur=$(slim_version "$PROJECT_DIR")
   new=$(npm_latest oh-my-opencode-slim)
   method="slim"
   _store_component "$name" "$cur" "$new" "$method" "tool"
@@ -194,28 +194,28 @@ check_components() {
 
   # 6. LiteLLM (Docker)
   name="litellm"
-  cur=$(grep 'image:.*litellm:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's/.*:v//' | tr -d ' ')
+  cur=$(strip_v "$(compose_image_tag litellm "$PROJECT_DIR/docker-compose.yml")")
   new=$(strip_v "$(github_latest BerriAI/litellm)")
   method="docker:litellm:ghcr.io/berriai/litellm:v"
   _store_component "$name" "$cur" "$new" "$method" "infra"
 
   # 7. Prometheus (Docker)
   name="prometheus"
-  cur=$(grep 'image:.*prom/prometheus:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's/.*:v//' | tr -d ' ')
+  cur=$(strip_v "$(compose_image_tag prometheus "$PROJECT_DIR/docker-compose.yml")")
   new=$(strip_v "$(github_latest prometheus/prometheus)")
   method="docker:prometheus:prom/prometheus:v"
   _store_component "$name" "$cur" "$new" "$method" "infra"
 
   # 8. Grafana (Docker)
   name="grafana"
-  cur=$(grep 'image:.*grafana/grafana:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's|.*grafana/grafana:||' | tr -d ' ')
+  cur=$(strip_v "$(compose_image_tag grafana "$PROJECT_DIR/docker-compose.yml")")
   new=$(strip_v "$(github_latest grafana/grafana)")
   method="docker:grafana:grafana/grafana:"
   _store_component "$name" "$cur" "$new" "$method" "infra"
 
   # 9. PostgreSQL (display-only — pinned, never auto-updated)
   name="postgres"
-  cur=$(grep 'image:.*postgres:' "$PROJECT_DIR/docker-compose.yml" 2>/dev/null | sed 's/.*postgres://' | tr -d ' ')
+  cur=$(strip_v "$(compose_image_tag postgres "$PROJECT_DIR/docker-compose.yml")")
   new=""
   method="pinned"
   _store_component "$name" "$cur" "$new" "$method" "infra"

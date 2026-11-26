@@ -119,7 +119,7 @@ are exported in `~/.bashrc`, and
 |---|--------|---------|
 | — | `bootstrap.sh` | End-to-end orchestrator: selection → core prereqs → dispatch steps → summary. Use --tool=all\|litellm\|opencode\|codex\|claude\|pi (comma-separated for combos) |
 | 01 | `01_env.sh` | Generate `.env` with secrets + MaaS keys; configure git hooks |
-| 02 | `02_litellm.sh` | Generate `configs/litellm/config.yaml` from `.env` + deploy Docker Compose |
+| 02 | `02_litellm.sh` | Emit `configs/litellm/config.yaml` inline from the `models.sh` catalog + `.env`, then deploy Docker Compose |
 | 03a | `03a_opencode.sh` | Install opencode + plugin + mint key + write config |
 | 03b | `03b_codex.sh` | Install Codex CLI + mint key + write config + model catalog |
 | 03c | `03c_claude_code.sh` | Install Claude Code CLI + mint key + write settings + disable VSCode ext |
@@ -133,7 +133,7 @@ are exported in `~/.bashrc`, and
 | — | `helpers/prereqs.sh` | Shared prerequisite installation helpers (prereq_ensure_apt/bun/npm/docker/node_mcp — pi-managed Node trees excluded; npm_install_global writable-prefix-or-sudo shared by 03b/03c/03d/04), sourced by bootstrap.sh and steps 01–05 |
 | — | `helpers/keys.sh` | Key resolution + virtual key minting (resolve_master_key, mint_or_reuse_key), MaaS key validation (validate_maas_key) |
 | — | `helpers/common.sh` | Shared utilities (logging, prompts, is_interactive, run_filtered, run_with_spinner, source_env, retry_curl, strip_jsonc, mask_key, backup_with_prune) |
-| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, 05_validate.sh). Also update `config.yaml.template`, `opencode.json.template`, and `model_catalog.json` when adding models. Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
+| — | `helpers/models.sh` | Model catalog (MODELS array, sourced by bootstrap.sh, 02_litellm.sh, 03d_pi.sh, 05_validate.sh). Also update `opencode.json.template` and `model_catalog.json` when adding models (the LiteLLM `config.yaml` is emitted inline from this catalog). Add to `REASONING_MODELS` if the model surfaces reasoning (`reasoning_effort` pass-through or thinking mode); add to `OFF_PEAK_PRICING` if it has off-peak pricing; add to `VISION_MODELS` if it accepts image input (set `modalities` to include `image` in `input` on its `opencode.json.template` entries). Update `configs/opencode/oh-my-opencode-slim.json.template` only if agents should use the new model. |
 | — | `helpers/skills.sh` | Companion skill install/uninstall helpers for each agent tool + directory-based bundle install (per-file drift detection) |
 | — | `helpers/mcp.sh` | Merge-safe MCP server registration per tool (opencode `.mcp`, codex `[mcp_servers.*]` sentinel blocks, claude/pi `.mcpServers`); register/unregister/verify |
 | — | `helpers/versions.sh` | Component version table for the bootstrap install summary (show_installed_versions) + bundle pins (REA_AGENTS_VERSION, DRAWIO_MCP_VERSION, NODE_MCP_MIN_VERSION) |
@@ -271,7 +271,6 @@ litellm_settings:
   request_timeout: 600
   stream_timeout: 60
   drop_params: True
-  set_verbose: False
   callbacks: ["prometheus"]
   prometheus_initialize_budget_metrics: true
   require_auth_for_metrics_endpoint: false
@@ -387,7 +386,6 @@ Each deployment includes metadata for budget tracking and LiteLLM UI:
 | `request_timeout` | 600 | Full request timeout (10 min) |
 | `stream_timeout` | 60 | TTFT timeout (60s) |
 | `drop_params` | `True` | Drop unsupported params instead of erroring |
-| `set_verbose` | `False` | Disable verbose LiteLLM logging |
 | `callbacks` | `["prometheus"]` | Enable Prometheus metrics export |
 | `prometheus_initialize_budget_metrics` | true | Emit budget metrics for all keys |
 | `require_auth_for_metrics_endpoint` | false | Allow unauthenticated `/metrics` |
@@ -910,26 +908,13 @@ re-configuration after rotation.
 | Docker containers + volumes + images | — | `--docker` |
 | Repository (`.env`, configs, scripts) | `$PROJECT_DIR` | `--repo` |
 
-Binaries (opencode, codex, claude, pi), configs, and `.bashrc` entries are
-removed; runtimes (bun, pi-node) are removed after confirmation (kept by
-default — auto-accepted only under `AUTO_YES`/bootstrap `-y`; uninstall's
-own `--yes` skips just the main confirmation). Backup files (`*.bak.*`) are also
-removed. Use `--dry-run` to preview before running.
-
-To remove only the REA/drawio bundle artifacts (MCP registrations + skills)
-while leaving binaries and configs intact, use `--bundles --tool=<t|all>` —
-see the [Agent Tool Bundles](#agent-tool-bundles) lifecycle section.
-
-Global `rea`/npm packages and the shared
-`~/.agents/skills/reverse-engineer-anything` are removed only when ALL agents
-are removed (`--tool=all` / `--all`); NodeSource Node is intentionally left
-(shared with tools).
-
-```bash
-./scripts/uninstall.sh --all --dry-run        # preview
-./scripts/uninstall.sh --tool=opencode,codex  # subset
-./scripts/uninstall.sh --all --yes            # everything, no prompt
-```
+Binaries, configs, `.bashrc` entries, and backup files (`*.bak.*`) are
+removed; runtimes (bun, pi-node) are removed only after confirmation. Global
+`rea`/npm packages and the shared `~/.agents` skill dir are removed only when
+all agents are removed; NodeSource Node is left installed. Full flag reference
+and examples: see [INSTALLATION.md § Uninstall](./INSTALLATION.md#uninstall).
+Bundle-only removal (`--bundles --tool=<t|all>`) is covered in the
+[Agent Tool Bundles](#agent-tool-bundles) lifecycle section.
 
 ---
 

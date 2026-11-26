@@ -44,27 +44,27 @@ contains `scripts/05_validate.sh`.
 
 ## Available Scripts
 
-| Script | Purpose | Key flags |
-|--------|---------|-----------|
-| `scripts/bootstrap.sh` | Install or upgrade the entire stack | `--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--dry-run`, `--no-skill`, `--no-bundles` |
-| `scripts/update.sh` | Check and update individual components (tools + infrastructure); shows project + component versions | `--check`, `--all`, `--dry-run` |
-| `scripts/04_skills_mcps.sh` | Install THIS companion skill + agent tool bundles (REA, drawio) into agents | `--yes`, `--dry-run`, `--no-skill`, `--no-rea`, `--no-drawio`, `--refresh-only`, `--strict`, `--skip-<tool>` |
-| `scripts/05_validate.sh` | End-to-end validation (run anytime) | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--skip-bundles`, `--dry-run` |
-| `scripts/06_backup.sh` | Dump/restore the LiteLLM PostgreSQL DB (spend history, virtual keys, budgets) | `--restore FILE`, `--keep N`, `--dry-run`, `--yes` |
-| `scripts/07_dashboard_shots.sh` | Capture dashboard screenshots for visual verification | `--out=`, `--dry-run` |
-| `scripts/install-skill.sh` | Install ANY skill into all detected agents | `--name=`, `--source=`, `--dry-run` |
-| `scripts/uninstall.sh` | Remove all or part of the gateway | `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes`, `--bundles` |
-| `scripts/02_litellm.sh` | Regenerate LiteLLM config + restart (after editing `.env` or `models.sh`) | `--routing-strategy=`, `--dry-run` |
-| `scripts/01_env.sh` | Regenerate `.env` (after key changes) | `--force` |
+Script names and the flags you need day-to-day. For the full per-script
+reference (purpose, domain, behavior), see [REFERENCE.md § Scripts](./REFERENCE.md#scripts).
+
+| Script | Key flags |
+|--------|-----------|
+| `scripts/bootstrap.sh` | `--tool=`, `--virtual-key=`, `--api-key=`, `-y`/`--yes`, `--dry-run`, `--no-skill`, `--no-bundles` |
+| `scripts/update.sh` | `--check`, `--all`, `--dry-run` |
+| `scripts/04_skills_mcps.sh` | `--yes`, `--dry-run`, `--no-skill`, `--no-rea`, `--no-drawio`, `--refresh-only`, `--strict`, `--skip-<tool>` |
+| `scripts/05_validate.sh` | `--litellm-only`, `--opencode-only`, `--codex-only`, `--claude-code-only`, `--pi-only`, `--skip-opencode`, `--skip-codex`, `--skip-claude-code`, `--skip-pi`, `--skip-bundles`, `--dry-run` |
+| `scripts/06_backup.sh` | `--restore FILE`, `--keep N`, `--dry-run`, `--yes` |
+| `scripts/07_dashboard_shots.sh` | `--out=`, `--dry-run` |
+| `scripts/install-skill.sh` | `--name=`, `--source=`, `--dry-run` |
+| `scripts/uninstall.sh` | `--tool=`, `--docker`, `--repo`, `--all`, `--dry-run`, `--yes`, `--bundles` |
+| `scripts/02_litellm.sh` | `--routing-strategy=`, `--dry-run` |
+| `scripts/01_env.sh` | `--force` |
 
 ## Services
 
-| Service | URL | Auth |
-|---------|-----|------|
-| LiteLLM Proxy | `http://127.0.0.1:4000` | Virtual key |
-| LiteLLM Admin UI | `http://127.0.0.1:4000/ui` | admin account (created via /user/update; password recorded in .env as LITELLM_UI_PASSWORD, Proxy Auth section) |
-| Grafana Dashboard | `http://127.0.0.1:3000` | admin password (from .env) |
-| Prometheus | `http://127.0.0.1:9090` | None |
+Service URLs, auth, and endpoints are catalogued in
+[REFERENCE.md § Endpoints](./REFERENCE.md#endpoints); observability services
+are in [§ Observability](./REFERENCE.md#observability).
 
 ---
 
@@ -90,47 +90,19 @@ and offer to run it. WARN messages are advisory only.
 
 ## Option 3: Upgrade
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/wallacelw/oh-my-coding-maas-gateway/main/scripts/bootstrap.sh | bash
-```
-
-After upgrade, remind user to restart any running coding tools.
-If Grafana looks stale: `docker compose restart grafana`.
-
-### Update coding tools only
-
-To check and update individual components without re-running the full
-pipeline. Components are grouped into two categories:
-
-- **Coding Tools** — opencode, oh-my-opencode-slim, Codex CLI, Claude
-  Code, Pi agent, plus display-only bundle-pin drift rows (`rea-agents`,
-  `@drawio/mcp` — never auto-updated; pins move via repo releases)
-- **Infrastructure** — LiteLLM, Grafana, Prometheus (active docker-method
-  updates); PostgreSQL (pinned, display-only — never auto-updated)
-
-```bash
-./scripts/update.sh              # interactive: show grouped table, select which to update
-./scripts/update.sh --check      # show version table only
-./scripts/update.sh --all        # update all components with updates available
-./scripts/update.sh --dry-run    # show what would be updated
-```
-
-The script detects installed components, checks current vs latest
-versions, and offers selective updates. It does NOT touch passwords,
-API keys, or virtual keys — only updates binaries, npm packages, and
-Docker images; the slim and docker methods also bump pinned versions
-in tracked files and commit those changes. After updating Docker
-images, the affected service is automatically pulled and restarted.
+Run the same one-liner as install — bootstrap detects the existing install,
+pulls updates, and re-runs idempotently (secrets and data preserved). Restart
+any running coding tools afterward; if Grafana looks stale, run
+`docker compose restart grafana`. See [INSTALLATION.md § Upgrade](./INSTALLATION.md#upgrade)
+for the full procedure and [§ Updating coding tools](./INSTALLATION.md#updating-coding-tools)
+for `./scripts/update.sh` (individual component checks and updates).
 
 ## Option 4: Uninstall
 
-Ask what to remove:
-
-```bash
-./scripts/uninstall.sh --all --dry-run   # preview
-./scripts/uninstall.sh --tool=opencode   # one agent
-./scripts/uninstall.sh --all             # everything
-```
+`./scripts/uninstall.sh` removes all or part of the installation. Preview with
+`--all --dry-run`, remove one agent with `--tool=<t>`, remove everything with
+`--all`. See [INSTALLATION.md § Uninstall](./INSTALLATION.md#uninstall) for all
+flags.
 
 ## Option 5: Install Skill
 
@@ -249,9 +221,10 @@ Current models: `glm-5.3`, `deepseek-v4.1-flash-1017`.
 sed -n '/^MODELS=(/,/^)/p' scripts/helpers/models.sh | grep -E '^[[:space:]]*"' | sed 's/^[[:space:]]*"//; s/:.*//' | sort
 ```
 
-**Add a model**: add a line to the `MODELS` array in `scripts/helpers/models.sh`,
-then update `configs/litellm/config.yaml.template`, `configs/opencode/opencode.json.template`,
-and `configs/codex/model_catalog.json` with the new model. If the model surfaces
+**Add a model**: add a line to the `MODELS` array in `scripts/helpers/models.sh`
+(the LiteLLM `config.yaml` is emitted inline from this catalog), then update
+`configs/opencode/opencode.json.template` and `configs/codex/model_catalog.json`
+with the new model. If the model surfaces
 reasoning (`reasoning_effort` pass-through or thinking mode), add it to the
 `REASONING_MODELS` array. If it has off-peak
 pricing, add it to the `OFF_PEAK_PRICING` array. If it accepts image input,
@@ -389,10 +362,5 @@ container may have loaded a config without `off_peak_pricing` blocks — check
 
 ## Remote Access
 
-**SSH forwarding (recommended):**
-```bash
-ssh -L 4000:127.0.0.1:4000 -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 user@vm
-```
-
-**Bind to all interfaces:** set `BIND_ADDRESS="0.0.0.0"` in `.env`, then
-`docker compose up -d`.
+All ports bind to `127.0.0.1` by default. See [REFERENCE.md § Remote Access](./REFERENCE.md#remote-access)
+for SSH port forwarding and binding to all interfaces.

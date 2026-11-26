@@ -6,8 +6,8 @@
 # 03d_pi.sh (Pi agent config), and bootstrap.sh (helper sourcing for
 # the install pipeline).
 #
-# To add/remove a model: edit this file, then update config.yaml.template,
-# opencode.json.template, and model_catalog.json. If the model surfaces
+# To add/remove a model: edit this file, then update opencode.json.template
+# and model_catalog.json. If the model surfaces
 # reasoning (reasoning_effort pass-through or thinking mode), add it to
 # REASONING_MODELS. If it has off-peak pricing, add it to OFF_PEAK_PRICING.
 # If it accepts image input (multimodal), add it to VISION_MODELS and set
